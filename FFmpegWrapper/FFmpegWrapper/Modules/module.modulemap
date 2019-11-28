@@ -1,0 +1,22 @@
+module CFFmpeg [system] {
+    module AVCodec {
+        header "avcodec_shim.h"
+        link "avformat"
+        export *
+    }
+    module AVUtil {
+        header "avutil_shim.h"
+        link "avutil"
+        export *
+    }
+    module Swscale {
+        header "swscale_shim.h"
+        link "swscale"
+        export *
+    }
+}
+
+module OCBridge [system] {
+    header "OCBridgingHelper.h"
+    export *
+}
