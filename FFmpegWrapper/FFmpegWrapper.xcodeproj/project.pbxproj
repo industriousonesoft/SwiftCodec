@@ -130,6 +130,19 @@
 		90D0557E238FB51600DB766C /* avcodec_shim.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = avcodec_shim.h; sourceTree = "<group>"; };
 		90D0557F238FB51600DB766C /* OCBridgingHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OCBridgingHelper.m; sourceTree = "<group>"; };
 		90D05580238FB51600DB766C /* module.modulemap */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
+		90D0562F238FC6CA00DB766C /* libopencore-amrwb.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = "libopencore-amrwb.0.dylib"; sourceTree = "<group>"; };
+		90D05630238FC6CA00DB766C /* libspeex.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libspeex.1.dylib; sourceTree = "<group>"; };
+		90D05631238FC6CA00DB766C /* libvorbisenc.2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libvorbisenc.2.dylib; sourceTree = "<group>"; };
+		90D05632238FC6CA00DB766C /* libvorbis.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libvorbis.0.dylib; sourceTree = "<group>"; };
+		90D05633238FC6CA00DB766C /* libfdk-aac.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = "libfdk-aac.1.dylib"; sourceTree = "<group>"; };
+		90D05634238FC6CA00DB766C /* libopencore-amrnb.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = "libopencore-amrnb.0.dylib"; sourceTree = "<group>"; };
+		90D05635238FC6CA00DB766C /* libx264.152.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libx264.152.dylib; sourceTree = "<group>"; };
+		90D05636238FC6CA00DB766C /* libtheoradec.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libtheoradec.1.dylib; sourceTree = "<group>"; };
+		90D05637238FC6CA00DB766C /* libogg.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libogg.0.dylib; sourceTree = "<group>"; };
+		90D05638238FC6CA00DB766C /* libtheoraenc.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libtheoraenc.1.dylib; sourceTree = "<group>"; };
+		90D05639238FC6CA00DB766C /* libswresample.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libswresample.3.dylib; sourceTree = "<group>"; };
+		90D0563A238FC6CA00DB766C /* libgsm.1.0.13.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libgsm.1.0.13.dylib; sourceTree = "<group>"; };
+		90D0563B238FC6CB00DB766C /* libx265.169.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libx265.169.dylib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -317,6 +330,19 @@
 				90CC7A2B238E114F005FCD2D /* libswscale.5.dylib */,
 				90CC7A2C238E114F005FCD2D /* libavutil.56.dylib */,
 				90CC7A2D238E114F005FCD2D /* libavcodec.58.dylib */,
+				90D05633238FC6CA00DB766C /* libfdk-aac.1.dylib */,
+				90D0563A238FC6CA00DB766C /* libgsm.1.0.13.dylib */,
+				90D05637238FC6CA00DB766C /* libogg.0.dylib */,
+				90D05634238FC6CA00DB766C /* libopencore-amrnb.0.dylib */,
+				90D0562F238FC6CA00DB766C /* libopencore-amrwb.0.dylib */,
+				90D05630238FC6CA00DB766C /* libspeex.1.dylib */,
+				90D05639238FC6CA00DB766C /* libswresample.3.dylib */,
+				90D05636238FC6CA00DB766C /* libtheoradec.1.dylib */,
+				90D05638238FC6CA00DB766C /* libtheoraenc.1.dylib */,
+				90D05632238FC6CA00DB766C /* libvorbis.0.dylib */,
+				90D05631238FC6CA00DB766C /* libvorbisenc.2.dylib */,
+				90D05635238FC6CA00DB766C /* libx264.152.dylib */,
+				90D0563B238FC6CB00DB766C /* libx265.169.dylib */,
 			);
 			path = lib;
 			sourceTree = "<group>";
@@ -334,10 +360,10 @@
 			isa = PBXGroup;
 			children = (
 				90D0557B238FB51600DB766C /* avutil_shim.h */,
-				90D0557C238FB51600DB766C /* OCBridgingHelper.h */,
 				90D0557D238FB51600DB766C /* swscale_shim.h */,
 				90D0557E238FB51600DB766C /* avcodec_shim.h */,
 				90D0557F238FB51600DB766C /* OCBridgingHelper.m */,
+				90D0557C238FB51600DB766C /* OCBridgingHelper.h */,
 				90D05580238FB51600DB766C /* module.modulemap */,
 			);
 			path = Modules;
