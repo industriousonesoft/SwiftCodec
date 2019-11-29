@@ -10,7 +10,7 @@ import Foundation
 import CFFmpeg
 import OCBridge
 
-let AV_PIX_FMT_RGB32 = AVPixelFormat(OCBridgingHelper.avPixelFormatRGB32())
+private let AV_PIX_FMT_RGB32 = AVPixelFormat(OCBridgingHelper.avPixelFormatRGB32())
 
 public class FFmpegEncoder: NSObject {
     
