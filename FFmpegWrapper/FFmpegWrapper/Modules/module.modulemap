@@ -16,7 +16,7 @@ module CFFmpeg [system] {
     }
 }
 
-module OCBridge [system] {
-    header "OCBridgingHelper.h"
+module FFmepgWrapperOCBridge [system] {
+    header "FFmepgWrapperOCBridge.h"
     export *
 }
