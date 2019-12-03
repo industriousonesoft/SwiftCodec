@@ -12,10 +12,10 @@
 		90CC7A31238E1179005FCD2D /* libswscale.5.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90CC7A2B238E114F005FCD2D /* libswscale.5.dylib */; };
 		90D05581238FB51600DB766C /* Encoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D05579238FB51600DB766C /* Encoder.swift */; };
 		90D05582238FB51600DB766C /* avutil_shim.h in Headers */ = {isa = PBXBuildFile; fileRef = 90D0557B238FB51600DB766C /* avutil_shim.h */; };
-		90D05583238FB51600DB766C /* OCBridgingHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 90D0557C238FB51600DB766C /* OCBridgingHelper.h */; };
+		90D05583238FB51600DB766C /* FFmepgWrapperOCBridge.h in Headers */ = {isa = PBXBuildFile; fileRef = 90D0557C238FB51600DB766C /* FFmepgWrapperOCBridge.h */; };
 		90D05584238FB51600DB766C /* swscale_shim.h in Headers */ = {isa = PBXBuildFile; fileRef = 90D0557D238FB51600DB766C /* swscale_shim.h */; };
 		90D05585238FB51600DB766C /* avcodec_shim.h in Headers */ = {isa = PBXBuildFile; fileRef = 90D0557E238FB51600DB766C /* avcodec_shim.h */; };
-		90D05586238FB51600DB766C /* OCBridgingHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 90D0557F238FB51600DB766C /* OCBridgingHelper.m */; };
+		90D05586238FB51600DB766C /* FFmepgWrapperOCBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 90D0557F238FB51600DB766C /* FFmepgWrapperOCBridge.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -125,10 +125,10 @@
 		90CC7A2D238E114F005FCD2D /* libavcodec.58.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libavcodec.58.dylib; sourceTree = "<group>"; };
 		90D05579238FB51600DB766C /* Encoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Encoder.swift; sourceTree = "<group>"; };
 		90D0557B238FB51600DB766C /* avutil_shim.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = avutil_shim.h; sourceTree = "<group>"; };
-		90D0557C238FB51600DB766C /* OCBridgingHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCBridgingHelper.h; sourceTree = "<group>"; };
+		90D0557C238FB51600DB766C /* FFmepgWrapperOCBridge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FFmepgWrapperOCBridge.h; sourceTree = "<group>"; };
 		90D0557D238FB51600DB766C /* swscale_shim.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = swscale_shim.h; sourceTree = "<group>"; };
 		90D0557E238FB51600DB766C /* avcodec_shim.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = avcodec_shim.h; sourceTree = "<group>"; };
-		90D0557F238FB51600DB766C /* OCBridgingHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OCBridgingHelper.m; sourceTree = "<group>"; };
+		90D0557F238FB51600DB766C /* FFmepgWrapperOCBridge.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FFmepgWrapperOCBridge.m; sourceTree = "<group>"; };
 		90D05580238FB51600DB766C /* module.modulemap */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 		90D0562F238FC6CA00DB766C /* libopencore-amrwb.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = "libopencore-amrwb.0.dylib"; sourceTree = "<group>"; };
 		90D05630238FC6CA00DB766C /* libspeex.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libspeex.1.dylib; sourceTree = "<group>"; };
@@ -362,8 +362,8 @@
 				90D0557B238FB51600DB766C /* avutil_shim.h */,
 				90D0557D238FB51600DB766C /* swscale_shim.h */,
 				90D0557E238FB51600DB766C /* avcodec_shim.h */,
-				90D0557F238FB51600DB766C /* OCBridgingHelper.m */,
-				90D0557C238FB51600DB766C /* OCBridgingHelper.h */,
+				90D0557C238FB51600DB766C /* FFmepgWrapperOCBridge.h */,
+				90D0557F238FB51600DB766C /* FFmepgWrapperOCBridge.m */,
 				90D05580238FB51600DB766C /* module.modulemap */,
 			);
 			path = Modules;
@@ -376,7 +376,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				90D05583238FB51600DB766C /* OCBridgingHelper.h in Headers */,
+				90D05583238FB51600DB766C /* FFmepgWrapperOCBridge.h in Headers */,
 				90D05585238FB51600DB766C /* avcodec_shim.h in Headers */,
 				90D05584238FB51600DB766C /* swscale_shim.h in Headers */,
 				90D05582238FB51600DB766C /* avutil_shim.h in Headers */,
@@ -442,7 +442,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				90D05581238FB51600DB766C /* Encoder.swift in Sources */,
-				90D05586238FB51600DB766C /* OCBridgingHelper.m in Sources */,
+				90D05586238FB51600DB766C /* FFmepgWrapperOCBridge.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

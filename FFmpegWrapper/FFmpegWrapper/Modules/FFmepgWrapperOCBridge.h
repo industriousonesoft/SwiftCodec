@@ -1,5 +1,5 @@
 //
-//  OCBridgingHelper.h
+//  OCBridge.h
 //  FFMpegEncoder
 //
 //  Created by caowanping on 2019/11/27.
@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 
-@interface OCBridgingHelper : NSObject
+@interface FFmepgWrapperOCBridge : NSObject
 
 + (int)avPixelFormatRGB32;
 + (int)avErrorEOF;

@@ -8,16 +8,18 @@
 
 import Foundation
 import CFFmpeg
-import OCBridge
+import FFmepgWrapperOCBridge
 
-private let AV_PIX_FMT_RGB32 = AVPixelFormat(OCBridgingHelper.avPixelFormatRGB32())
+private let SWIFT_AV_PIX_FMT_RGB32 = AVPixelFormat(FFmepgWrapperOCBridge.avPixelFormatRGB32())
+private let SWIFT_AV_ERROR_EOF = FFmepgWrapperOCBridge.avErrorEOF()
+private let SWIFT_AV_ERROR_EAGAIN = FFmepgWrapperOCBridge.avErrorEagain()
 
 public class FFmpegEncoder: NSObject {
     
-    private var inWidth: Int32 = 0
-    private var inHeight: Int32 = 0
-    private var outWidth: Int32 = 0
-    private var outHeight: Int32 = 0
+    public private(set) var inWidth: Int32 = 0
+    public private(set) var inHeight: Int32 = 0
+    public private(set) var outWidth: Int32 = 0
+    public private(set) var outHeight: Int32 = 0
     
     private var codec: UnsafeMutablePointer<AVCodec>?
     private var codecContext: UnsafeMutablePointer<AVCodecContext>?
@@ -36,7 +38,7 @@ public class FFmpegEncoder: NSObject {
     }
     
     deinit {
-        self.destotyEncoder()
+        self.destoty()
     }
     
     public func initEncoder(inWidth: Int32, inHeight: Int32, outWidth: Int32, outHeight: Int32, bitrate: Int64) -> Bool {
@@ -45,7 +47,7 @@ public class FFmpegEncoder: NSObject {
         
         defer {
             if hasError == true {
-                self.destotyEncoder()
+                self.destoty()
             }
         }
         
@@ -90,7 +92,7 @@ public class FFmpegEncoder: NSObject {
         
         //InFrame
         if let frame = av_frame_alloc() {
-            frame.pointee.format = AV_PIX_FMT_RGB32.rawValue
+            frame.pointee.format = SWIFT_AV_PIX_FMT_RGB32.rawValue
             frame.pointee.width = inWidth
             frame.pointee.height = inHeight
             frame.pointee.pts = 0
@@ -104,7 +106,7 @@ public class FFmpegEncoder: NSObject {
             
             self.inFrameBuffer = unsafeBitCast(malloc(Int(frameSize)), to: UnsafeMutablePointer<UInt8>.self)
             
-            if av_image_fill_arrays(&(frame.pointee.data.0), &(frame.pointee.linesize.0), self.inFrameBuffer, AV_PIX_FMT_RGB32, inWidth, inHeight, 1) < 0 {
+            if av_image_fill_arrays(&(frame.pointee.data.0), &(frame.pointee.linesize.0), self.inFrameBuffer, SWIFT_AV_PIX_FMT_RGB32, inWidth, inHeight, 1) < 0 {
                 print("Can not fill input frame...")
                 hasError = true
                 return false
@@ -148,7 +150,7 @@ public class FFmpegEncoder: NSObject {
             return false
         }
     
-        if let sws = sws_getContext(inWidth, inHeight, AV_PIX_FMT_RGB32, outWidth, outHeight, AV_PIX_FMT_YUV420P, SWS_BILINEAR, nil, nil, nil) {
+        if let sws = sws_getContext(inWidth, inHeight, SWIFT_AV_PIX_FMT_RGB32, outWidth, outHeight, AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, nil, nil, nil) {
              self.swsContext = sws
         }else {
             print("Can not create sws context...")
@@ -159,19 +161,23 @@ public class FFmpegEncoder: NSObject {
         return true
     }
     
-    public func destotyEncoder() {
+    public func destoty() {
         if let context = self.codecContext {
             avcodec_close(context)
             av_free(context)
+            self.codecContext = nil
         }
         if let sws = self.swsContext {
             sws_freeContext(sws)
+            self.swsContext = nil
         }
         if let frame = self.outFrame {
             av_free(frame)
+            self.outFrame = nil
         }
         if let frameBuffer = self.outFrameBuffer {
             free(frameBuffer)
+            self.outFrameBuffer = nil
         }
     }
     
@@ -252,9 +258,9 @@ public class FFmpegEncoder: NSObject {
                 }
                 
                 ret = avcodec_receive_packet(self.codecContext, UnsafeMutablePointer<AVPacket>(&self.packet))
-                if ret == OCBridgingHelper.avErrorEOF() {
+                if ret == SWIFT_AV_ERROR_EOF {
                     print("avcodec_recieve_packet() encoder flushed...")
-                }else if ret == OCBridgingHelper.avErrorEagain() {
+                }else if ret == SWIFT_AV_ERROR_EAGAIN {
                     print("avcodec_recieve_packet() need more input...")
                 }else if ret < 0 {
                     onFailure(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when encoding."]))
