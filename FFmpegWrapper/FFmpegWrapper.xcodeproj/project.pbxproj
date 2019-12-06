@@ -16,6 +16,7 @@
 		90D05584238FB51600DB766C /* swscale_shim.h in Headers */ = {isa = PBXBuildFile; fileRef = 90D0557D238FB51600DB766C /* swscale_shim.h */; };
 		90D05585238FB51600DB766C /* avcodec_shim.h in Headers */ = {isa = PBXBuildFile; fileRef = 90D0557E238FB51600DB766C /* avcodec_shim.h */; };
 		90D05586238FB51600DB766C /* FFmepgWrapperOCBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 90D0557F238FB51600DB766C /* FFmepgWrapperOCBridge.m */; };
+		90D3E0AE2398E084009C2195 /* libavformat.58.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90D3E0AD2398E083009C2195 /* libavformat.58.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -143,6 +144,11 @@
 		90D05639238FC6CA00DB766C /* libswresample.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libswresample.3.dylib; sourceTree = "<group>"; };
 		90D0563A238FC6CA00DB766C /* libgsm.1.0.13.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libgsm.1.0.13.dylib; sourceTree = "<group>"; };
 		90D0563B238FC6CB00DB766C /* libx265.169.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libx265.169.dylib; sourceTree = "<group>"; };
+		90D3E0AD2398E083009C2195 /* libavformat.58.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libavformat.58.dylib; sourceTree = "<group>"; };
+		90D3E0B02398E09F009C2195 /* version.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = version.h; sourceTree = "<group>"; };
+		90D3E0B12398E09F009C2195 /* avio.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = avio.h; sourceTree = "<group>"; };
+		90D3E0B22398E09F009C2195 /* avformat.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = avformat.h; sourceTree = "<group>"; };
+		90D3E0B32398E0E3009C2195 /* avformat_shim.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = avformat_shim.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -150,6 +156,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				90D3E0AE2398E084009C2195 /* libavformat.58.dylib in Frameworks */,
 				90CC7A2F238E1173005FCD2D /* libavcodec.58.dylib in Frameworks */,
 				90CC7A30238E1176005FCD2D /* libavutil.56.dylib in Frameworks */,
 				90CC7A31238E1179005FCD2D /* libswscale.5.dylib in Frameworks */,
@@ -196,6 +203,7 @@
 		90CC79C2238E114F005FCD2D /* include */ = {
 			isa = PBXGroup;
 			children = (
+				90D3E0AF2398E09F009C2195 /* libavformat */,
 				90CC79C3238E114F005FCD2D /* libavutil */,
 				90CC7A14238E114F005FCD2D /* libswscale */,
 				90CC7A17238E114F005FCD2D /* libavcodec */,
@@ -327,6 +335,7 @@
 		90CC7A2A238E114F005FCD2D /* lib */ = {
 			isa = PBXGroup;
 			children = (
+				90D3E0AD2398E083009C2195 /* libavformat.58.dylib */,
 				90CC7A2B238E114F005FCD2D /* libswscale.5.dylib */,
 				90CC7A2C238E114F005FCD2D /* libavutil.56.dylib */,
 				90CC7A2D238E114F005FCD2D /* libavcodec.58.dylib */,
@@ -362,11 +371,22 @@
 				90D0557B238FB51600DB766C /* avutil_shim.h */,
 				90D0557D238FB51600DB766C /* swscale_shim.h */,
 				90D0557E238FB51600DB766C /* avcodec_shim.h */,
+				90D3E0B32398E0E3009C2195 /* avformat_shim.h */,
 				90D0557C238FB51600DB766C /* FFmepgWrapperOCBridge.h */,
 				90D0557F238FB51600DB766C /* FFmepgWrapperOCBridge.m */,
 				90D05580238FB51600DB766C /* module.modulemap */,
 			);
 			path = Modules;
+			sourceTree = "<group>";
+		};
+		90D3E0AF2398E09F009C2195 /* libavformat */ = {
+			isa = PBXGroup;
+			children = (
+				90D3E0B02398E09F009C2195 /* version.h */,
+				90D3E0B12398E09F009C2195 /* avio.h */,
+				90D3E0B22398E09F009C2195 /* avformat.h */,
+			);
+			path = libavformat;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -566,7 +586,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				EXECUTABLE_PREFIX = lib;
-				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/LinkedFramework/FFMpeg/include";
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/LinkedFramework/FFMpeg/include\"";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -574,7 +594,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/LinkedFramework/FFMpeg/lib",
+					"\"$(SRCROOT)/LinkedFramework/FFMpeg/lib\"",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -592,7 +612,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				EXECUTABLE_PREFIX = lib;
-				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/LinkedFramework/FFMpeg/include";
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/LinkedFramework/FFMpeg/include\"";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -600,7 +620,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/LinkedFramework/FFMpeg/lib",
+					"\"$(SRCROOT)/LinkedFramework/FFMpeg/lib\"",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
