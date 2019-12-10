@@ -41,6 +41,81 @@ public class FFmpegEncoder: NSObject {
     
     public var onEncoderFinished: OnEncodedFinishedClouser?
     public var onEncoderFaiure: OnEncodedFailuerClouser?
+    
+    private var srcSliceArray: [UnsafePointer<UInt8>?]? {
+        get {
+            if let frame = self.inFrame {
+                return [
+                    UnsafePointer<UInt8>(frame.pointee.data.0),
+                    UnsafePointer<UInt8>(frame.pointee.data.1),
+                    UnsafePointer<UInt8>(frame.pointee.data.2),
+                    UnsafePointer<UInt8>(frame.pointee.data.3),
+                    UnsafePointer<UInt8>(frame.pointee.data.4),
+                    UnsafePointer<UInt8>(frame.pointee.data.5),
+                    UnsafePointer<UInt8>(frame.pointee.data.6),
+                    UnsafePointer<UInt8>(frame.pointee.data.7),
+                ]
+            }else {
+                return nil
+            }
+        }
+    }
+    private var srcStrideArray: [Int32]? {
+        get {
+            if let frame = self.inFrame {
+                return [
+                    frame.pointee.linesize.0,
+                    frame.pointee.linesize.1,
+                    frame.pointee.linesize.2,
+                    frame.pointee.linesize.3,
+                    frame.pointee.linesize.4,
+                    frame.pointee.linesize.5,
+                    frame.pointee.linesize.6,
+                    frame.pointee.linesize.7
+                ]
+            }else {
+                return nil
+            }
+        }
+    }
+                  
+    private var dstSliceArray: [UnsafeMutablePointer<UInt8>?]? {
+        get {
+            if let frame = self.outFrame {
+                return [
+                    UnsafeMutablePointer<UInt8>(frame.pointee.data.0),
+                    UnsafeMutablePointer<UInt8>(frame.pointee.data.1),
+                    UnsafeMutablePointer<UInt8>(frame.pointee.data.2),
+                    UnsafeMutablePointer<UInt8>(frame.pointee.data.3),
+                    UnsafeMutablePointer<UInt8>(frame.pointee.data.4),
+                    UnsafeMutablePointer<UInt8>(frame.pointee.data.5),
+                    UnsafeMutablePointer<UInt8>(frame.pointee.data.6),
+                    UnsafeMutablePointer<UInt8>(frame.pointee.data.7),
+                ]
+            }else {
+                return nil
+            }
+        }
+    }
+    private var dstStrideArray: [Int32]? {
+        get {
+            if let frame = self.outFrame {
+                return [
+                    frame.pointee.linesize.0,
+                    frame.pointee.linesize.1,
+                    frame.pointee.linesize.2,
+                    frame.pointee.linesize.3,
+                    frame.pointee.linesize.4,
+                    frame.pointee.linesize.5,
+                    frame.pointee.linesize.6,
+                    frame.pointee.linesize.7
+                ]
+            }else {
+                return nil
+            }
+        }
+    }
+                  
    
     public override init() {
         super.init()
@@ -87,6 +162,7 @@ extension FFmpegEncoder {
             }
             
             if let context = avcodec_alloc_context3(self.codec) {
+                context.pointee.codec_id = AV_CODEC_ID_MPEG1VIDEO
                 context.pointee.dct_algo = FF_DCT_FASTINT
                 context.pointee.bit_rate = bitrate
                 context.pointee.width = outWidth
@@ -96,6 +172,7 @@ extension FFmpegEncoder {
                 context.pointee.gop_size = 25
                 context.pointee.max_b_frames = 0 //Drop out B frame
                 context.pointee.pix_fmt = AV_PIX_FMT_YUV420P
+                context.pointee.mb_cmp = FF_MB_DECISION_SIMPLE
                 self.codecContext = context
             }else {
                 print("Can not create codec context...")
@@ -178,9 +255,10 @@ extension FFmpegEncoder {
             }
           
             self.initMuxer()
+        
             return true
         }
-        
+    
         func destroyEncoder() {
             if let context = self.codecContext {
                 avcodec_close(context)
@@ -220,53 +298,9 @@ extension FFmpegEncoder {
                 //RGB32
                 self.inFrame!.pointee.linesize.0 = self.inWidth * 4
                 
-                let sourceData = [
-                    UnsafePointer<UInt8>(self.inFrame!.pointee.data.0),
-                    UnsafePointer<UInt8>(self.inFrame!.pointee.data.1),
-                    UnsafePointer<UInt8>(self.inFrame!.pointee.data.2),
-                    UnsafePointer<UInt8>(self.inFrame!.pointee.data.3),
-                    UnsafePointer<UInt8>(self.inFrame!.pointee.data.4),
-                    UnsafePointer<UInt8>(self.inFrame!.pointee.data.5),
-                    UnsafePointer<UInt8>(self.inFrame!.pointee.data.6),
-                    UnsafePointer<UInt8>(self.inFrame!.pointee.data.7),
-                ]
-                
-                let sourceLineSize = [
-                    self.inFrame!.pointee.linesize.0,
-                    self.inFrame!.pointee.linesize.1,
-                    self.inFrame!.pointee.linesize.2,
-                    self.inFrame!.pointee.linesize.3,
-                    self.inFrame!.pointee.linesize.4,
-                    self.inFrame!.pointee.linesize.5,
-                    self.inFrame!.pointee.linesize.6,
-                    self.inFrame!.pointee.linesize.7
-                ]
-                
-                let targetData = [
-                    self.outFrame!.pointee.data.0,
-                    self.outFrame!.pointee.data.1,
-                    self.outFrame!.pointee.data.2,
-                    self.outFrame!.pointee.data.3,
-                    self.outFrame!.pointee.data.4,
-                    self.outFrame!.pointee.data.5,
-                    self.outFrame!.pointee.data.6,
-                    self.outFrame!.pointee.data.7
-                ]
-                
-                let targetLineSize = [
-                    self.outFrame!.pointee.linesize.0,
-                    self.outFrame!.pointee.linesize.1,
-                    self.outFrame!.pointee.linesize.2,
-                    self.outFrame!.pointee.linesize.3,
-                    self.outFrame!.pointee.linesize.4,
-                    self.outFrame!.pointee.linesize.5,
-                    self.outFrame!.pointee.linesize.6,
-                    self.outFrame!.pointee.linesize.7
-                ]
-                
                 //Convert RGB32 to YUV420
                 //Return the height of the output slice
-                let destSliceH = sws_scale(self.swsContext, sourceData, sourceLineSize, 0, self.inHeight, targetData, targetLineSize)
+                let destSliceH = sws_scale(self.swsContext, self.srcSliceArray, self.srcStrideArray, 0, self.inHeight, self.dstSliceArray, self.dstStrideArray)
                 
                 if destSliceH > 0 {
                
@@ -297,9 +331,14 @@ extension FFmpegEncoder {
                     
                     if ret == 0 {
                         
-                        print("Encoded successfully...")
+//                        print("Encoded successfully...")
                         
                         av_packet_rescale_ts(&self.packet, self.codecContext!.pointee.time_base, self.outVideoStream!.pointee.time_base)
+                        
+                        if self.outFrame?.pointee.key_frame == 1 {
+                            self.packet.flags |= AV_PKT_FLAG_KEY
+                        }
+                        
                         self.packet.stream_index = self.outVideoStream!.pointee.index
                         if let ofCtx = self.outFMTCtx {
                             av_interleaved_write_frame(ofCtx, &self.packet)
