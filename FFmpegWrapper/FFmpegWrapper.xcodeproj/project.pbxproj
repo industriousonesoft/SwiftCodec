@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		90BF91C323A77877006CF64F /* libswresample.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05639238FC6CA00DB766C /* libswresample.3.dylib */; };
 		90CC7A2F238E1173005FCD2D /* libavcodec.58.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90CC7A2D238E114F005FCD2D /* libavcodec.58.dylib */; };
 		90CC7A30238E1176005FCD2D /* libavutil.56.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90CC7A2C238E114F005FCD2D /* libavutil.56.dylib */; };
 		90CC7A31238E1179005FCD2D /* libswscale.5.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90CC7A2B238E114F005FCD2D /* libswscale.5.dylib */; };
@@ -20,6 +21,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		90BF91C423A7789D006CF64F /* swresample_shim.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = swresample_shim.h; sourceTree = "<group>"; };
+		90BF91C923A779DA006CF64F /* version.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = version.h; sourceTree = "<group>"; };
+		90BF91CA23A779DA006CF64F /* swresample.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = swresample.h; sourceTree = "<group>"; };
 		90CC79B2238E0E8F005FCD2D /* libFFmpegWrapper.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libFFmpegWrapper.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		90CC79C4238E114F005FCD2D /* hwcontext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = hwcontext.h; sourceTree = "<group>"; };
 		90CC79C5238E114F005FCD2D /* time.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = time.h; sourceTree = "<group>"; };
@@ -158,6 +162,7 @@
 			files = (
 				90D3E0AE2398E084009C2195 /* libavformat.58.dylib in Frameworks */,
 				90CC7A2F238E1173005FCD2D /* libavcodec.58.dylib in Frameworks */,
+				90BF91C323A77877006CF64F /* libswresample.3.dylib in Frameworks */,
 				90CC7A30238E1176005FCD2D /* libavutil.56.dylib in Frameworks */,
 				90CC7A31238E1179005FCD2D /* libswscale.5.dylib in Frameworks */,
 			);
@@ -166,6 +171,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		90BF91C823A779DA006CF64F /* libswresample */ = {
+			isa = PBXGroup;
+			children = (
+				90BF91C923A779DA006CF64F /* version.h */,
+				90BF91CA23A779DA006CF64F /* swresample.h */,
+			);
+			path = libswresample;
+			sourceTree = "<group>";
+		};
 		90CC79A9238E0E8F005FCD2D = {
 			isa = PBXGroup;
 			children = (
@@ -203,6 +217,7 @@
 		90CC79C2238E114F005FCD2D /* include */ = {
 			isa = PBXGroup;
 			children = (
+				90BF91C823A779DA006CF64F /* libswresample */,
 				90D3E0AF2398E09F009C2195 /* libavformat */,
 				90CC79C3238E114F005FCD2D /* libavutil */,
 				90CC7A14238E114F005FCD2D /* libswscale */,
@@ -369,9 +384,10 @@
 			isa = PBXGroup;
 			children = (
 				90D0557B238FB51600DB766C /* avutil_shim.h */,
-				90D0557D238FB51600DB766C /* swscale_shim.h */,
 				90D0557E238FB51600DB766C /* avcodec_shim.h */,
 				90D3E0B32398E0E3009C2195 /* avformat_shim.h */,
+				90D0557D238FB51600DB766C /* swscale_shim.h */,
+				90BF91C423A7789D006CF64F /* swresample_shim.h */,
 				90D0557C238FB51600DB766C /* FFmepgWrapperOCBridge.h */,
 				90D0557F238FB51600DB766C /* FFmepgWrapperOCBridge.m */,
 				90D05580238FB51600DB766C /* module.modulemap */,
@@ -596,6 +612,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/LinkedFramework/FFMpeg/lib\"",
+					"$(PROJECT_DIR)/LinkedFramework/FFMpeg/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -623,6 +640,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/LinkedFramework/FFMpeg/lib\"",
+					"$(PROJECT_DIR)/LinkedFramework/FFMpeg/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
