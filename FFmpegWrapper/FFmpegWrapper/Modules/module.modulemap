@@ -14,9 +14,14 @@ module CFFmpeg [system] {
         link "avformat"
         export *
     }
-    module Swscale {
+    module SWScale {
         header "swscale_shim.h"
         link "swscale"
+        export *
+    }
+    module SWResample {
+        header "swresample_shim.h"
+        link "swresample"
         export *
     }
 }
