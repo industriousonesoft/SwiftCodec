@@ -25,4 +25,9 @@
 + (int)avErrorEagain {
     return AVERROR(EAGAIN);
 }
+
++ (char *)avErr2str:(int)errCode {
+    return av_err2str(errCode);
+}
+
 @end

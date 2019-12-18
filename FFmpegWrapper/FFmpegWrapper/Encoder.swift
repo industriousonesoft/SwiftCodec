@@ -181,6 +181,15 @@ extension FFmpegEncoder {
         self.outAudioDesc = outAudioDesc
         
         let codecId: AVCodecID = AV_CODEC_ID_MP2
+        if let codec = avcodec_find_encoder(codecId) {
+            self.audioCodec = codec
+            print("Created audio codec...\(self.selectSampleRate(codec: codec)) - \(self.selectChannelLayout(codec: codec))")
+        }else {
+            print("Can not create audio codec...")
+            hasError = true
+            return false
+        }
+        
         if let context = avcodec_alloc_context3(self.audioCodec) {
             context.pointee.codec_id = codecId
             context.pointee.codec_type = AVMEDIA_TYPE_AUDIO
@@ -188,18 +197,10 @@ extension FFmpegEncoder {
             context.pointee.channel_layout = UInt64(av_get_default_channel_layout(outAudioDesc.channels))//UInt64(AV_CH_LAYOUT_STEREO)
             context.pointee.sample_rate = outAudioDesc.sampleRate//44100
             context.pointee.channels = outAudioDesc.channels//2
-            context.pointee.bit_rate = 64000
+            context.pointee.bit_rate = 128000
             self.audioCodecContext = context
         }else {
             print("Can not create audio codec context...")
-            hasError = true
-            return false
-        }
-        
-        if let codec = avcodec_find_encoder(self.audioCodecContext!.pointee.codec_id) {
-            self.audioCodec = codec
-        }else {
-            print("Can not create audio codec...")
             hasError = true
             return false
         }
@@ -213,8 +214,27 @@ extension FFmpegEncoder {
         //outFrame
         if let frame = av_frame_alloc() {
             frame.pointee.format = outAudioDesc.sampleFormat
-            frame.pointee.nb_samples = self.audioCodecContext!.pointee.frame_size
+            
+            let nb_samples = self.audioCodecContext!.pointee.frame_size
+            frame.pointee.nb_samples = nb_samples
+
+            let size = av_samples_get_buffer_size(nil, outAudioDesc.channels, nb_samples, AVSampleFormat(outAudioDesc.sampleFormat), 1)
+            if size < 0 {
+                print("Can not get the output sampele buffer size...")
+                hasError = true
+                return false
+            }
+            
+            self.audioOutFrameBuffer = unsafeBitCast(malloc(Int(size)), to: UnsafeMutablePointer<UInt8>.self)
+            
+            if avcodec_fill_audio_frame(frame, outAudioDesc.channels, AVSampleFormat(outAudioDesc.sampleFormat), self.audioOutFrameBuffer, size, 1) < 0 {
+                print("Can not fill output audio frame...")
+                hasError = true
+                return false
+            }
+            
             self.audioOutFrame = frame
+            
         }else {
             print("Can not create audio output frame...")
             hasError = true
@@ -264,6 +284,44 @@ extension FFmpegEncoder {
 
     }
     
+    func selectSampleRate(codec: UnsafeMutablePointer<AVCodec>) -> Int32 {
+        //supported_samplerates is a Int32 array contains all the supported samplerate
+        guard let ptr: UnsafePointer<Int32> = codec.pointee.supported_samplerates else {
+            return 44100
+        }
+        var bestSamplerate: Int32 = 0
+        var index: Int = 0
+        var cur = ptr.advanced(by: index).pointee
+        while cur != 0 {
+            if (bestSamplerate == 0 || abs(44100 - cur) < abs(44100 - bestSamplerate)) {
+                bestSamplerate = cur
+            }
+            index += 1
+            cur = ptr.advanced(by: index).pointee
+        }
+        return bestSamplerate
+    }
+    
+    func selectChannelLayout(codec: UnsafeMutablePointer<AVCodec>) -> UInt64 {
+        guard let ptr: UnsafePointer<UInt64> = codec.pointee.channel_layouts else {
+            return UInt64(AV_CH_LAYOUT_STEREO)
+        }
+        var bestChannelLayout: UInt64 = 0
+        var bestChannels: Int32 = 0
+        var index: Int = 0
+        var cur = ptr.advanced(by: index).pointee
+        while cur != 0 {
+            let curChannels = av_get_channel_layout_nb_channels(cur)
+            if curChannels > bestChannels {
+                bestChannelLayout = cur
+                bestChannels = curChannels
+            }
+            index += 1
+            cur = ptr.advanced(by: index).pointee
+        }
+        return bestChannelLayout
+    }
+    
     func updateAudioOutFrame(nb_samples: Int32) -> Bool {
         
         guard let outFrame = self.audioOutFrame, let outAudioDesc = self.outAudioDesc else {
@@ -282,7 +340,7 @@ extension FFmpegEncoder {
             }
             
             outFrame.pointee.nb_samples = nb_samples
-            let size = av_samples_get_buffer_size(nil, self.audioCodecContext!.pointee.channels, nb_samples, AVSampleFormat(outAudioDesc.sampleFormat), 1)
+            let size = av_samples_get_buffer_size(nil, outAudioDesc.channels, nb_samples, AVSampleFormat(outAudioDesc.sampleFormat), 1)
             if size < 0 {
                 print("Can not get the output sampele buffer size...")
                 hasError = true
@@ -291,11 +349,13 @@ extension FFmpegEncoder {
             
             self.audioOutFrameBuffer = unsafeBitCast(malloc(Int(size)), to: UnsafeMutablePointer<UInt8>.self)
             
-            if avcodec_fill_audio_frame(outFrame, self.audioCodecContext!.pointee.channels, AVSampleFormat(outAudioDesc.sampleFormat), self.audioOutFrameBuffer, size, 1) < 0 {
+            if avcodec_fill_audio_frame(outFrame, outAudioDesc.channels, AVSampleFormat(outAudioDesc.sampleFormat), self.audioOutFrameBuffer, size, 1) < 0 {
                 print("Can not fill output audio frame...")
                 hasError = true
                 return false
             }
+            
+            print("The audio output sampele updated..")
         }
     
         return true
@@ -308,12 +368,15 @@ extension FFmpegEncoder {
             var srcBuff = unsafeBitCast(pamBytes, to: UnsafePointer<UInt8>?.self)
         
             let src_nb_samples = bytesLen/(inAudioDesc.channels * inAudioDesc.bitsPerChannel / 8)/*2 channel, 32 bits per channel(SWIFT_AV_SAMPLE_FMT_FLT)*/
-            let dst_nb_samples = av_rescale_rnd(swr_get_delay(swr, Int64(inAudioDesc.sampleRate)) + Int64(src_nb_samples), Int64(outAudioDesc.sampleRate), Int64(inAudioDesc.sampleRate), AV_ROUND_UP)
+            let dst_nb_samples = self.audioOutFrame!.pointee.nb_samples
             
+            /* 使用下面公式计算并更改audioOutFrame的nb_samples值会导致编码失败（-22)，改为在定义audioOutFrame使用self.audioCodecContext!.pointee.frame_size作为nb_samples值
+             let dst_nb_samples = av_rescale_rnd(swr_get_delay(swr, Int64(inAudioDesc.sampleRate)) + Int64(src_nb_samples), Int64(outAudioDesc.sampleRate), Int64(inAudioDesc.sampleRate), AV_ROUND_UP)
             guard self.updateAudioOutFrame(nb_samples: Int32(dst_nb_samples)) == true else {
                 self.onAudioEncoderFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(-1), userInfo: [NSLocalizedDescriptionKey : "Error about update audio out frame for rasampling."]))
                 return
             }
+             */
             
             let nb_samples = swr_convert(swr, &self.audioOutFrameBuffer, Int32(dst_nb_samples), &srcBuff, src_nb_samples)
             
@@ -325,51 +388,49 @@ extension FFmpegEncoder {
                     onResample(self.audioOutFrameBuffer!, size)
                 }
                 
-                if let onEncoded = self.onAudioEncodeFinished {
+                av_init_packet(UnsafeMutablePointer<AVPacket>(&self.audioPacket))
+                                
+                defer {
+                    av_packet_unref(UnsafeMutablePointer<AVPacket>(&self.audioPacket))
+                }
+                
+                //FIXME: How to set pts of audio frame
+                self.audioOutFrame!.pointee.pts += 1
+             
+                var ret = avcodec_send_frame(codecCtx, self.audioOutFrame)
+                if ret < 0 {
+                    self.onAudioEncoderFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error about sending a packet for audio encoding."]))
+                    return
+                }
+                
+                ret = avcodec_receive_packet(self.audioCodecContext, UnsafeMutablePointer<AVPacket>(&self.audioPacket))
+                if ret == SWIFT_AV_ERROR_EOF {
+                    print("avcodec_recieve_packet() encoder flushed...")
+                }else if ret == SWIFT_AV_ERROR_EAGAIN {
+                    print("avcodec_recieve_packet() need more input...")
+                }else if ret < 0 {
+                    self.onAudioEncoderFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when encoding audio."]))
+                    return
+                }
+                
+                if ret == 0 {
                     
-                    self.audioOutFrame!.pointee.pts += 1
-                                    
-                    av_init_packet(UnsafeMutablePointer<AVPacket>(&self.audioPacket))
-                                    
-                    defer {
-                        av_packet_unref(UnsafeMutablePointer<AVPacket>(&self.audioPacket))
-                    }
-                    
-                    var ret = avcodec_send_frame(codecCtx, self.audioOutFrame)
-                    if ret < 0 {
-                        self.onAudioEncoderFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error about sending a packet for audio encoding."]))
-                        return
-                    }
-                    
-                    ret = avcodec_receive_packet(self.audioCodecContext, UnsafeMutablePointer<AVPacket>(&self.audioPacket))
-                    if ret == SWIFT_AV_ERROR_EOF {
-                        print("avcodec_recieve_packet() encoder flushed...")
-                    }else if ret == SWIFT_AV_ERROR_EAGAIN {
-                        print("avcodec_recieve_packet() need more input...")
-                    }else if ret < 0 {
-                        self.onAudioEncoderFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when encoding audio."]))
-                        return
-                    }
-                    
-                    if ret == 0 {
-                        
-    //                    print("Encoded audio successfully...")
-                                    
+//                    print("Encoded audio successfully...")
+                      
+                    if let onEncoded = self.onAudioEncodeFinished {
                         let packetSize = Int(self.audioPacket.size)
                         let encodedBytes = unsafeBitCast(malloc(packetSize), to: UnsafeMutablePointer<UInt8>.self)
                         memcpy(encodedBytes, self.audioPacket.data, packetSize)
                         onEncoded(encodedBytes, Int32(packetSize))
-                        
-                        if let ofCtx = self.outFMTCtx, self.onMuxerFinished != nil {
-                            self.audioPacket.stream_index = self.outAudioStream!.pointee.index
-                            av_packet_rescale_ts(&self.audioPacket, self.audioCodecContext!.pointee.time_base, self.outAudioStream!.pointee.time_base)
-                            av_interleaved_write_frame(ofCtx, &self.audioPacket)
-                        }
-                        
                     }
+                    
+                    if let ofCtx = self.outFMTCtx, self.onMuxerFinished != nil {
+                        self.audioPacket.stream_index = self.outAudioStream!.pointee.index
+                        av_packet_rescale_ts(&self.audioPacket, self.audioCodecContext!.pointee.time_base, self.outAudioStream!.pointee.time_base)
+                        av_interleaved_write_frame(ofCtx, &self.audioPacket)
+                    }
+                    
                 }
-                
-                
             }
         }
     }
@@ -396,8 +457,15 @@ extension FFmpegEncoder {
         
         //Deprecated, No neccessary any more!
 //        avcodec_register_all()
-        
         let codecId: AVCodecID = AV_CODEC_ID_MPEG1VIDEO
+        if let codec = avcodec_find_encoder(codecId) {
+            self.videoCodec = codec
+        }else {
+            print("Can not create video codec...")
+            hasError = true
+            return false
+        }
+        
         if let context = avcodec_alloc_context3(self.videoCodec) {
             context.pointee.codec_id = codecId
             context.pointee.codec_type = AVMEDIA_TYPE_VIDEO
@@ -414,14 +482,6 @@ extension FFmpegEncoder {
             self.videoCodecContext = context
         }else {
             print("Can not create video codec context...")
-            hasError = true
-            return false
-        }
-        
-        if let codec = avcodec_find_encoder(self.videoCodecContext!.pointee.codec_id) {
-            self.videoCodec = codec
-        }else {
-            print("Can not create video codec...")
             hasError = true
             return false
         }
@@ -549,7 +609,7 @@ extension FFmpegEncoder {
             //Return the height of the output slice
             let destSliceH = sws_scale(self.swsContext, self.videoSrcSliceArray, self.videoSrcStrideArray, 0, self.inHeight, self.videoDstSliceArray, self.videoDstStrideArray)
             
-            if destSliceH > 0, let onEncoded = self.onVideoEncodeFinished {
+            if destSliceH > 0 {
            
                 //Why do pts here need to add 1?
                 self.videoOutFrame!.pointee.pts += 1
@@ -583,10 +643,12 @@ extension FFmpegEncoder {
                         self.videoPacket.flags |= AV_PKT_FLAG_KEY
                     }
                     
-                    let packetSize = Int(self.videoPacket.size)
-                    let encodedBytes = unsafeBitCast(malloc(packetSize), to: UnsafeMutablePointer<UInt8>.self)
-                    memcpy(encodedBytes, self.videoPacket.data, packetSize)
-                    onEncoded(encodedBytes, Int32(packetSize))
+                    if let onEncoded = self.onVideoEncodeFinished {
+                        let packetSize = Int(self.videoPacket.size)
+                        let encodedBytes = unsafeBitCast(malloc(packetSize), to: UnsafeMutablePointer<UInt8>.self)
+                        memcpy(encodedBytes, self.videoPacket.data, packetSize)
+                        onEncoded(encodedBytes, Int32(packetSize))
+                    }
                     
                     if let ofCtx = self.outFMTCtx, self.onMuxerFinished != nil {
                     
@@ -631,10 +693,6 @@ extension FFmpegEncoder {
                 self.outVideoStream?.pointee.id = Int32(fmtCtx.pointee.nb_streams - 1)
                 
                 codecCtx.pointee.codec_tag = 0
-                let flags = fmtCtx.pointee.oformat.pointee.flags
-                if (flags & AVFMT_GLOBALHEADER) > 0 {
-                    fmtCtx.pointee.oformat.pointee.flags |= AV_CODEC_FLAG_GLOBAL_HEADER
-                }
                 if let stream = self.outVideoStream, avcodec_parameters_from_context(stream.pointee.codecpar, codecCtx) < 0 {
                     print("Failed to copy codec context parameters to video out stream")
                     return
@@ -644,16 +702,17 @@ extension FFmpegEncoder {
             if let codec = self.audioCodec, let codecCtx = self.audioCodecContext {
                 self.outAudioStream = avformat_new_stream(fmtCtx, codec)
                 self.outAudioStream?.pointee.id = Int32(fmtCtx.pointee.nb_streams - 1)
-                
+              
                 codecCtx.pointee.codec_tag = 0
-                let flags = fmtCtx.pointee.oformat.pointee.flags
-                if (flags & AVFMT_GLOBALHEADER) > 0 {
-                    fmtCtx.pointee.oformat.pointee.flags |= AV_CODEC_FLAG_GLOBAL_HEADER
-                }
                 if let stream = self.outAudioStream, avcodec_parameters_from_context(stream.pointee.codecpar, codecCtx) < 0 {
                     print("Failed to copy codec context parameters to audio out stream")
                     return
                 }
+            }
+            
+            let flags = fmtCtx.pointee.oformat.pointee.flags
+            if (flags & AVFMT_GLOBALHEADER) > 0 {
+                fmtCtx.pointee.oformat.pointee.flags |= AV_CODEC_FLAG_GLOBAL_HEADER
             }
             
             av_dump_format(fmtCtx, 0, nil, 1)

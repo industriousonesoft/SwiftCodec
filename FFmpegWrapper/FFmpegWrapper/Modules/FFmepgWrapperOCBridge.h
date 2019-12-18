@@ -13,5 +13,6 @@
 + (int)avPixelFormatRGB32;
 + (int)avErrorEOF;
 + (int)avErrorEagain;
++ (char *)avErr2str:(int)errCode;
 
 @end
