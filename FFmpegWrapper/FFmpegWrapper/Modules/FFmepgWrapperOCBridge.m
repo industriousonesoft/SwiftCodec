@@ -30,4 +30,8 @@
     return av_err2str(errCode);
 }
 
++ (int64_t)avNoPTSValue {
+    return AV_NOPTS_VALUE;
+}
+
 @end
