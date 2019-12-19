@@ -14,5 +14,6 @@
 + (int)avErrorEOF;
 + (int)avErrorEagain;
 + (char *)avErr2str:(int)errCode;
++ (int64_t)avNoPTSValue;
 
 @end
