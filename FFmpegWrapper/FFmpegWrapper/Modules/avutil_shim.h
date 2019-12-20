@@ -9,4 +9,5 @@
 #pragma once
 #include "libavutil/avutil.h"
 #include "libavutil/imgutils.h"
+#include "libavutil/audio_fifo.h"
 
