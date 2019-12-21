@@ -55,6 +55,7 @@ public class FFmpegEncoder: NSObject {
     private var outVideoStream: UnsafeMutablePointer<AVStream>?
     
     private var videoNextPts: Int64 = 0
+    private var videoFrameCount: Int64 = 0
     
     //Audio
     private var audioCodec: UnsafeMutablePointer<AVCodec>?
@@ -214,7 +215,7 @@ extension FFmpegEncoder {
             context.pointee.channel_layout = UInt64(av_get_default_channel_layout(outAudioDesc.channels))//UInt64(AV_CH_LAYOUT_STEREO)
             context.pointee.sample_rate = outAudioDesc.sampleRate//44100
             context.pointee.channels = outAudioDesc.channels//2
-            context.pointee.bit_rate = 128000 //128kbps
+            context.pointee.bit_rate = 64000 //128kbps
             context.pointee.time_base.num = 1
             context.pointee.time_base.den = outAudioDesc.sampleRate
             self.audioCodecContext = context
@@ -538,7 +539,7 @@ extension FFmpegEncoder {
         guard let codecCtx = self.audioCodecContext else {
             return
         }
-            
+        
         av_init_packet(UnsafeMutablePointer<AVPacket>(&self.audioPacket))
         
         defer {
@@ -569,19 +570,21 @@ extension FFmpegEncoder {
         if ret == 0 {
 
 //                    print("Encoded audio successfully...")
-              
+         
             if let onEncoded = self.onAudioEncodeFinished {
                 let packetSize = Int(self.audioPacket.size)
                 let encodedBytes = unsafeBitCast(malloc(packetSize), to: UnsafeMutablePointer<UInt8>.self)
                 memcpy(encodedBytes, self.audioPacket.data, packetSize)
                 onEncoded(encodedBytes, Int32(packetSize))
             }
-          
-            let bRet = self.muxer(packet: &self.audioPacket, stream: self.outAudioStream!, timebase: self.audioCodecContext!.pointee.time_base)
-            if bRet == false {
-               self.onMuxerFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing audio..."]))
+            
+            if self.onMuxerFinished != nil {
+                let bRet = self.muxer(packet: &self.audioPacket, stream: self.outAudioStream!, timebase: self.audioCodecContext!.pointee.time_base)
+                if bRet == false {
+                   self.onMuxerFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing audio..."]))
+                }
             }
-       
+          
         }
     }
     
@@ -773,8 +776,9 @@ extension FFmpegEncoder {
             if destSliceH > 0 {
            
                 //Why do pts here need to add 1?
-                self.videoNextPts += 1
-                self.videoOutFrame!.pointee.pts = self.videoNextPts
+                self.videoFrameCount += 1
+                self.videoOutFrame!.pointee.pts = self.videoFrameCount
+                self.videoNextPts = self.videoFrameCount
                 
                 av_init_packet(UnsafeMutablePointer<AVPacket>(&self.videoPacket))
                 
@@ -804,7 +808,7 @@ extension FFmpegEncoder {
                     if self.videoOutFrame?.pointee.key_frame == 1 {
                         self.videoPacket.flags |= AV_PKT_FLAG_KEY
                     }
-                    
+                  
                     if let onEncoded = self.onVideoEncodeFinished {
                         let packetSize = Int(self.videoPacket.size)
                         let encodedBytes = unsafeBitCast(malloc(packetSize), to: UnsafeMutablePointer<UInt8>.self)
@@ -812,12 +816,12 @@ extension FFmpegEncoder {
                         onEncoded(encodedBytes, Int32(packetSize))
                     }
                     
-                    let bRet = self.muxer(packet: &self.videoPacket, stream: self.outVideoStream!, timebase: self.videoCodecContext!.pointee.time_base)
-                    
-                    if bRet == false {
-                        self.onMuxerFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing video."]))
+                    if self.onMuxerFinished != nil {
+                        let bRet = self.muxer(packet: &self.videoPacket, stream: self.outVideoStream!, timebase: self.videoCodecContext!.pointee.time_base)
+                        if bRet == false {
+                            self.onMuxerFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing video."]))
+                        }
                     }
-                    
                 }
             }
            
@@ -852,7 +856,6 @@ extension FFmpegEncoder {
                 self.outVideoStream = avformat_new_stream(fmtCtx, codec)
                 self.outVideoStream?.pointee.id = Int32(fmtCtx.pointee.nb_streams - 1)
                 
-                codecCtx.pointee.codec_tag = 0
                 if let stream = self.outVideoStream, avcodec_parameters_from_context(stream.pointee.codecpar, codecCtx) < 0 {
                     print("Failed to copy codec context parameters to video out stream")
                     return
@@ -862,10 +865,7 @@ extension FFmpegEncoder {
             if let codec = self.audioCodec, let codecCtx = self.audioCodecContext {
                 self.outAudioStream = avformat_new_stream(fmtCtx, codec)
                 self.outAudioStream?.pointee.id = Int32(fmtCtx.pointee.nb_streams - 1)
-                self.outAudioStream?.pointee.time_base.den = self.outAudioDesc!.sampleRate
-                self.outAudioStream?.pointee.time_base.num = 1
-              
-                codecCtx.pointee.codec_tag = 0
+             
                 if let stream = self.outAudioStream, avcodec_parameters_from_context(stream.pointee.codecpar, codecCtx) < 0 {
                     print("Failed to copy codec context parameters to audio out stream")
                     return
@@ -903,11 +903,7 @@ extension FFmpegEncoder {
     }
     
     func isToWriteVideo() -> Bool {
-        
-        if self.audioNextPts == 0 {
-            return false
-        }
-        
+     
         let ret = av_compare_ts(self.videoNextPts, self.videoCodecContext!.pointee.time_base, self.audioNextPts, self.audioCodecContext!.pointee.time_base)
 //        print("ret => \(ret)")
         if ret <= 0 {
