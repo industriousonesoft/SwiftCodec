@@ -13,7 +13,7 @@ import FFmepgWrapperOCBridge
 public typealias OnResampleFinishedClouser = (UnsafeMutablePointer<UInt8>, Int32) -> Void
 public typealias OnEncodeFinishedClouser = (UnsafeMutablePointer<UInt8>, Int32) -> Void
 public typealias OnMuxerFinishedClouser = (UnsafeMutablePointer<UInt8>, Int32) -> Void
-public typealias OnEncodedFailuerClouser = (NSError?)->Void
+public typealias OnFailuerClouser = (NSError?)->Void
 
 private let SWIFT_AV_PIX_FMT_RGB32 = AVPixelFormat(FFmepgWrapperOCBridge.avPixelFormatRGB32())
 private let SWIFT_AV_ERROR_EOF = FFmepgWrapperOCBridge.avErrorEOF()
@@ -82,11 +82,14 @@ public class FFmpegEncoder: NSObject {
     
     //Callback
     public var onVideoEncodeFinished: OnEncodeFinishedClouser?
+    public var onVideoEncoderFaiure: OnFailuerClouser?
+    
     public var onAudioEncodeFinished: OnEncodeFinishedClouser?
     public var onAudioResampleFinished: OnResampleFinishedClouser?
+    public var onAudioEncoderFaiure: OnFailuerClouser?
+    
     public var onMuxerFinished: OnMuxerFinishedClouser?
-    public var onVideoEncoderFaiure: OnEncodedFailuerClouser?
-    public var onAudioEncoderFaiure: OnEncodedFailuerClouser?
+    public var onMuxerFaiure: OnFailuerClouser?
     
     private var videoSrcSliceArray: [UnsafePointer<UInt8>?]? {
         get {
@@ -377,25 +380,6 @@ extension FFmpegEncoder {
         return true
     }
     
-    func addSamplesToFifo(frameSize: Int32) -> Bool {
-        
-        guard let fifo = self.audioFifo, self.covertedSampleBuffer != nil  else {
-            return false
-        }
-        
-        if av_audio_fifo_realloc(fifo, av_audio_fifo_size(fifo) + frameSize) < 0 {
-            print("Could not reallocate FIFO...")
-            return false
-        }
-        
-        if av_audio_fifo_write(fifo, unsafeBitCast(self.covertedSampleBuffer, to: UnsafeMutablePointer<UnsafeMutableRawPointer?>.self), frameSize) < frameSize {
-            print("Could not write data to FIFO...")
-            return false
-        }
-        
-        return true
-    }
-    
     /*
     func updateAudioOutFrame(nb_samples: Int32) -> Bool {
         
@@ -437,11 +421,70 @@ extension FFmpegEncoder {
     }
  */
     
-    public func encode(pamBytes: UnsafeMutablePointer<UInt8>, bytesLen: Int32, duration: Int64 ,finished: Bool = false) {
+    func addAudioSamplesToFifo(frameSize: Int32) -> Bool {
         
+        guard let fifo = self.audioFifo, self.covertedSampleBuffer != nil  else {
+            return false
+        }
+        
+        if av_audio_fifo_realloc(fifo, av_audio_fifo_size(fifo) + frameSize) < 0 {
+            print("Could not reallocate FIFO...")
+            return false
+        }
+        
+        if av_audio_fifo_write(fifo, unsafeBitCast(self.covertedSampleBuffer, to: UnsafeMutablePointer<UnsafeMutableRawPointer?>.self), frameSize) < frameSize {
+            print("Could not write data to FIFO...")
+            return false
+        }
+        
+        return true
+    }
+    
+    func readAudioSamplesFromFifoAndEncode(finished: Bool) {
+        
+        guard let codecCtx = self.audioCodecContext,
+            let fifo = self.audioFifo else {
+            return
+        }
+        
+        /*  由于audioCodecContext中的frame_size与src_nb_samples的值很可能是不一样的，
+            使用fifo缓存队列进行存储数据，确保了音频数据的连续性，
+            当fifo队列中的缓存长度大于等于audioCodecContext的frame_size（可以理解为每次编码的长度）时才进行读取，
+            确保每次都能满足audioCodecContext的所需编码长度，从而避免出现杂音等位置情况
+         */
+        let fifoSize = av_audio_fifo_size(fifo)
+        if (finished == false && fifoSize < codecCtx.pointee.frame_size) || (finished == true && fifoSize > 0) {
+            return
+        }
+        
+        let encodeFrameSize = min(fifoSize, codecCtx.pointee.frame_size)
+        
+        self.audioNextPts += Int64(encodeFrameSize)
+        
+        if self.audioOutFrame == nil {
+            if self.initOutputFrame(frameSize: encodeFrameSize, codecCtx: self.audioCodecContext!) == false {
+                print("Can not create audio output frame...")
+                return
+            }
+        }
+        weak var weakSelf = self
+        let frameDataPtr = UnsafeMutablePointer(&self.audioOutFrame!.pointee.data.0)
+        frameDataPtr.withMemoryRebound(to: UnsafeMutableRawPointer?.self, capacity: 1) { ptr in
+            
+            if av_audio_fifo_read(fifo, ptr, encodeFrameSize) < encodeFrameSize {
+               print("Could not read data from FIFO...")
+               return
+            }
+            
+            weakSelf?.encode(audio: weakSelf!.audioOutFrame!)
+        }
+        
+    }
+    
+    public func encode(pamBytes: UnsafeMutablePointer<UInt8>, bytesLen: Int32, duration: Int64 ,finished: Bool = false) {
+            
         if let swr = self.swrContext,
             let codecCtx = self.audioCodecContext,
-            let fifo = self.audioFifo,
             let inAudioDesc = self.inAudioDesc,
             let outAudioDesc = self.outAudioDesc {
             
@@ -473,49 +516,19 @@ extension FFmpegEncoder {
                     onResample(self.audioOutBuffer!, size)
                 }
                 
-                if self.addSamplesToFifo(frameSize: src_nb_samples) == false {
+                if self.addAudioSamplesToFifo(frameSize: src_nb_samples) == false {
+                    print("Can not add audio samples to fifo...")
                     return
                 }
                 
-                if self.isToWriteVideo() == true {
-                    return
-                }
+//                if self.isToWriteVideo() {
+//                    return
+//                }
                 
-//                print("[Audio] encode for now...")
+                print("[Audio] encode for now...")
                 
-                /*  由于audioCodecContext中的frame_size与src_nb_samples的值很可能是不一样的，
-                    使用fifo缓存队列进行存储数据，确保了音频数据的连续性，
-                    当fifo队列中的缓存长度大于等于audioCodecContext的frame_size（可以理解为每次编码的长度）时才进行读取，
-                    确保每次都能满足audioCodecContext的所需编码长度，从而避免出现杂音等位置情况
-                 */
-                let fifoSize = av_audio_fifo_size(fifo)
-                if (finished == false && fifoSize < codecCtx.pointee.frame_size) || (finished == true && fifoSize > 0) {
-                    return
-                }
-                
-                let encodeFrameSize = min(fifoSize, codecCtx.pointee.frame_size)
-                
-                self.audioNextPts += Int64(encodeFrameSize)
-                
-                if self.audioOutFrame == nil {
-                    if self.initOutputFrame(frameSize: encodeFrameSize, codecCtx: self.audioCodecContext!) == false {
-                        print("Can not create audio output frame...")
-                        return
-                    }
-                }
-                weak var weakSelf = self
-                let frameDataPtr = UnsafeMutablePointer(&self.audioOutFrame!.pointee.data.0)
-                frameDataPtr.withMemoryRebound(to: UnsafeMutableRawPointer?.self, capacity: 1) { ptr in
-                    
-                    if av_audio_fifo_read(fifo, ptr, encodeFrameSize) < encodeFrameSize {
-                       print("Could not read data from FIFO...")
-                       return
-                    }
-                    
-                    if let frame = weakSelf?.audioOutFrame {
-                         weakSelf?.encode(audio: frame)
-                    }
-                }
+                self.readAudioSamplesFromFifoAndEncode(finished: finished)
+    
             }
         }
     }
@@ -533,7 +546,6 @@ extension FFmpegEncoder {
         }
                         
         //FIXME: How to set pts of audio frame
-//        self.audioOutFrame!.pointee.pts = self.audioSampleCount
         self.audioOutFrame!.pointee.pts = av_rescale_q(self.audioSampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
         self.audioSampleCount += Int64(self.audioOutFrame!.pointee.nb_samples)
      
@@ -564,10 +576,10 @@ extension FFmpegEncoder {
                 memcpy(encodedBytes, self.audioPacket.data, packetSize)
                 onEncoded(encodedBytes, Int32(packetSize))
             }
-            
+          
             let bRet = self.muxer(packet: &self.audioPacket, stream: self.outAudioStream!, timebase: self.audioCodecContext!.pointee.time_base)
             if bRet == false {
-               self.onAudioEncoderFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing audio."]))
+               self.onMuxerFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing audio..."]))
             }
        
         }
@@ -737,11 +749,11 @@ extension FFmpegEncoder {
 //        let inDataArray = unsafeBitCast([rgbPixels], to: UnsafePointer<UnsafePointer<UInt8>?>?.self)
 //        let inLineSizeArray = unsafeBitCast([self.inWidth * 4], to: UnsafePointer<Int32>.self)
         
-        guard self.isToWriteVideo() else {
+        if self.isToWriteVideo() == false {
             return
         }
         
-//        print("[Video] encode for now...")
+        print("[Video] encode for now...")
     
         if self.videoOutFrame != nil && self.videoInFrame != nil {
             
@@ -803,7 +815,7 @@ extension FFmpegEncoder {
                     let bRet = self.muxer(packet: &self.videoPacket, stream: self.outVideoStream!, timebase: self.videoCodecContext!.pointee.time_base)
                     
                     if bRet == false {
-                        self.onVideoEncoderFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing video."]))
+                        self.onMuxerFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing video."]))
                     }
                     
                 }
@@ -853,7 +865,7 @@ extension FFmpegEncoder {
                 self.outAudioStream?.pointee.time_base.den = self.outAudioDesc!.sampleRate
                 self.outAudioStream?.pointee.time_base.num = 1
               
-                codecCtx.pointee.codec_tag = 1
+                codecCtx.pointee.codec_tag = 0
                 if let stream = self.outAudioStream, avcodec_parameters_from_context(stream.pointee.codecpar, codecCtx) < 0 {
                     print("Failed to copy codec context parameters to audio out stream")
                     return
@@ -891,6 +903,11 @@ extension FFmpegEncoder {
     }
     
     func isToWriteVideo() -> Bool {
+        
+        if self.audioNextPts == 0 {
+            return false
+        }
+        
         let ret = av_compare_ts(self.videoNextPts, self.videoCodecContext!.pointee.time_base, self.audioNextPts, self.audioCodecContext!.pointee.time_base)
 //        print("ret => \(ret)")
         if ret <= 0 {

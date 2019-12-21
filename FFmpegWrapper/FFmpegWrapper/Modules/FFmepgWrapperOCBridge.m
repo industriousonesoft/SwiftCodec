@@ -7,10 +7,10 @@
 //
 
 #import "FFmepgWrapperOCBridge.h"
-#import "avutil.h"
-#import "imgutils.h"
-#import "avcodec.h"
-#import "swscale.h"
+#import "libavutil/avutil.h"
+#import "libavutil/imgutils.h"
+#import "libavcodec/avcodec.h"
+#import "libswscale/swscale.h"
 
 @implementation FFmepgWrapperOCBridge
 
@@ -31,7 +31,13 @@
 }
 
 + (int64_t)avNoPTSValue {
+    
     return AV_NOPTS_VALUE;
 }
+
++ (int64_t)avTimebase {
+    return AV_TIME_BASE;
+}
+
 
 @end

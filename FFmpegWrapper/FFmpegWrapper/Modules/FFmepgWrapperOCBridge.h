@@ -15,5 +15,6 @@
 + (int)avErrorEagain;
 + (char *)avErr2str:(int)errCode;
 + (int64_t)avNoPTSValue;
++ (int64_t)avTimebase;
 
 @end
