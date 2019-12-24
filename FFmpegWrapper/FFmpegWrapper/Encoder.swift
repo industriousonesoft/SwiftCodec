@@ -52,9 +52,6 @@ public class FFmpegEncoder: NSObject {
     private lazy var muxingQueue: DispatchQueue = {
         DispatchQueue.init(label: "com.zdnet.encoder.muxingQueue")
     }()
-    private lazy var videoPacketList: [AVPacket] = {
-        return Array<AVPacket>.init()
-    }()
     private var outFMTCtx: UnsafeMutablePointer<AVFormatContext>?
     
     //Video
@@ -198,7 +195,11 @@ public class FFmpegEncoder: NSObject {
     public func stop() {
         self.destroyAudioEncoder()
         self.destroyVideoEncoder()
-        self.destoryMuxer()
+        weak var weakSelf = self
+        self.muxingQueue.async {
+            weakSelf?.destoryMuxer()
+        }
+        
     }
     
 }
@@ -567,6 +568,13 @@ extension FFmpegEncoder {
         
         var audioPacket = AVPacket.init()
         av_init_packet(UnsafeMutablePointer<AVPacket>(&audioPacket))
+        var muxied = false
+        defer {
+            if muxied == false {
+                av_packet_unref(UnsafeMutablePointer<AVPacket>(&audioPacket))
+            }
+            
+        }
                   
         //FIXME: How to set pts of audio frame
         self.audioOutFrame!.pointee.pts = av_rescale_q(self.audioSampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
@@ -576,7 +584,6 @@ extension FFmpegEncoder {
         if ret < 0 {
             self.onAudioEncoderFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error about sending a packet for audio encoding."]))
             return
-            
         }
         
         ret = avcodec_receive_packet(self.audioCodecContext, UnsafeMutablePointer<AVPacket>(&audioPacket))
@@ -601,15 +608,16 @@ extension FFmpegEncoder {
             }
             
             if self.onMuxerFinished != nil, self.outAudioStream != nil, self.audioCodecContext != nil {
-                
-//                print("audio \(self.audioNextPts) PTS \(audioPacket.pts) - DTS \(audioPacket.dts)")
-                let bRet = self.muxer(packet: &audioPacket, stream: self.outAudioStream!, timebase: self.audioCodecContext!.pointee.time_base)
-                if bRet == false {
-                   self.onMuxerFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing audio..."]))
+                muxied = true
+                weak var weakSelf = self
+                self.muxingQueue.async {
+                    print("audio \(self.audioNextPts) PTS \(audioPacket.pts) - DTS \(audioPacket.dts)")
+                    let bRet = weakSelf!.muxer(packet: &audioPacket, stream: weakSelf!.outAudioStream!, timebase: weakSelf!.audioCodecContext!.pointee.time_base)
+                    if bRet == false {
+                       weakSelf!.onMuxerFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing audio..."]))
+                    }
+                    av_packet_unref(UnsafeMutablePointer<AVPacket>(&audioPacket))
                 }
-                av_packet_unref(UnsafeMutablePointer<AVPacket>(&audioPacket))
-            }else {
-                av_packet_unref(UnsafeMutablePointer<AVPacket>(&audioPacket))
             }
           
         }
@@ -813,6 +821,13 @@ extension FFmpegEncoder {
 //                print("[Video] encode for now...")
                 var videoPacket = AVPacket.init()
                 av_init_packet(UnsafeMutablePointer<AVPacket>(&videoPacket))
+                var muxied = false
+                defer {
+                    if muxied == false {
+                        av_packet_unref(UnsafeMutablePointer<AVPacket>(&videoPacket))
+                    }
+                    
+                }
                
                 var ret = avcodec_send_frame(self.videoCodecContext, self.videoOutFrame)
                 if ret < 0 {
@@ -852,13 +867,16 @@ extension FFmpegEncoder {
                     //B相对于I帧和P帧而言是压缩率最高的，更好的保证视频质量，但是由于需要向后一帧参考，所以不适合用于实时性要求高的场合。
                     //当前编码用于镜像，实时性优先，所以去掉了B帧
                     if self.onMuxerFinished != nil, self.outVideoStream != nil, self.videoCodecContext != nil {
-                        let bRet = self.muxer(packet: &videoPacket, stream: self.outVideoStream!, timebase: self.videoCodecContext!.pointee.time_base)
-                        if bRet == false {
-                            self.onMuxerFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing video."]))
+                        muxied = true
+                        weak var weakSelf = self
+                        self.muxingQueue.async {
+                            let bRet = weakSelf!.muxer(packet: &videoPacket, stream: weakSelf!.outVideoStream!, timebase: weakSelf!.videoCodecContext!.pointee.time_base)
+                            if bRet == false {
+                                weakSelf!.onMuxerFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing video."]))
+                            }
+                            av_packet_unref(UnsafeMutablePointer<AVPacket>(&videoPacket))
                         }
-                        av_packet_unref(UnsafeMutablePointer<AVPacket>(&videoPacket))
-                    }else {
-                        av_packet_unref(UnsafeMutablePointer<AVPacket>(&videoPacket))
+                        
                     }
                 }
             }
