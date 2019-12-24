@@ -15,14 +15,24 @@ public typealias OnEncodeFinishedClouser = (UnsafeMutablePointer<UInt8>, Int32) 
 public typealias OnMuxerFinishedClouser = (UnsafeMutablePointer<UInt8>, Int32) -> Void
 public typealias OnFailuerClouser = (NSError?)->Void
 
-private let SWIFT_AV_PIX_FMT_RGB32 = AVPixelFormat(FFmepgWrapperOCBridge.avPixelFormatRGB32())
-private let SWIFT_AV_ERROR_EOF = FFmepgWrapperOCBridge.avErrorEOF()
-private let SWIFT_AV_ERROR_EAGAIN = FFmepgWrapperOCBridge.avErrorEagain()
-
 public let SWIFT_AV_SAMPLE_FMT_S16: Int32 = AV_SAMPLE_FMT_S16.rawValue
 public let SWIFT_AV_SAMPLE_FMT_S16P: Int32 = AV_SAMPLE_FMT_S16P.rawValue
 public let SWIFT_AV_SAMPLE_FMT_FLT: Int32 = AV_SAMPLE_FMT_FLT.rawValue
 public let SWIFT_AV_SAMPLE_FMT_FLTP: Int32 = AV_SAMPLE_FMT_FLTP.rawValue
+
+private let SWIFT_AV_PIX_FMT_RGB32 = AVPixelFormat(FFmepgWrapperOCBridge.avPixelFormatRGB32())
+private let SWIFT_AV_ERROR_EOF = FFmepgWrapperOCBridge.avErrorEOF()
+private let SWIFT_AV_ERROR_EAGAIN = FFmepgWrapperOCBridge.avErrorEagain()
+private let SWIFT_AC_NOPTS_VALUE = FFmepgWrapperOCBridge.avNoPTSValue()
+
+private let Video_Timebase = AVRational.init(num: 1, den: 90000)
+
+private
+enum AudioOrVideoToWriteType {
+    case none
+    case audio
+    case video
+}
 
 public typealias AudioDescriptionTuple = (sampleRate: Int32, channels: Int32, bitsPerChannel: Int32, sampleFormat: Int32)
 
@@ -36,7 +46,15 @@ public class FFmpegEncoder: NSObject {
     public private(set) var encodeVideo: Bool = true
     public private(set) var encodeAudio: Bool = true
     
+    private var displayTimeBase: Double = 0
+
     //Muxer
+    private lazy var muxingQueue: DispatchQueue = {
+        DispatchQueue.init(label: "com.zdnet.encoder.muxingQueue")
+    }()
+    private lazy var videoPacketList: [AVPacket] = {
+        return Array<AVPacket>.init()
+    }()
     private var outFMTCtx: UnsafeMutablePointer<AVFormatContext>?
     
     //Video
@@ -49,13 +67,12 @@ public class FFmpegEncoder: NSObject {
     private var videoOutFrame: UnsafeMutablePointer<AVFrame>?
     private var videoOutFrameBuffer: UnsafeMutablePointer<UInt8>?
 
-    private var videoPacket = AVPacket.init()
+//    private var videoPacket = AVPacket.init()
     private var swsContext: OpaquePointer?
 
     private var outVideoStream: UnsafeMutablePointer<AVStream>?
     
     private var videoNextPts: Int64 = 0
-    private var videoFrameCount: Int64 = 0
     
     //Audio
     private var audioCodec: UnsafeMutablePointer<AVCodec>?
@@ -69,7 +86,7 @@ public class FFmpegEncoder: NSObject {
     
     private var audioOutBuffer: UnsafeMutablePointer<UInt8>?
    
-    private var audioPacket = AVPacket.init()
+//    private var audioPacket = AVPacket.init()
     private var swrContext: OpaquePointer?
     
     private var outAudioStream: UnsafeMutablePointer<AVStream>?
@@ -171,10 +188,14 @@ public class FFmpegEncoder: NSObject {
     }
     
     deinit {
-        self.destory()
+        self.stop()
     }
     
-    public func destory() {
+    public func start() {
+        self.addStream()
+    }
+    
+    public func stop() {
         self.destroyAudioEncoder()
         self.destroyVideoEncoder()
         self.destoryMuxer()
@@ -248,7 +269,7 @@ extension FFmpegEncoder {
             hasError = true
             return false
         }
-        
+    
         //fifo
         if let fifo = av_audio_fifo_alloc(self.audioCodecContext!.pointee.sample_fmt, self.audioCodecContext!.pointee.channels, 1) {
             self.audioFifo = fifo
@@ -460,8 +481,6 @@ extension FFmpegEncoder {
         
         let encodeFrameSize = min(fifoSize, codecCtx.pointee.frame_size)
         
-        self.audioNextPts += Int64(encodeFrameSize)
-        
         if self.audioOutFrame == nil {
             if self.initOutputFrame(frameSize: encodeFrameSize, codecCtx: self.audioCodecContext!) == false {
                 print("Can not create audio output frame...")
@@ -477,24 +496,30 @@ extension FFmpegEncoder {
                return
             }
             
+            weakSelf?.audioNextPts += Int64(encodeFrameSize)
+            
             weakSelf?.encode(audio: weakSelf!.audioOutFrame!)
         }
         
     }
     
-    public func encode(pamBytes: UnsafeMutablePointer<UInt8>, bytesLen: Int32, duration: Int64 ,finished: Bool = false) {
-            
+    public func encode(pcmBytes: UnsafeMutablePointer<UInt8>, bytesLen: Int32, displayTime: Double, finished: Bool = false) {
+                  
+        print("Audio display time: \(displayTime)")
+        if self.displayTimeBase == 0 {
+            self.displayTimeBase = displayTime
+        }
+     
         if let swr = self.swrContext,
-            let codecCtx = self.audioCodecContext,
             let inAudioDesc = self.inAudioDesc,
             let outAudioDesc = self.outAudioDesc {
             
-            if av_compare_ts(self.audioNextPts, codecCtx.pointee.time_base, duration, AVRational.init(num: 1, den: 1)) >= 0 {
-                print("Not need to generate more audio frame")
-                return
-            }
+//            if av_compare_ts(self.audioNextPts, codecCtx.pointee.time_base, duration, AVRational.init(num: 1, den: 1)) >= 0 {
+//                print("Not need to generate more audio frame")
+//                return
+//            }
             
-            var srcBuff = unsafeBitCast(pamBytes, to: UnsafePointer<UInt8>?.self)
+            var srcBuff = unsafeBitCast(pcmBytes, to: UnsafePointer<UInt8>?.self)
         
             //nb_samples: 时间 * 采本率
             //nb_bytes（单位：字节） = (nb_samples * nb_channel * nb_bitsPerChannel) / 8 /*bits per bytes*/
@@ -522,11 +547,11 @@ extension FFmpegEncoder {
                     return
                 }
                 
-//                if self.isToWriteVideo() {
+//                if self.isToWrite() != .audio {
 //                    return
 //                }
                 
-                print("[Audio] encode for now...")
+//                print("[Audio] encode for now...")
                 
                 self.readAudioSamplesFromFifoAndEncode(finished: finished)
     
@@ -540,12 +565,9 @@ extension FFmpegEncoder {
             return
         }
         
-        av_init_packet(UnsafeMutablePointer<AVPacket>(&self.audioPacket))
-        
-        defer {
-            av_packet_unref(UnsafeMutablePointer<AVPacket>(&self.audioPacket))
-        }
-                        
+        var audioPacket = AVPacket.init()
+        av_init_packet(UnsafeMutablePointer<AVPacket>(&audioPacket))
+                  
         //FIXME: How to set pts of audio frame
         self.audioOutFrame!.pointee.pts = av_rescale_q(self.audioSampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
         self.audioSampleCount += Int64(self.audioOutFrame!.pointee.nb_samples)
@@ -557,7 +579,7 @@ extension FFmpegEncoder {
             
         }
         
-        ret = avcodec_receive_packet(self.audioCodecContext, UnsafeMutablePointer<AVPacket>(&self.audioPacket))
+        ret = avcodec_receive_packet(self.audioCodecContext, UnsafeMutablePointer<AVPacket>(&audioPacket))
         if ret == SWIFT_AV_ERROR_EOF {
             print("avcodec_recieve_packet() encoder flushed...")
         }else if ret == SWIFT_AV_ERROR_EAGAIN {
@@ -569,20 +591,25 @@ extension FFmpegEncoder {
         
         if ret == 0 {
 
-//                    print("Encoded audio successfully...")
-         
+//          print("Encoded audio successfully...")
+
             if let onEncoded = self.onAudioEncodeFinished {
-                let packetSize = Int(self.audioPacket.size)
+                let packetSize = Int(audioPacket.size)
                 let encodedBytes = unsafeBitCast(malloc(packetSize), to: UnsafeMutablePointer<UInt8>.self)
-                memcpy(encodedBytes, self.audioPacket.data, packetSize)
+                memcpy(encodedBytes, audioPacket.data, packetSize)
                 onEncoded(encodedBytes, Int32(packetSize))
             }
             
-            if self.onMuxerFinished != nil {
-                let bRet = self.muxer(packet: &self.audioPacket, stream: self.outAudioStream!, timebase: self.audioCodecContext!.pointee.time_base)
+            if self.onMuxerFinished != nil, self.outAudioStream != nil, self.audioCodecContext != nil {
+                
+//                print("audio \(self.audioNextPts) PTS \(audioPacket.pts) - DTS \(audioPacket.dts)")
+                let bRet = self.muxer(packet: &audioPacket, stream: self.outAudioStream!, timebase: self.audioCodecContext!.pointee.time_base)
                 if bRet == false {
                    self.onMuxerFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing audio..."]))
                 }
+                av_packet_unref(UnsafeMutablePointer<AVPacket>(&audioPacket))
+            }else {
+                av_packet_unref(UnsafeMutablePointer<AVPacket>(&audioPacket))
             }
           
         }
@@ -628,7 +655,7 @@ extension FFmpegEncoder {
             context.pointee.height = outHeight
             context.pointee.time_base.num = 1
             context.pointee.time_base.den = 25
-            context.pointee.gop_size = 60
+            context.pointee.gop_size = 25
             context.pointee.max_b_frames = 0 //Drop out B frame
             context.pointee.pix_fmt = AV_PIX_FMT_YUV420P
             context.pointee.mb_cmp = FF_MB_DECISION_RD
@@ -713,8 +740,6 @@ extension FFmpegEncoder {
             return false
         }
       
-        self.initMuxer()
-    
         return true
     }
     
@@ -746,24 +771,20 @@ extension FFmpegEncoder {
             self.videoInFrameBuffer = nil
         }
     }
-    
-    public func encode(rgbPixels: UnsafeMutablePointer<UInt8>, duration: Int64) {
-      
+     
+    public func encode(rgbPixels: UnsafeMutablePointer<UInt8>, displayTime: Double) {
+        
 //        let inDataArray = unsafeBitCast([rgbPixels], to: UnsafePointer<UnsafePointer<UInt8>?>?.self)
 //        let inLineSizeArray = unsafeBitCast([self.inWidth * 4], to: UnsafePointer<Int32>.self)
         
-        if self.isToWriteVideo() == false {
+        print("Video display time: \(displayTime)")
+      
+        if self.isToWrite() == .none {
+            print("[None] Nothing to encode for now...")
             return
         }
         
-        print("[Video] encode for now...")
-    
         if self.videoOutFrame != nil && self.videoInFrame != nil {
-            
-            if av_compare_ts(self.videoNextPts, self.videoCodecContext!.pointee.time_base, duration, AVRational.init(num: 1, den: 1)) >= 0 {
-                print("Not need to generate more video frame")
-                return
-            }
             
             self.videoInFrame!.pointee.data.0 = rgbPixels
             //RGB32
@@ -771,28 +792,35 @@ extension FFmpegEncoder {
             
             //Convert RGB32 to YUV420
             //Return the height of the output slice
+            //不同于音频重采样，视频格式转换不影响视频采样率，所以转换前后的同一时间内采样数量不变
             let destSliceH = sws_scale(self.swsContext, self.videoSrcSliceArray, self.videoSrcStrideArray, 0, self.inHeight, self.videoDstSliceArray, self.videoDstStrideArray)
             
             if destSliceH > 0 {
-           
-                //Why do pts here need to add 1?
-                self.videoFrameCount += 1
-                self.videoOutFrame!.pointee.pts = self.videoFrameCount
-                self.videoNextPts = self.videoFrameCount
                 
-                av_init_packet(UnsafeMutablePointer<AVPacket>(&self.videoPacket))
+                let duration = displayTime - self.displayTimeBase
+                let nb_samples_count = Int64(duration * Double(Video_Timebase.den))
+               
+                //这一步很关键！在未知输入视频的帧率或者帧率是一个动态值时，使用视频采样率（一般都是90K）作为视频量增幅的参考标准
+                //将基于采样频率的增量计数方式转换为基于当前编码帧率的增量计数方式（也就是编码前的pts）
+                self.videoOutFrame!.pointee.pts = av_rescale_q(nb_samples_count, Video_Timebase, self.videoCodecContext!.pointee.time_base)
+                self.videoNextPts = self.videoOutFrame!.pointee.pts
                 
-                defer {
-                    av_packet_unref(UnsafeMutablePointer<AVPacket>(&self.videoPacket))
+                if self.isToWrite() == .audio {
+                    print("[Video] not to encode for now...")
+                    return
                 }
-                
+              
+//                print("[Video] encode for now...")
+                var videoPacket = AVPacket.init()
+                av_init_packet(UnsafeMutablePointer<AVPacket>(&videoPacket))
+               
                 var ret = avcodec_send_frame(self.videoCodecContext, self.videoOutFrame)
                 if ret < 0 {
                     self.onVideoEncoderFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error about sending a packet for video encoding."]))
                     return
                 }
                 
-                ret = avcodec_receive_packet(self.videoCodecContext, UnsafeMutablePointer<AVPacket>(&self.videoPacket))
+                ret = avcodec_receive_packet(self.videoCodecContext, UnsafeMutablePointer<AVPacket>(&videoPacket))
                 if ret == SWIFT_AV_ERROR_EOF {
                     print("avcodec_recieve_packet() encoder flushed...")
                 }else if ret == SWIFT_AV_ERROR_EAGAIN {
@@ -804,23 +832,33 @@ extension FFmpegEncoder {
                 
                 if ret == 0 {
 //                        print("Encoded video successfully...")
+
+//                    print("Video packet pts: \(videoPacket.pts) - dts: \(videoPacket.dts)")
                     
                     if self.videoOutFrame?.pointee.key_frame == 1 {
-                        self.videoPacket.flags |= AV_PKT_FLAG_KEY
+                        videoPacket.flags |= AV_PKT_FLAG_KEY
                     }
                   
                     if let onEncoded = self.onVideoEncodeFinished {
-                        let packetSize = Int(self.videoPacket.size)
+                        let packetSize = Int(videoPacket.size)
                         let encodedBytes = unsafeBitCast(malloc(packetSize), to: UnsafeMutablePointer<UInt8>.self)
-                        memcpy(encodedBytes, self.videoPacket.data, packetSize)
+                        memcpy(encodedBytes, videoPacket.data, packetSize)
                         onEncoded(encodedBytes, Int32(packetSize))
                     }
                     
-                    if self.onMuxerFinished != nil {
-                        let bRet = self.muxer(packet: &self.videoPacket, stream: self.outVideoStream!, timebase: self.videoCodecContext!.pointee.time_base)
+//                    print("video pts: \(self.videoNextPts), packet pts: \(self.videoPacket.pts) - dts: \(self.videoPacket.dts)")
+                    
+                    //视频编码如果不存在B帧，那么packet中pts与dts是一致的
+                    //B相对于I帧和P帧而言是压缩率最高的，更好的保证视频质量，但是由于需要向后一帧参考，所以不适合用于实时性要求高的场合。
+                    //当前编码用于镜像，实时性优先，所以去掉了B帧
+                    if self.onMuxerFinished != nil, self.outVideoStream != nil, self.videoCodecContext != nil {
+                        let bRet = self.muxer(packet: &videoPacket, stream: self.outVideoStream!, timebase: self.videoCodecContext!.pointee.time_base)
                         if bRet == false {
                             self.onMuxerFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing video."]))
                         }
+                        av_packet_unref(UnsafeMutablePointer<AVPacket>(&videoPacket))
+                    }else {
+                        av_packet_unref(UnsafeMutablePointer<AVPacket>(&videoPacket))
                     }
                 }
             }
@@ -835,22 +873,24 @@ extension FFmpegEncoder {
 //MARK: Muxer
 extension FFmpegEncoder {
     
-    func initMuxer() {
+    func addStream() {
         
-        let ioBufferSize: Int = 512*1024 //32768
-        let buff = UnsafeMutablePointer<UInt8>.allocate(capacity: ioBufferSize)
-        let writable: Int = 1
-        let ioCtx = avio_alloc_context(buff, Int32(ioBufferSize), Int32(writable), unsafeBitCast(self, to: UnsafeMutableRawPointer.self), nil, muxerCallback, nil)
-        
-        if avformat_alloc_output_context2(&outFMTCtx, nil, "mpegts", nil) < 0 {
-            print("Could not create output context.")
-            return
+        if self.outFMTCtx == nil {
+            let ioBufferSize: Int = 512*1024 //32768
+            let buff = UnsafeMutablePointer<UInt8>.allocate(capacity: ioBufferSize)
+            let writable: Int = 1
+            let ioCtx = avio_alloc_context(buff, Int32(ioBufferSize), Int32(writable), unsafeBitCast(self, to: UnsafeMutableRawPointer.self), nil, muxerCallback, nil)
+            
+            if avformat_alloc_output_context2(&outFMTCtx, nil, "mpegts", nil) < 0 {
+                print("Could not create output context.")
+                return
+            }
+            
+            self.outFMTCtx?.pointee.pb = ioCtx
+            self.outFMTCtx?.pointee.flags |= AVFMT_FLAG_CUSTOM_IO | AVFMT_NOFILE | AVFMT_FLAG_FLUSH_PACKETS
         }
         
         if let fmtCtx = self.outFMTCtx {
-            
-            fmtCtx.pointee.pb = ioCtx
-            fmtCtx.pointee.flags |= AVFMT_FLAG_CUSTOM_IO | AVFMT_NOFILE | AVFMT_FLAG_FLUSH_PACKETS
             
             if let codec = self.videoCodec, let codecCtx = self.videoCodecContext {
                 self.outVideoStream = avformat_new_stream(fmtCtx, codec)
@@ -881,6 +921,8 @@ extension FFmpegEncoder {
                 print("Error occurred when writing header.")
                 return
             }
+            
+            print("Muxer is ready...")
         }
         
     }
@@ -901,15 +943,32 @@ extension FFmpegEncoder {
         }
     
     }
-    
-    func isToWriteVideo() -> Bool {
+   
+    private
+    func isToWrite() -> AudioOrVideoToWriteType {
+        
+        guard let vCodecCtx = self.videoCodecContext, let aCodecCtx = self.audioCodecContext else {
+            print("Codec context is not ready yet...")
+            return .none
+        }
+        
+        //已音频捕获第一帧未基准，确保视频同步于音频
+        if self.displayTimeBase == 0 {
+            print("Audio is not ready yet...")
+            return .none
+        }
      
-        let ret = av_compare_ts(self.videoNextPts, self.videoCodecContext!.pointee.time_base, self.audioNextPts, self.audioCodecContext!.pointee.time_base)
-//        print("ret => \(ret)")
+        let vDuration = Double(self.videoNextPts) * av_q2d(vCodecCtx.pointee.time_base)
+        let aDuration = Double(self.audioNextPts) * av_q2d(aCodecCtx.pointee.time_base)
+        
+        let ret = av_compare_ts(self.videoNextPts, Video_Timebase, self.audioNextPts, aCodecCtx.pointee.time_base)
+//        print("vPts \(self.videoNextPts) - aPts: \(self.audioNextPts)")
         if ret <= 0 {
-            return true
+            print("V: \(vDuration) < A: \(aDuration)")
+            return .video
         }else {
-            return false
+            print("V: \(vDuration) > A: \(aDuration)")
+            return .audio
         }
     }
     
