@@ -506,7 +506,7 @@ extension FFmpegEncoder {
     
     public func encode(pcmBytes: UnsafeMutablePointer<UInt8>, bytesLen: Int32, displayTime: Double, finished: Bool = false) {
                   
-        print("Audio display time: \(displayTime)")
+//        print("Audio display time: \(displayTime)")
         if self.displayTimeBase == 0 {
             self.displayTimeBase = displayTime
         }
@@ -611,7 +611,7 @@ extension FFmpegEncoder {
                 muxied = true
                 weak var weakSelf = self
                 self.muxingQueue.async {
-                    print("audio \(self.audioNextPts) PTS \(audioPacket.pts) - DTS \(audioPacket.dts)")
+//                    print("audio \(self.audioNextPts) PTS \(audioPacket.pts) - DTS \(audioPacket.dts)")
                     let bRet = weakSelf!.muxer(packet: &audioPacket, stream: weakSelf!.outAudioStream!, timebase: weakSelf!.audioCodecContext!.pointee.time_base)
                     if bRet == false {
                        weakSelf!.onMuxerFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing audio..."]))
@@ -663,7 +663,7 @@ extension FFmpegEncoder {
             context.pointee.height = outHeight
             context.pointee.time_base.num = 1
             context.pointee.time_base.den = 25
-            context.pointee.gop_size = 25
+            context.pointee.gop_size = 30
             context.pointee.max_b_frames = 0 //Drop out B frame
             context.pointee.pix_fmt = AV_PIX_FMT_YUV420P
             context.pointee.mb_cmp = FF_MB_DECISION_RD
@@ -785,7 +785,7 @@ extension FFmpegEncoder {
 //        let inDataArray = unsafeBitCast([rgbPixels], to: UnsafePointer<UnsafePointer<UInt8>?>?.self)
 //        let inLineSizeArray = unsafeBitCast([self.inWidth * 4], to: UnsafePointer<Int32>.self)
         
-        print("Video display time: \(displayTime)")
+//        print("Video display time: \(displayTime)")
       
         if self.isToWrite() == .none {
             print("[None] Nothing to encode for now...")
@@ -975,17 +975,26 @@ extension FFmpegEncoder {
             print("Audio is not ready yet...")
             return .none
         }
-     
-        let vDuration = Double(self.videoNextPts) * av_q2d(vCodecCtx.pointee.time_base)
-        let aDuration = Double(self.audioNextPts) * av_q2d(aCodecCtx.pointee.time_base)
         
-        let ret = av_compare_ts(self.videoNextPts, Video_Timebase, self.audioNextPts, aCodecCtx.pointee.time_base)
-//        print("vPts \(self.videoNextPts) - aPts: \(self.audioNextPts)")
-        if ret <= 0 {
-            print("V: \(vDuration) < A: \(aDuration)")
+        //Method One:
+        /*
+         let vCurTime = Double(self.videoNextPts) * av_q2d(vCodecCtx.pointee.time_base)
+         let aCurTime = Double(self.audioNextPts) * av_q2d(aCodecCtx.pointee.time_base)
+         
+         if vCurTime <= aCurTime {
+             print("V: \(vCurTime) < A: \(aCurTime)")
+             return .video
+         }else {
+             print("V: \(vCurTime) > A: \(aCurTime)")
+             return .audio
+         }
+         */
+        //Method two:
+        let ret = av_compare_ts(self.videoNextPts, vCodecCtx.pointee.time_base, self.audioNextPts, aCodecCtx.pointee.time_base)
+        print("vPts \(self.videoNextPts) - aPts: \(self.audioNextPts)")
+        if ret <= 0 /*vCurTime <= aCurTime*/ {
             return .video
         }else {
-            print("V: \(vDuration) > A: \(aDuration)")
             return .audio
         }
     }
