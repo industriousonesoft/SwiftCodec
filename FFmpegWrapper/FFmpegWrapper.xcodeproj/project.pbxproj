@@ -18,6 +18,8 @@
 		90D05585238FB51600DB766C /* avcodec_shim.h in Headers */ = {isa = PBXBuildFile; fileRef = 90D0557E238FB51600DB766C /* avcodec_shim.h */; };
 		90D05586238FB51600DB766C /* FFmepgWrapperOCBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 90D0557F238FB51600DB766C /* FFmepgWrapperOCBridge.m */; };
 		90D3E0AE2398E084009C2195 /* libavformat.58.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90D3E0AD2398E083009C2195 /* libavformat.58.dylib */; };
+		90D4263F23CDA06B0077CF1A /* AudioSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D4263E23CDA06B0077CF1A /* AudioSession.swift */; };
+		90D4264123CDB1690077CF1A /* NSError+Extend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D4264023CDB1690077CF1A /* NSError+Extend.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -153,6 +155,8 @@
 		90D3E0B12398E09F009C2195 /* avio.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = avio.h; sourceTree = "<group>"; };
 		90D3E0B22398E09F009C2195 /* avformat.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = avformat.h; sourceTree = "<group>"; };
 		90D3E0B32398E0E3009C2195 /* avformat_shim.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = avformat_shim.h; sourceTree = "<group>"; };
+		90D4263E23CDA06B0077CF1A /* AudioSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSession.swift; sourceTree = "<group>"; };
+		90D4264023CDB1690077CF1A /* NSError+Extend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSError+Extend.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -375,6 +379,8 @@
 			isa = PBXGroup;
 			children = (
 				90D0557A238FB51600DB766C /* Modules */,
+				90D4264023CDB1690077CF1A /* NSError+Extend.swift */,
+				90D4263E23CDA06B0077CF1A /* AudioSession.swift */,
 				90D05579238FB51600DB766C /* Encoder.swift */,
 			);
 			path = FFmpegWrapper;
@@ -478,6 +484,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				90D05581238FB51600DB766C /* Encoder.swift in Sources */,
+				90D4264123CDB1690077CF1A /* NSError+Extend.swift in Sources */,
+				90D4263F23CDA06B0077CF1A /* AudioSession.swift in Sources */,
 				90D05586238FB51600DB766C /* FFmepgWrapperOCBridge.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
