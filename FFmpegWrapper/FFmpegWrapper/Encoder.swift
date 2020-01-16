@@ -11,7 +11,7 @@ import CFFmpeg
 import FFmepgWrapperOCBridge
 
 //MARK: Public
-public typealias OnResampleFinishedClouser = (UnsafeMutablePointer<UInt8>, Int32) -> Void
+public typealias OnResampleFinishedClouser = (UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?, Int32) -> Void
 public typealias OnEncodeFinishedClouser = (UnsafeMutablePointer<UInt8>, Int32) -> Void
 public typealias OnMuxerFinishedClouser = (UnsafeMutablePointer<UInt8>, Int32) -> Void
 public typealias OnFailuerClouser = (NSError?)->Void
@@ -28,10 +28,10 @@ public enum EncoderType {
 }
 
 //MARK: Private
-private let SWIFT_AV_PIX_FMT_RGB32 = AVPixelFormat(FFmepgWrapperOCBridge.avPixelFormatRGB32())
-private let SWIFT_AV_ERROR_EOF = FFmepgWrapperOCBridge.avErrorEOF()
-private let SWIFT_AV_ERROR_EAGAIN = FFmepgWrapperOCBridge.avErrorEagain()
-private let SWIFT_AC_NOPTS_VALUE = FFmepgWrapperOCBridge.avNoPTSValue()
+let SWIFT_AV_PIX_FMT_RGB32 = AVPixelFormat(FFmepgWrapperOCBridge.avPixelFormatRGB32())
+let SWIFT_AV_ERROR_EOF = FFmepgWrapperOCBridge.avErrorEOF()
+let SWIFT_AV_ERROR_EAGAIN = FFmepgWrapperOCBridge.avErrorEagain()
+let SWIFT_AC_NOPTS_VALUE = FFmepgWrapperOCBridge.avNoPTSValue()
 
 private let Video_Timebase = AVRational.init(num: 1, den: 90000)
 
@@ -41,6 +41,7 @@ private enum AudioOrVideoToWriteType {
     case video
 }
 
+//MARK: - FFmpegEncoder
 public typealias AudioDescriptionTuple = (sampleRate: Int32, channels: Int32, bitsPerChannel: Int32, sampleFormat: Int32)
 
 public class FFmpegEncoder: NSObject {
@@ -54,6 +55,7 @@ public class FFmpegEncoder: NSObject {
     public private(set) var encodeAudio: Bool = true
     
     private var displayTimeBase: Double = 0
+    private var isWroteHeader: Bool = false
 
     //Muxer
     private lazy var muxingQueue: DispatchQueue = {
@@ -85,7 +87,6 @@ public class FFmpegEncoder: NSObject {
     private var covertedSampleBuffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?
     private var audioFifo: OpaquePointer?
     
-    private var audioOutBuffer: UnsafeMutablePointer<UInt8>?
     private var swrContext: OpaquePointer?
     
     private var outAudioStream: UnsafeMutablePointer<AVStream>?
@@ -184,13 +185,12 @@ public class FFmpegEncoder: NSObject {
         }
     }
                   
-    public init(encoder type: EncoderType) {
+    public init(_ type: EncoderType) {
         self.encoderType = type
         super.init()
     }
     
     deinit {
-        self.stop()
     }
     
     public func start() {
@@ -198,13 +198,9 @@ public class FFmpegEncoder: NSObject {
     }
     
     public func stop() {
-        self.destroyAudioEncoder()
-        self.destroyVideoEncoder()
-        weak var weakSelf = self
-        self.muxingQueue.async {
-            weakSelf?.destoryMuxer()
-        }
-        
+        self.removeAudioEncoder()
+        self.removeVideoEncoder()
+        self.destoryMuxer()
     }
     
 }
@@ -212,16 +208,16 @@ public class FFmpegEncoder: NSObject {
 //MARK: Encode Video
 extension FFmpegEncoder {
     //https://www.jianshu.com/p/e25d56a67c2e
-    public func initAudioEncoder(inAudioDesc: AudioDescriptionTuple, outAudioDesc: AudioDescriptionTuple) -> Bool {
+    public func addAudioEncoder(inAudioDesc: AudioDescriptionTuple, outAudioDesc: AudioDescriptionTuple) -> Bool {
         
         var hasError = false
         
         defer {
             if hasError == true {
-                self.destroyAudioEncoder()
+                self.removeAudioEncoder()
             }
         }
-        
+    
         self.inAudioDesc = inAudioDesc
         self.outAudioDesc = outAudioDesc
         
@@ -288,7 +284,7 @@ extension FFmpegEncoder {
         return true
     }
     
-    public func destroyAudioEncoder() {
+    public func removeAudioEncoder() {
     
         if let swr = self.swrContext {
             swr_close(swr)
@@ -314,9 +310,11 @@ extension FFmpegEncoder {
             self.audioOutFrameBuffer = nil
         }
          */
-        if let buffer = self.audioOutBuffer {
+     
+        if let buffer = self.covertedSampleBuffer {
+            av_freep(buffer)
             free(buffer)
-            self.audioOutBuffer = nil
+            self.covertedSampleBuffer = nil
         }
 
     }
@@ -525,6 +523,8 @@ extension FFmpegEncoder {
 //                return
 //            }
             
+            //FIXME: 此处需要根据in buffer的格式进行内存格式转换，当前因为输入输出恰好是Packed类型（LRLRLR），只有data[0]有数据，所以直接指针转换即可
+            //如果是Planar格式，则需要对多维数组，维度等于channel数量，然后进行内存重映射，参考函数initCovertedSamples
             var srcBuff = unsafeBitCast(pcmBytes, to: UnsafePointer<UInt8>?.self)
         
             //nb_samples: 时间 * 采本率
@@ -545,7 +545,7 @@ extension FFmpegEncoder {
                 
                 if let onResample = self.onAudioResampleFinished {
                     let size = av_samples_get_buffer_size(nil, self.audioCodecContext!.pointee.channels, nb_samples, self.audioCodecContext!.pointee.sample_fmt, 1)
-                    onResample(self.audioOutBuffer!, size)
+                    onResample(self.covertedSampleBuffer!, size)
                 }
                 
                 if self.addAudioSamplesToFifo(frameSize: src_nb_samples) == false {
@@ -619,7 +619,7 @@ extension FFmpegEncoder {
 //                    print("audio \(self.audioNextPts) PTS \(audioPacket.pts) - DTS \(audioPacket.dts)")
                     let bRet = weakSelf!.muxer(packet: &audioPacket, stream: weakSelf!.outAudioStream!, timebase: weakSelf!.audioCodecContext!.pointee.time_base)
                     if bRet == false {
-                       weakSelf!.onMuxerFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing audio..."]))
+                       weakSelf!.onMuxerFaiure?(NSError.error(self.className, code: Int(ret), reason: "Error occured when muxing audio."))
                     }
                     av_packet_unref(UnsafeMutablePointer<AVPacket>(&audioPacket))
                 }
@@ -633,13 +633,13 @@ extension FFmpegEncoder {
 //MARK: Encode Video
 extension FFmpegEncoder {
     
-    public func initVideoEncoder(inWidth: Int32, inHeight: Int32, outWidth: Int32, outHeight: Int32, bitrate: Int64) -> Bool {
+    public func addVideoEncoder(inWidth: Int32, inHeight: Int32, outWidth: Int32, outHeight: Int32, bitrate: Int64) -> Bool {
             
         var hasError = false
         
         defer {
             if hasError == true {
-                self.destroyVideoEncoder()
+                self.removeVideoEncoder()
             }
         }
         
@@ -669,10 +669,14 @@ extension FFmpegEncoder {
             context.pointee.time_base.num = 1
             //All the fps supported by mpeg1: 0, 23.976, 24, 25, 29.97, 30, 50, 59.94, 60
             context.pointee.time_base.den = 25
-            context.pointee.gop_size = 30
+            context.pointee.gop_size = 50 // 2s: 2 * 25
             context.pointee.max_b_frames = 0 //Drop out B frame
             context.pointee.pix_fmt = AV_PIX_FMT_YUV420P
             context.pointee.mb_cmp = FF_MB_DECISION_RD
+            //CBR is default setting, VBR Setting blow:
+//            context.pointee.flags |= AV_CODEC_FLAG_QSCALE
+//            context.pointee.rc_max_rate =
+//            context.pointee.rc_min_rate =
             self.videoCodecContext = context
         }else {
             print("Can not create video codec context...")
@@ -757,7 +761,7 @@ extension FFmpegEncoder {
         return true
     }
     
-    func destroyVideoEncoder() {
+    func removeVideoEncoder() {
         
         if let sws = self.swsContext {
             sws_freeContext(sws)
@@ -806,8 +810,8 @@ extension FFmpegEncoder {
             self.videoInFrame!.pointee.data.0 = rgbPixels
             //RGB32
             self.videoInFrame!.pointee.linesize.0 = self.inWidth * 4
-            
-            //Convert RGB32 to YUV420
+           
+            //TODO: Using libyuv to convert RGB32 to YUV420 is faster then sws_scale
             //Return the height of the output slice
             //不同于音频重采样，视频格式转换不影响视频采样率，所以转换前后的同一时间内采样数量不变
             let destSliceH = sws_scale(self.swsContext, self.videoSrcSliceArray, self.videoSrcStrideArray, 0, self.inHeight, self.videoDstSliceArray, self.videoDstStrideArray)
@@ -897,6 +901,35 @@ extension FFmpegEncoder {
 //MARK: Muxer
 extension FFmpegEncoder {
     
+    func writeTSHeader() {
+        guard let fmtCtx = self.outFMTCtx else {
+            return
+        }
+        weak var weakSelf = self
+        self.muxingQueue.async {
+            if avformat_write_header(fmtCtx, nil) < 0 {
+                print("Error occurred when writing header.")
+            }else {
+                weakSelf?.isWroteHeader = true
+            }
+        }
+        
+    }
+    
+    func writeTSTrailer() {
+        guard let fmtCtx = self.outFMTCtx else {
+            return
+        }
+        weak var weakSelf = self
+        self.muxingQueue.async {
+            if av_write_trailer(fmtCtx) != 0 {
+                print("Error occurred when writing trailer.")
+            }else {
+                weakSelf?.isWroteHeader = false
+            }
+        }
+    }
+    
     func addStream() {
         
         if self.outFMTCtx == nil {
@@ -941,11 +974,7 @@ extension FFmpegEncoder {
                 fmtCtx.pointee.oformat.pointee.flags |= AV_CODEC_FLAG_GLOBAL_HEADER
             }
             
-            if avformat_write_header(fmtCtx, nil) < 0 {
-                print("Error occurred when writing header.")
-                return
-            }
-            
+            self.writeTSHeader()
             print("Muxer is ready...")
         }
         
