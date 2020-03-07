@@ -14,8 +14,8 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "90CC79B1238E0E8F005FCD2D"
-               BuildableName = "libFFmpegWrapper.dylib"
+               BlueprintIdentifier = "90D35BAA24138BD400A507BC"
+               BuildableName = "FFmpegWrapper.framework"
                BlueprintName = "FFmpegWrapper"
                ReferencedContainer = "container:FFmpegWrapper.xcodeproj">
             </BuildableReference>
@@ -50,8 +50,8 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "90CC79B1238E0E8F005FCD2D"
-            BuildableName = "libFFmpegWrapper.dylib"
+            BlueprintIdentifier = "90D35BAA24138BD400A507BC"
+            BuildableName = "FFmpegWrapper.framework"
             BlueprintName = "FFmpegWrapper"
             ReferencedContainer = "container:FFmpegWrapper.xcodeproj">
          </BuildableReference>
