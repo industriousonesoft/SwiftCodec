@@ -35,6 +35,10 @@ let SWIFT_AC_NOPTS_VALUE = FFmepgWrapperOCBridge.avNoPTSValue()
 
 private let Video_Timebase = AVRational.init(num: 1, den: 90000)
 
+private let VideoEncodeDomain: String = "VideoEncoder"
+private let AudioEncodeDomain: String = "AudioEncoder"
+private let MuxerEncodeDomain: String = "MuxerEncoder"
+
 private enum AudioOrVideoToWriteType {
     case none
     case audio
@@ -46,10 +50,8 @@ public typealias AudioDescriptionTuple = (sampleRate: Int32, channels: Int32, bi
 
 public class FFmpegEncoder: NSObject {
     
-    public private(set) var inWidth: Int32 = 0
-    public private(set) var inHeight: Int32 = 0
-    public private(set) var outWidth: Int32 = 0
-    public private(set) var outHeight: Int32 = 0
+    public private(set) var inSize: CGSize = .zero
+    public private(set) var outSize: CGSize = .zero
     
     public private(set) var encodeVideo: Bool = true
     public private(set) var encodeAudio: Bool = true
@@ -68,11 +70,8 @@ public class FFmpegEncoder: NSObject {
     private var videoCodecContext: UnsafeMutablePointer<AVCodecContext>?
     
     private var videoInFrame: UnsafeMutablePointer<AVFrame>?
-    private var videoInFrameBuffer: UnsafeMutablePointer<UInt8>?
-    
     private var videoOutFrame: UnsafeMutablePointer<AVFrame>?
-    private var videoOutFrameBuffer: UnsafeMutablePointer<UInt8>?
-
+  
     private var swsContext: OpaquePointer?
 
     private var outVideoStream: UnsafeMutablePointer<AVStream>?
@@ -633,20 +632,9 @@ extension FFmpegEncoder {
 //MARK: Encode Video
 extension FFmpegEncoder {
     
-    public func addVideoEncoder(inWidth: Int32, inHeight: Int32, outWidth: Int32, outHeight: Int32, bitrate: Int64) -> Bool {
+    public func addVideoEncoder(outSize: CGSize, bitrate: Int64, fps: Int32, gopSize: Int32, dropBFrame: Bool) throws {
             
-        var hasError = false
-        
-        defer {
-            if hasError == true {
-                self.removeVideoEncoder()
-            }
-        }
-        
-        self.inWidth = inWidth
-        self.inHeight = inHeight
-        self.outWidth = outWidth
-        self.outHeight = outHeight
+        self.outSize = outSize
         
         //Deprecated, No neccessary any more!
 //        avcodec_register_all()
@@ -654,9 +642,7 @@ extension FFmpegEncoder {
         if let codec = avcodec_find_encoder(codecId) {
             self.videoCodec = codec
         }else {
-            print("Can not create video codec...")
-            hasError = true
-            return false
+            throw NSError.error(VideoEncodeDomain, reason: "Failed to create video codec.")!
         }
         
         if let context = avcodec_alloc_context3(self.videoCodec) {
@@ -664,13 +650,16 @@ extension FFmpegEncoder {
             context.pointee.codec_type = AVMEDIA_TYPE_VIDEO
             context.pointee.dct_algo = FF_DCT_FASTINT
             context.pointee.bit_rate = bitrate
-            context.pointee.width = outWidth
-            context.pointee.height = outHeight
+            context.pointee.width = Int32(outSize.width)
+            context.pointee.height = Int32(outSize.height)
             context.pointee.time_base.num = 1
             //All the fps supported by mpeg1: 0, 23.976, 24, 25, 29.97, 30, 50, 59.94, 60
-            context.pointee.time_base.den = 25
-            context.pointee.gop_size = 50 // 2s: 2 * 25
-            context.pointee.max_b_frames = 0 //Drop out B frame
+            context.pointee.time_base.den = fps
+            context.pointee.gop_size = gopSize // 2s: 2 * 25
+            //Drop out B frame
+            if dropBFrame {
+                context.pointee.max_b_frames = 0
+            }
             context.pointee.pix_fmt = AV_PIX_FMT_YUV420P
             context.pointee.mb_cmp = FF_MB_DECISION_RD
             //CBR is default setting, VBR Setting blow:
@@ -679,122 +668,132 @@ extension FFmpegEncoder {
 //            context.pointee.rc_min_rate =
             self.videoCodecContext = context
         }else {
-            print("Can not create video codec context...")
-            hasError = true
-            return false
+            throw NSError.error(VideoEncodeDomain, reason: "Failed to create video codec context.")!
         }
         
-        if  avcodec_open2(self.videoCodecContext!, self.videoCodec!, nil) < 0 {
-            print("Can not open video avcodec...")
-            hasError = true
-            return false
+        if avcodec_open2(self.videoCodecContext!, self.videoCodec!, nil) < 0 {
+            throw NSError.error(VideoEncodeDomain, reason: "Failed to open video avcodec.")!
         }
         
-        //InFrame
-        if let frame = av_frame_alloc() {
-            frame.pointee.format = SWIFT_AV_PIX_FMT_RGB32.rawValue
-            frame.pointee.width = inWidth
-            frame.pointee.height = inHeight
-            frame.pointee.pts = 0
-            
-            let frameSize = av_image_get_buffer_size(AV_PIX_FMT_YUV420P, outWidth, outHeight, 1)
-            if frameSize < 0 {
-                print("Can not get the buffer size...")
-                hasError = true
-                return false
-            }
-            
-            self.videoInFrameBuffer = unsafeBitCast(malloc(Int(frameSize)), to: UnsafeMutablePointer<UInt8>.self)
-            
-            if av_image_fill_arrays(&(frame.pointee.data.0), &(frame.pointee.linesize.0), self.videoInFrameBuffer, SWIFT_AV_PIX_FMT_RGB32, inWidth, inHeight, 1) < 0 {
-                print("Can not fill input frame...")
-                hasError = true
-                return false
-            }
-            
-            self.videoInFrame = frame
-            
-        }else {
-            print("Can not create video input frame...")
-            hasError = true
-            return false
-        }
-        
-        //OutFrame
-        if let frame = av_frame_alloc() {
-            frame.pointee.format = AV_PIX_FMT_YUV420P.rawValue
-            frame.pointee.width = outWidth
-            frame.pointee.height = outHeight
-            frame.pointee.pts = 0
-            
-            let frameSize = av_image_get_buffer_size(AV_PIX_FMT_YUV420P, outWidth, outHeight, 1)
-            if frameSize < 0 {
-                print("Can not get the YUV420P buffer size...")
-                hasError = true
-                return false
-            }
-            
-            self.videoOutFrameBuffer = unsafeBitCast(malloc(Int(frameSize)), to: UnsafeMutablePointer<UInt8>.self)
-            
-            if av_image_fill_arrays(&(frame.pointee.data.0), &(frame.pointee.linesize.0), self.videoOutFrameBuffer, AV_PIX_FMT_YUV420P, outWidth, outHeight, 1) < 0 {
-                print("Can not fill video output frame...")
-                hasError = true
-                return false
-            }
-            
-            self.videoOutFrame = frame
-            
-        }else {
-            print("Can not create video output frame...")
-            hasError = true
-            return false
-        }
+        try self.createVideoOutFrame(size: self.outSize)
     
-        if let sws = sws_getContext(inWidth, inHeight, SWIFT_AV_PIX_FMT_RGB32, outWidth, outHeight, AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, nil, nil, nil) {
-             self.swsContext = sws
-        }else {
-            print("Can not create sws context...")
-            hasError = true
-            return false
-        }
-      
-        return true
     }
     
     func removeVideoEncoder() {
         
-        if let sws = self.swsContext {
-            sws_freeContext(sws)
-            self.swsContext = nil
-        }
         if let context = self.videoCodecContext {
             avcodec_close(context)
             avcodec_free_context(&self.videoCodecContext)
             self.videoCodecContext = nil
         }
+        
+        self.destorySwsContext()
+        self.destoryVideoOutFrame()
+        self.destoryVideoInFrame()
+    }
+    
+    //MARK: - Video Encode Context
+    
+    //MARK: - Out Video Frame
+    private func destoryVideoOutFrame() {
         if let frame = self.videoOutFrame {
             av_free(frame)
             self.videoOutFrame = nil
         }
-        if let frameBuffer = self.videoOutFrameBuffer {
-            free(frameBuffer)
-            self.videoOutFrameBuffer = nil
+    }
+    
+    private func createVideoOutFrame(size: CGSize) throws {
+        if let frame = av_frame_alloc() {
+            frame.pointee.format = AV_PIX_FMT_YUV420P.rawValue
+            frame.pointee.width = Int32(size.width)
+            frame.pointee.height = Int32(size.height)
+            frame.pointee.pts = 0
+            
+            let frameSize = av_image_get_buffer_size(AV_PIX_FMT_YUV420P,  Int32(size.width), Int32(size.height), 1)
+            if frameSize < 0 {
+                throw NSError.error(VideoEncodeDomain, reason: "Can not get the video output frame buffer size.")!
+            }
+            
+            let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: Int(frameSize))
+            if av_image_fill_arrays(&(frame.pointee.data.0), &(frame.pointee.linesize.0), buffer, AV_PIX_FMT_YUV420P, Int32(size.width), Int32(size.height), 1) < 0 {
+                throw NSError.error(VideoEncodeDomain, reason: "Can not get the video output frame buffer size.")!
+            }
+            
+            self.videoOutFrame = frame
+            
+        }else {
+            throw NSError.error(VideoEncodeDomain, reason: "Can not get the video output frame buffer size.")!
         }
+    }
+    
+    //MARK: - Input Video Frame
+    private func destoryVideoInFrame() {
         if let frame = self.videoInFrame {
             av_free(frame)
             self.videoInFrame = nil
         }
-        if let frameBuffer = self.videoInFrameBuffer {
-            free(frameBuffer)
-            self.videoInFrameBuffer = nil
+    }
+    
+    private func createVideoInFrame(size: CGSize) throws {
+        //InFrame
+        if let frame = av_frame_alloc() {
+            frame.pointee.format = SWIFT_AV_PIX_FMT_RGB32.rawValue
+            frame.pointee.width = Int32(size.width)
+            frame.pointee.height = Int32(size.height)
+            frame.pointee.pts = 0
+            
+            let frameSize = av_image_get_buffer_size(SWIFT_AV_PIX_FMT_RGB32, Int32(size.width), Int32(size.height), 1)
+            if frameSize < 0 {
+                throw NSError.error(VideoEncodeDomain, reason: "Can not get the video input frame buffer size.")!
+            }
+            
+            let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: Int(frameSize))
+            if av_image_fill_arrays(&(frame.pointee.data.0), &(frame.pointee.linesize.0), buffer, SWIFT_AV_PIX_FMT_RGB32, Int32(size.width), Int32(size.height), 1) < 0 {
+                throw NSError.error(VideoEncodeDomain, reason: "Can not fill the video input frame buffer.")!
+            }
+            
+            self.videoInFrame = frame
+            
+        }else {
+            throw NSError.error(VideoEncodeDomain, reason: "Can not alloc the video input frame.")!
+        }
+    }
+    
+    //MARK: - Sws Context
+    private func destorySwsContext() {
+        if let sws = self.swsContext {
+            sws_freeContext(sws)
+            self.swsContext = nil
+        }
+    }
+    
+    private func createSwsContect(inSize: CGSize, outSize: CGSize) throws {
+        if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), SWIFT_AV_PIX_FMT_RGB32, Int32(outSize.width), Int32(outSize.height), AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, nil, nil, nil) {
+            self.swsContext = sws
+        }else {
+            throw NSError.error(VideoEncodeDomain, reason: "Can not create sws context.")!
         }
     }
      
-    public func encode(rgbPixels: UnsafeMutablePointer<UInt8>, displayTime: Double) {
+    //MARK: - Video Encode
+    public func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) {
         
 //        let inDataArray = unsafeBitCast([rgbPixels], to: UnsafePointer<UnsafePointer<UInt8>?>?.self)
 //        let inLineSizeArray = unsafeBitCast([self.inWidth * 4], to: UnsafePointer<Int32>.self)
 //        print("Video display time: \(displayTime)")
+        
+        if __CGSizeEqualToSize(self.inSize, size) == false {
+            do {
+                self.destoryVideoInFrame()
+                self.destorySwsContext()
+                try self.createVideoInFrame(size: size)
+                try self.createSwsContect(inSize: size, outSize: self.outSize)
+                self.inSize = size
+            } catch let err {
+                self.onVideoEncoderFaiure?(NSError.error(VideoEncodeDomain, reason: err.localizedDescription))
+                return
+            }
+        }
         
         if self.encoderType == .video && self.displayTimeBase == 0 {
             self.displayTimeBase = displayTime
@@ -807,14 +806,14 @@ extension FFmpegEncoder {
         
         if self.videoOutFrame != nil && self.videoInFrame != nil {
             
-            self.videoInFrame!.pointee.data.0 = rgbPixels
-            //RGB32
-            self.videoInFrame!.pointee.linesize.0 = self.inWidth * 4
+            self.videoInFrame!.pointee.data.0 = bytes
+            //输入使用的是AV_PIX_FMT_RGB32: width x 4(RGBA有4个颜色通道个数) = bytesPerRow = stride
+            self.videoInFrame!.pointee.linesize.0 = Int32(size.width) * 4
            
             //TODO: Using libyuv to convert RGB32 to YUV420 is faster then sws_scale
             //Return the height of the output slice
             //不同于音频重采样，视频格式转换不影响视频采样率，所以转换前后的同一时间内采样数量不变
-            let destSliceH = sws_scale(self.swsContext, self.videoSrcSliceArray, self.videoSrcStrideArray, 0, self.inHeight, self.videoDstSliceArray, self.videoDstStrideArray)
+            let destSliceH = sws_scale(self.swsContext, self.videoSrcSliceArray, self.videoSrcStrideArray, 0, Int32(size.height), self.videoDstSliceArray, self.videoDstStrideArray)
             
             if destSliceH > 0 {
                 
@@ -843,7 +842,7 @@ extension FFmpegEncoder {
                
                 var ret = avcodec_send_frame(self.videoCodecContext, self.videoOutFrame)
                 if ret < 0 {
-                    self.onVideoEncoderFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error about sending a packet for video encoding."]))
+                    self.onVideoEncoderFaiure?(NSError.error(VideoEncodeDomain, code: Int(ret), reason: "Error about sending a packet for video encoding.")!)
                     return
                 }
                 
@@ -853,7 +852,7 @@ extension FFmpegEncoder {
                 }else if ret == SWIFT_AV_ERROR_EAGAIN {
                     print("avcodec_recieve_packet() need more input...")
                 }else if ret < 0 {
-                    self.onVideoEncoderFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when encoding video."]))
+                    self.onVideoEncoderFaiure?(NSError.error(VideoEncodeDomain, code: Int(ret), reason: "Error occured when encoding video.")!)
                     return
                 }
                 
@@ -873,7 +872,6 @@ extension FFmpegEncoder {
                         onEncoded(encodedBytes, Int32(packetSize))
                     }
                    
-                    
                     //B相对于I帧和P帧而言是压缩率最高的，更好的保证视频质量，但是由于需要向后一帧参考，所以不适合用于实时性要求高的场合。
                     //当前编码用于镜像，实时性优先，所以去掉了B帧
                     if self.onMuxerFinished != nil, self.outVideoStream != nil, self.videoCodecContext != nil {
@@ -882,7 +880,7 @@ extension FFmpegEncoder {
                         self.muxingQueue.async {
                             let bRet = weakSelf!.muxer(packet: &videoPacket, stream: weakSelf!.outVideoStream!, timebase: weakSelf!.videoCodecContext!.pointee.time_base)
                             if bRet == false {
-                                weakSelf!.onMuxerFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when muxing video."]))
+                                weakSelf!.onMuxerFaiure?(NSError.error(VideoEncodeDomain, code: Int(ret), reason: "Error occured when muxing video.")!)
                             }
                             av_packet_unref(UnsafeMutablePointer<AVPacket>(&videoPacket))
                         }
@@ -892,7 +890,7 @@ extension FFmpegEncoder {
             }
            
         }else {
-            self.onVideoEncoderFaiure?(NSError.init(domain: "FFmpegEncoder", code: Int(-1), userInfo: [NSLocalizedDescriptionKey : "Encoder not initailized."]))
+            self.onVideoEncoderFaiure?(NSError.error(VideoEncodeDomain, reason: "Encoder not initailized.")!)
         }
         
     }
