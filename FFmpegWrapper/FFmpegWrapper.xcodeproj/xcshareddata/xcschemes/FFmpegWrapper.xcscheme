@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "90D35BAA24138BD400A507BC"
-               BuildableName = "FFmpegWrapper.framework"
+               BuildableName = "ZDSwiftyFFmpegWrapper.framework"
                BlueprintName = "FFmpegWrapper"
                ReferencedContainer = "container:FFmpegWrapper.xcodeproj">
             </BuildableReference>
@@ -51,7 +51,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "90D35BAA24138BD400A507BC"
-            BuildableName = "FFmpegWrapper.framework"
+            BuildableName = "ZDSwiftyFFmpegWrapper.framework"
             BlueprintName = "FFmpegWrapper"
             ReferencedContainer = "container:FFmpegWrapper.xcodeproj">
          </BuildableReference>
