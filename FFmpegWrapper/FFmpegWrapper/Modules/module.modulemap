@@ -1,0 +1,32 @@
+module CFFmpeg [system] {
+    module AVUtil {
+        header "avutil_shim.h"
+        link "avutil"
+        export *
+    }
+    module AVCodec {
+        header "avcodec_shim.h"
+        link "avcodec"
+        export *
+    }
+    module AVFormat {
+        header "avformat_shim.h"
+        link "avformat"
+        export *
+    }
+    module SWScale {
+        header "swscale_shim.h"
+        link "swscale"
+        export *
+    }
+    module SWResample {
+        header "swresample_shim.h"
+        link "swresample"
+        export *
+    }
+}
+
+module FFmepgWrapperOCBridge [system] {
+    header "FFmepgWrapperOCBridge.h"
+    export *
+}
