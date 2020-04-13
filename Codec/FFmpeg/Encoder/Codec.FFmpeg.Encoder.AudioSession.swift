@@ -10,42 +10,43 @@ import Foundation
 
 private let ErrorDomain = "FFmpeg:Audio:Encoder"
 
-//MARK: - FFmpegAudioSession
-class FFmpegEncoderAudioSession: NSObject {
-    
-    private let inDesc: FFmpegCodec.AudioDescription
-    private let config: FFmpegCodec.Config
-    
-    private var codec: UnsafeMutablePointer<AVCodec>?
-    private var codecCtx: UnsafeMutablePointer<AVCodecContext>?
-    
-    private var audioFifo: OpaquePointer?
-    
-    private var encodeInFrame: UnsafeMutablePointer<AVFrame>?
-    private var convertOutSampleBuffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?
-    
-    private var swrCtx: OpaquePointer?
-    
-    private var resampleDstFrameSize: Int32 = 0
-    private var audioSampleCount: Int64 = 0
-    private var audioNextPts: Int64 = 0
-    
-    private var outDesc = FFmpegCodec.Config.defaultDesc
-    
-    init(in desc: FFmpegCodec.AudioDescription, config: FFmpegCodec.Config) {
-        self.inDesc = desc
-        self.config = config
-        super.init()
+extension Codec.FFmpeg.Encoder {
+    //MARK: - FFmpegAudioSession
+    class AudioSession: NSObject {
+        
+        private var inDesc: Codec.FFmpeg.AudioDescription?
+        private var config: Codec.FFmpeg.Config?
+        
+        private var codec: UnsafeMutablePointer<AVCodec>?
+        private var codecCtx: UnsafeMutablePointer<AVCodecContext>?
+        
+        private var audioFifo: OpaquePointer?
+        
+        private var encodeInFrame: UnsafeMutablePointer<AVFrame>?
+        private var convertOutSampleBuffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?
+        
+        private var swrCtx: OpaquePointer?
+        
+        private var resampleDstFrameSize: Int32 = 0
+        private var audioSampleCount: Int64 = 0
+        private var audioNextPts: Int64 = 0
+        
+        private var outDesc = Codec.FFmpeg.Config.defaultDesc
+        
+        deinit {
+            self.close()
+        }
+        
     }
-    
-    deinit {
-        self.close()
-    }
+
 }
 
-extension FFmpegEncoderAudioSession {
+extension Codec.FFmpeg.Encoder.AudioSession {
     
-    func open() throws {
+    func open(in desc: Codec.FFmpeg.AudioDescription, config: Codec.FFmpeg.Config) throws {
+        
+        self.inDesc = desc
+        self.config = config
         
         //Codec
         let codecId: AVCodecID = config.codec.toAVCodecID()
@@ -96,7 +97,7 @@ extension FFmpegEncoderAudioSession {
         
         //Create swrCtx if neccessary
         if self.inDesc != self.outDesc {
-            self.swrCtx = try self.createConverter(inDesc: self.inDesc, outDesc: self.outDesc)
+            self.swrCtx = try self.createConverter(inDesc: desc, outDesc: self.outDesc)
         }
     }
     
@@ -130,7 +131,7 @@ extension FFmpegEncoderAudioSession {
 
 //MARK: - Initialize Helper
 private
-extension FFmpegEncoderAudioSession {
+extension Codec.FFmpeg.Encoder.AudioSession {
     
     func selectSampleRate(codec: UnsafeMutablePointer<AVCodec>) -> Int32? {
         //supported_samplerates is a Int32 array contains all the supported samplerate
@@ -172,7 +173,7 @@ extension FFmpegEncoderAudioSession {
     
     //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
     //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
-    func createSampleBuffer(desc: FFmpegCodec.AudioDescription, frameSize: Int32) throws -> UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?> {
+    func createSampleBuffer(desc: Codec.FFmpeg.AudioDescription, frameSize: Int32) throws -> UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?> {
         
         //申请一个多维数组，维度等于音频的channel数
         let buffer = calloc(Int(desc.channels), MemoryLayout<UnsafeMutablePointer<UnsafeMutablePointer<UInt8>>>.stride).assumingMemoryBound(to: UnsafeMutablePointer<UInt8>?.self)
@@ -200,7 +201,7 @@ extension FFmpegEncoderAudioSession {
         return av_audio_fifo_alloc(codecCtx.pointee.sample_fmt, codecCtx.pointee.channels, codecCtx.pointee.frame_size)
     }
     
-    func createConverter(inDesc: FFmpegCodec.AudioDescription, outDesc: FFmpegCodec.AudioDescription) throws -> OpaquePointer? {
+    func createConverter(inDesc: Codec.FFmpeg.AudioDescription, outDesc: Codec.FFmpeg.AudioDescription) throws -> OpaquePointer? {
         //swr
         if let swrCtx = swr_alloc_set_opts(nil,
                                     av_get_default_channel_layout(outDesc.channels),
@@ -227,7 +228,7 @@ extension FFmpegEncoderAudioSession {
 
 //MARK: - FIFO
 private
-extension FFmpegEncoderAudioSession {
+extension Codec.FFmpeg.Encoder.AudioSession {
     
     func write(buffer: UnsafeMutablePointer<UnsafeMutableRawPointer?>!, frameSize: Int32, to fifo: OpaquePointer) -> Error? {
      
@@ -267,9 +268,13 @@ extension FFmpegEncoderAudioSession {
 }
 
 //MARK: - Resample
-extension FFmpegEncoderAudioSession {
+extension Codec.FFmpeg.Encoder.AudioSession {
     
     func resample(pcm inBuffer: UnsafeMutablePointer<UInt8>, len: Int32) throws -> (UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, Int32) {
+        
+        guard let inDesc = self.inDesc else {
+            throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) => No in audio description available.")!
+        }
         
         //FIXME: 此处需要根据in buffer的格式进行内存格式转换，当前因为输入输出恰好是Packed类型（LRLRLR），只有data[0]有数据，所以直接指针转换即可
         //如果是Planar格式，则需要对多维数组，维度等于channel数量，然后进行内存重映射，参考函数createSampleBuffer
@@ -310,8 +315,8 @@ extension FFmpegEncoderAudioSession {
 }
 
 //MARK: - Encode
-extension FFmpegEncoderAudioSession {
-    
+extension Codec.FFmpeg.Encoder.AudioSession {
+
     func encode(pcm buffer: UnsafeMutablePointer<UInt8>, len: Int32) throws {
         
         if let codecCtx = self.codecCtx,
