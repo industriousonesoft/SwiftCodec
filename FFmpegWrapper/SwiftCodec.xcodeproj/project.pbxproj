@@ -152,7 +152,7 @@
 		90D05639238FC6CA00DB766C /* libswresample.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libswresample.3.dylib; sourceTree = "<group>"; };
 		90D0563A238FC6CA00DB766C /* libgsm.1.0.13.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libgsm.1.0.13.dylib; sourceTree = "<group>"; };
 		90D0563B238FC6CB00DB766C /* libx265.169.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libx265.169.dylib; sourceTree = "<group>"; };
-		90D35BAB24138BD400A507BC /* ZDSwiftyFFmpegWrapper.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ZDSwiftyFFmpegWrapper.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		90D35BAB24138BD400A507BC /* ZDSwiftySwiftCodec.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ZDSwiftySwiftCodec.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		90D35BB524138D9200A507BC /* FFmpegWrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FFmpegWrapper.h; sourceTree = "<group>"; };
 		90D35BB624138D9200A507BC /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		90D3E0AD2398E083009C2195 /* libavformat.58.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libavformat.58.dylib; sourceTree = "<group>"; };
@@ -192,7 +192,7 @@
 		90CC79A9238E0E8F005FCD2D = {
 			isa = PBXGroup;
 			children = (
-				90D05578238FB51600DB766C /* FFmpegWrapper */,
+				90D05578238FB51600DB766C /* FFmpeg */,
 				90D35BB424138D6A00A507BC /* SupportFiles */,
 				90CC79C1238E108A005FCD2D /* LinkedFramework */,
 				90CC79B3238E0E8F005FCD2D /* Products */,
@@ -202,7 +202,7 @@
 		90CC79B3238E0E8F005FCD2D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				90D35BAB24138BD400A507BC /* ZDSwiftyFFmpegWrapper.framework */,
+				90D35BAB24138BD400A507BC /* ZDSwiftySwiftCodec.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -381,7 +381,7 @@
 			path = lib;
 			sourceTree = "<group>";
 		};
-		90D05578238FB51600DB766C /* FFmpegWrapper */ = {
+		90D05578238FB51600DB766C /* FFmpeg */ = {
 			isa = PBXGroup;
 			children = (
 				90D0557A238FB51600DB766C /* Modules */,
@@ -389,7 +389,7 @@
 				90D4263E23CDA06B0077CF1A /* AudioSession.swift */,
 				90D05579238FB51600DB766C /* Encoder.swift */,
 			);
-			path = FFmpegWrapper;
+			path = FFmpeg;
 			sourceTree = "<group>";
 		};
 		90D0557A238FB51600DB766C /* Modules */ = {
@@ -446,9 +446,9 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		90D35BAA24138BD400A507BC /* FFmpegWrapper */ = {
+		90D35BAA24138BD400A507BC /* SwiftCodec */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 90D35BB024138BD400A507BC /* Build configuration list for PBXNativeTarget "FFmpegWrapper" */;
+			buildConfigurationList = 90D35BB024138BD400A507BC /* Build configuration list for PBXNativeTarget "SwiftCodec" */;
 			buildPhases = (
 				90D35BA624138BD400A507BC /* Headers */,
 				90D35BA724138BD400A507BC /* Sources */,
@@ -459,9 +459,9 @@
 			);
 			dependencies = (
 			);
-			name = FFmpegWrapper;
+			name = SwiftCodec;
 			productName = FFmpegWrapper;
-			productReference = 90D35BAB24138BD400A507BC /* ZDSwiftyFFmpegWrapper.framework */;
+			productReference = 90D35BAB24138BD400A507BC /* ZDSwiftySwiftCodec.framework */;
 			productType = "com.apple.product-type.framework";
 		};
 /* End PBXNativeTarget section */
@@ -478,7 +478,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 90CC79AD238E0E8F005FCD2D /* Build configuration list for PBXProject "FFmpegWrapper" */;
+			buildConfigurationList = 90CC79AD238E0E8F005FCD2D /* Build configuration list for PBXProject "SwiftCodec" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -491,7 +491,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				90D35BAA24138BD400A507BC /* FFmpegWrapper */,
+				90D35BAA24138BD400A507BC /* SwiftCodec */,
 			);
 		};
 /* End PBXProject section */
@@ -574,7 +574,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				MY_LIB_NAME = ZDSwiftyFFmpegWrapper;
+				MY_LIB_NAME = "";
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "${MY_LIB_NAME}";
 				SDKROOT = macosx;
@@ -628,7 +628,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				MY_LIB_NAME = ZDSwiftyFFmpegWrapper;
+				MY_LIB_NAME = "";
 				PRODUCT_NAME = "${MY_LIB_NAME}";
 				SDKROOT = macosx;
 			};
@@ -657,11 +657,12 @@
 					"\"$(SRCROOT)/LinkedFramework/FFMpeg/lib\"",
 					"$(PROJECT_DIR)/LinkedFramework/FFMpeg/lib",
 				);
+				MY_LIB_NAME = SwiftyCodecFFmpeg;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zdnet.FFmpegWrapper;
-				PRODUCT_NAME = "$(MY_LIB_NAME)";
+				PRODUCT_NAME = ZDSwiftySwiftCodec;
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
-				SWIFT_INCLUDE_PATHS = "\"$(SRCROOT)/FFmpegWrapper/Modules\"";
+				SWIFT_INCLUDE_PATHS = "\"$(SRCROOT)/FFmpeg/Modules\"";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -692,11 +693,12 @@
 					"\"$(SRCROOT)/LinkedFramework/FFMpeg/lib\"",
 					"$(PROJECT_DIR)/LinkedFramework/FFMpeg/lib",
 				);
+				MY_LIB_NAME = SwiftyCodecFFmpeg;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zdnet.FFmpegWrapper;
-				PRODUCT_NAME = "$(MY_LIB_NAME)";
+				PRODUCT_NAME = ZDSwiftySwiftCodec;
 				SKIP_INSTALL = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_INCLUDE_PATHS = "\"$(SRCROOT)/FFmpegWrapper/Modules\"";
+				SWIFT_INCLUDE_PATHS = "\"$(SRCROOT)/FFmpeg/Modules\"";
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -707,7 +709,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		90CC79AD238E0E8F005FCD2D /* Build configuration list for PBXProject "FFmpegWrapper" */ = {
+		90CC79AD238E0E8F005FCD2D /* Build configuration list for PBXProject "SwiftCodec" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				90CC79B9238E0E8F005FCD2D /* Debug */,
@@ -716,7 +718,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		90D35BB024138BD400A507BC /* Build configuration list for PBXNativeTarget "FFmpegWrapper" */ = {
+		90D35BB024138BD400A507BC /* Build configuration list for PBXNativeTarget "SwiftCodec" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				90D35BB124138BD400A507BC /* Debug */,
