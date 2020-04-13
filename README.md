@@ -1,2 +1,2 @@
-# FFmpegWrapper
-A wrapper based on FFmpeg
+# SwiftCodec
+A codec based on FFmpeg And Apple
