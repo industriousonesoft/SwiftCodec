@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "90D35BAA24138BD400A507BC"
-               BuildableName = "ZDSwiftyFFmpegWrapper.framework"
+               BuildableName = "ZDSwiftySwiftCodec.framework"
                BlueprintName = "SwiftCodec"
                ReferencedContainer = "container:SwiftCodec.xcodeproj">
             </BuildableReference>
@@ -51,7 +51,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "90D35BAA24138BD400A507BC"
-            BuildableName = "ZDSwiftyFFmpegWrapper.framework"
+            BuildableName = "ZDSwiftySwiftCodec.framework"
             BlueprintName = "SwiftCodec"
             ReferencedContainer = "container:SwiftCodec.xcodeproj">
          </BuildableReference>
