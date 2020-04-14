@@ -14,8 +14,8 @@ extension Codec.FFmpeg.Encoder {
     //MARK: - FFmpegAudioSession
     class AudioSession: NSObject {
         
-        private var inDesc: Codec.FFmpeg.AudioDescription?
-        private var config: Codec.FFmpeg.Config?
+        private var inDesc: Codec.FFmpeg.Audio.Description?
+        private var config: Codec.FFmpeg.Audio.Config?
         
         private var codec: UnsafeMutablePointer<AVCodec>?
         private var codecCtx: UnsafeMutablePointer<AVCodecContext>?
@@ -31,7 +31,7 @@ extension Codec.FFmpeg.Encoder {
         private var audioSampleCount: Int64 = 0
         private var audioNextPts: Int64 = 0
         
-        private var outDesc = Codec.FFmpeg.Config.defaultDesc
+        private var outDesc = Codec.FFmpeg.Audio.Config.defaultDesc
         
         deinit {
             self.close()
@@ -43,7 +43,7 @@ extension Codec.FFmpeg.Encoder {
 
 extension Codec.FFmpeg.Encoder.AudioSession {
     
-    func open(in desc: Codec.FFmpeg.AudioDescription, config: Codec.FFmpeg.Config) throws {
+    func open(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
         
         self.inDesc = desc
         self.config = config
@@ -173,7 +173,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
     
     //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
     //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
-    func createSampleBuffer(desc: Codec.FFmpeg.AudioDescription, frameSize: Int32) throws -> UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?> {
+    func createSampleBuffer(desc: Codec.FFmpeg.Audio.Description, frameSize: Int32) throws -> UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?> {
         
         //申请一个多维数组，维度等于音频的channel数
         let buffer = calloc(Int(desc.channels), MemoryLayout<UnsafeMutablePointer<UnsafeMutablePointer<UInt8>>>.stride).assumingMemoryBound(to: UnsafeMutablePointer<UInt8>?.self)
@@ -201,7 +201,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         return av_audio_fifo_alloc(codecCtx.pointee.sample_fmt, codecCtx.pointee.channels, codecCtx.pointee.frame_size)
     }
     
-    func createConverter(inDesc: Codec.FFmpeg.AudioDescription, outDesc: Codec.FFmpeg.AudioDescription) throws -> OpaquePointer? {
+    func createConverter(inDesc: Codec.FFmpeg.Audio.Description, outDesc: Codec.FFmpeg.Audio.Description) throws -> OpaquePointer? {
         //swr
         if let swrCtx = swr_alloc_set_opts(nil,
                                     av_get_default_channel_layout(outDesc.channels),
@@ -341,55 +341,50 @@ extension Codec.FFmpeg.Encoder.AudioSession {
                 
                 self.audioNextPts += Int64(readFrameSize)
                 
-                self.encode(encodeInFrame, onSuccess: { (packet) in
-                    av_packet_unref(packet)
-                }) { (error) in
-                    
-                }
+                self.encode(encodeInFrame, in: codecCtx, onFinisehd: { (packet, error) in
+                    if error != nil {
+                        
+                    }else if packet != nil {
+                        av_packet_unref(packet!)
+                    }
+                })
             }
         }
     }
   
     private
-    func encode(_ frame: UnsafeMutablePointer<AVFrame>, onSuccess: (UnsafeMutablePointer<AVPacket>)->Void, onFailure: (Error?)->Void) {
-        
-         guard let codecCtx = self.codecCtx else {
-            onFailure(NSError.error(ErrorDomain, reason: "Audio Codec not initilized yet."))
-            return
-        }
+    func encode(_ frame: UnsafeMutablePointer<AVFrame>, in codecCtx: UnsafeMutablePointer<AVCodecContext>, onFinisehd: (UnsafeMutablePointer<AVPacket>?, Error?)->Void) {
         
         var audioPacket = AVPacket.init()
         withUnsafeMutablePointer(to: &audioPacket) { [unowned self] (ptr) in
-            ptr.withMemoryRebound(to: AVPacket.self, capacity: 1) { [unowned self] (ptr) in
-                
-                av_init_packet(ptr)
-                        
-                //pts(presentation timestamp): Calculate the time of the sum of sample count for now as the timestmap
-                //计算目前为止的采用数所使用的时间作为显示时间戳
-                frame.pointee.pts = av_rescale_q(self.audioSampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
-                self.audioSampleCount += Int64(frame.pointee.nb_samples)
-             
-                var ret = avcodec_send_frame(codecCtx, frame)
-                if ret < 0 {
-                    onFailure(NSError.init(domain: ErrorDomain, code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error about sending a packet for audio encoding."]))
+            
+            av_init_packet(ptr)
+                       
+            //pts(presentation timestamp): Calculate the time of the sum of sample count for now as the timestmap
+            //计算目前为止的采用数所使用的时间作为显示时间戳
+            frame.pointee.pts = av_rescale_q(self.audioSampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
+            self.audioSampleCount += Int64(frame.pointee.nb_samples)
+            
+            var ret = avcodec_send_frame(codecCtx, frame)
+            if ret < 0 {
+                onFinisehd(nil, NSError.init(domain: ErrorDomain, code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error about sending a packet for audio encoding."]))
+                return
+            }
+               
+            ret = avcodec_receive_packet(codecCtx, ptr)
+            if ret == 0 {
+                //print("Encoded audio successfully...")
+                onFinisehd(ptr, nil)
+            }else {
+                if ret == SWIFT_AV_ERROR_EOF {
+                    print("avcodec_recieve_packet() encoder flushed...")
+                }else if ret == SWIFT_AV_ERROR_EAGAIN {
+                    print("avcodec_recieve_packet() need more input...")
+                }else if ret < 0 {
+                    onFinisehd(nil, NSError.init(domain: ErrorDomain, code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when encoding audio."]))
                     return
                 }
-                
-                ret = avcodec_receive_packet(codecCtx, ptr)
-                if ret == 0 {
-                    //print("Encoded audio successfully...")
-                    onSuccess(ptr)
-                }else {
-                    if ret == SWIFT_AV_ERROR_EOF {
-                        print("avcodec_recieve_packet() encoder flushed...")
-                    }else if ret == SWIFT_AV_ERROR_EAGAIN {
-                        print("avcodec_recieve_packet() need more input...")
-                    }else if ret < 0 {
-                        onFailure(NSError.init(domain: ErrorDomain, code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when encoding audio."]))
-                        return
-                    }
-                    av_packet_unref(ptr)
-                }
+                av_packet_unref(ptr)
             }
         }
         

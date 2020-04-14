@@ -31,7 +31,7 @@ extension Codec.FFmpeg.Encoder {
 public
 extension AudioCompatible where Base: Codec.FFmpeg.Encoder {
     
-    func open(in desc: Codec.FFmpeg.AudioDescription, config: Codec.FFmpeg.Config) throws {
+    func open(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
         try self.base.open(in: desc, config: config)
     }
     
@@ -49,7 +49,7 @@ extension AudioCompatible where Base: Codec.FFmpeg.Encoder {
 private
 extension Codec.FFmpeg.Encoder {
     
-    func open(in desc: Codec.FFmpeg.AudioDescription, config: Codec.FFmpeg.Config) throws {
+    func open(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
         try self.audioSession.open(in: desc, config: config)
     }
     

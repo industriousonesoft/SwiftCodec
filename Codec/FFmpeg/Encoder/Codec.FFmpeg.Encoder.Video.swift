@@ -37,4 +37,7 @@ extension AudioCompatible where Base: Codec.FFmpeg.Encoder {
 private
 extension Codec.FFmpeg.Encoder {
     
+    func open() {
+        
+    }
 }

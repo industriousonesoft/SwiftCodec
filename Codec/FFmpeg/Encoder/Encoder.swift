@@ -340,7 +340,8 @@ extension FFmpegEncoder {
         }
     }
     
-    private func createSwsContect(inSize: CGSize, outSize: CGSize) throws {
+    private
+    func createSwsContect(inSize: CGSize, outSize: CGSize) throws {
         if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), SWIFT_AV_PIX_FMT_RGB32, Int32(outSize.width), Int32(outSize.height), AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, nil, nil, nil) {
             self.swsContext = sws
         }else {

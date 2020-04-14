@@ -11,11 +11,18 @@ import CoreAudio
 @_exported import CFFmpeg
 @_exported import FFmepgWrapperOCBridge
 
-extension Codec {
-    public struct FFmpeg {
+public extension Codec {
+    struct FFmpeg {
+    }
+}
+
+ //MARK: - Audio
+public extension Codec.FFmpeg {
+
+    struct Audio {
         
-        //MARK: - AudioDescription
-        public struct AudioDescription: Equatable {
+        //MARK: - Description
+        public struct Description: Equatable {
             
             public enum SampleFMT {
                 case S16
@@ -64,15 +71,18 @@ extension Codec {
             }
         }
 
-        //MARK: - AudioDescription
+        //MARK: - Config
         public struct Config {
             
             public enum CodecType {
                 case MP2
+                case AAC
                 public func toAVCodecID() -> AVCodecID {
                     switch self {
                     case .MP2:
                         return AV_CODEC_ID_MP2
+                    case .AAC:
+                        return AV_CODEC_ID_AAC
                     }
                 }
             }
@@ -80,10 +90,38 @@ extension Codec {
             public var codec: CodecType
             public var bitRate: Int64
             
-            internal static let defaultDesc = AudioDescription.init(sampleRate: Int32(44100), channels: Int32(2), bitsPerChannel: Int32(16), sampleFormat: .S16)
+            internal static let defaultDesc = Audio.Description.init(sampleRate: Int32(44100), channels: Int32(2), bitsPerChannel: Int32(16), sampleFormat: .S16)
         }
     }
 }
 
-
+//MARK: - Video
+public extension Codec.FFmpeg {
+    
+    struct Video {
+        //MARK: - Config
+        public struct Config {
+            
+            public enum CodecType {
+                case MPEG1
+                case H264
+                public func toAVCodecID() -> AVCodecID {
+                    switch self {
+                    case .MPEG1:
+                        return AV_CODEC_ID_MPEG1VIDEO
+                    case .H264:
+                        return AV_CODEC_ID_H264
+                    }
+                }
+            }
+            
+            public var codec: CodecType
+            public var bitRate: Int64
+            public var fps: Int32
+            public var gopSize: Int32
+            public var dropB: Bool
+            public var outSize: CGSize
+        }
+    }
+}
 
