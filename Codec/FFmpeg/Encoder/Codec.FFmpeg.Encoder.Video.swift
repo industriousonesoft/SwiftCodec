@@ -30,12 +30,13 @@ extension Codec.FFmpeg.Encoder {
 
 public
 extension AudioCompatible where Base: Codec.FFmpeg.Encoder {
+    
     func open(config: Codec.FFmpeg.Video.Config) throws {
         try self.base.open(config: config)
     }
     
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) throws {
-        try self.base.encode(bytes: bytes, size: size, displayTime: displayTime)
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedDataCallback) throws {
+        try self.base.encode(bytes: bytes, size: size, displayTime: displayTime, onEncoded: onEncoded)
     }
     
 }
@@ -48,7 +49,8 @@ extension Codec.FFmpeg.Encoder {
         try self.videoSession = VideoSession.init(config: config)
     }
     
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) throws {
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping EncodedDataCallback) throws {
+        self.videoSession?.onEncodedData = onEncoded
         try videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime)
     }
 

@@ -35,8 +35,8 @@ extension AudioCompatible where Base: Codec.FFmpeg.Encoder {
         try self.base.open(in: desc, config: config)
     }
     
-    func encode(pcm buffer: UnsafeMutablePointer<UInt8>, len: Int32) throws {
-        try self.base.encode(pcm: buffer, len: len)
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedDataCallback) throws {
+        try self.base.encode(bytes: bytes, size: size, onEncoded: onEncoded)
     }
     
 }
@@ -49,7 +49,8 @@ extension Codec.FFmpeg.Encoder {
         self.audioSession = try AudioSession.init(in: desc, config: config)
     }
     
-    func encode(pcm buffer: UnsafeMutablePointer<UInt8>, len: Int32) throws {
-        try self.audioSession?.encode(pcm: buffer, len: len)
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping EncodedDataCallback) throws {
+        self.audioSession?.onEncodedData = onEncoded
+        try self.audioSession?.encode(bytes: bytes, size: size)
     }
 }

@@ -27,9 +27,11 @@ extension Codec.FFmpeg.Encoder {
         
         private var resampleDstFrameSize: Int32 = 0
         private var sampleCount: Int64 = 0
-        private var nextPts: Int64 = 0
-        
+      
         private var outDesc = Codec.FFmpeg.Audio.Config.defaultDesc
+        
+        var onEncodedData: EncodedDataCallback? = nil
+        var onEncodedPacket: EncodedPacketCallback? = nil
         
         init(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
             self.inDesc = desc
@@ -41,6 +43,8 @@ extension Codec.FFmpeg.Encoder {
         }
         
         deinit {
+            self.onEncodedData = nil
+            self.onEncodedPacket = nil
             self.freeSampleBuffer()
             self.destroyInFrame()
             self.destroyFIFO()
@@ -303,7 +307,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 //MARK: - Resample
 extension Codec.FFmpeg.Encoder.AudioSession {
     
-    func resample(pcm inBuffer: UnsafeMutablePointer<UInt8>, len: Int32) throws -> (UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, Int32) {
+    func resample(bytes: UnsafeMutablePointer<UInt8>, size: Int32) throws -> (UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, Int32) {
         
         guard let inDesc = self.inDesc else {
             throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) => No in audio description available.")!
@@ -311,12 +315,12 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         
         //FIXME: 此处需要根据in buffer的格式进行内存格式转换，当前因为输入输出恰好是Packed类型（LRLRLR），只有data[0]有数据，所以直接指针转换即可
         //如果是Planar格式，则需要对多维数组，维度等于channel数量，然后进行内存重映射，参考函数createSampleBuffer
-        var srcBuff = unsafeBitCast(inBuffer, to: UnsafePointer<UInt8>?.self)
+        var srcBuff = unsafeBitCast(bytes, to: UnsafePointer<UInt8>?.self)
         
         return try withUnsafeMutablePointer(to: &srcBuff) { [unowned self] (ptr) -> (UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, Int32) in
             //nb_samples: 时间 * 采本率
             //nb_bytes（单位：字节） = (nb_samples * nb_channel * nb_bitsPerChannel) / 8 /*bits per bytes*/
-            let src_nb_samples = len/(inDesc.channels * inDesc.bitsPerChannel / 8)
+            let src_nb_samples = size / (inDesc.channels * inDesc.bitsPerChannel / 8)
             
             if let swr = self.swrCtx {
                 
@@ -350,13 +354,13 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 //MARK: - Encode
 extension Codec.FFmpeg.Encoder.AudioSession {
 
-    func encode(pcm buffer: UnsafeMutablePointer<UInt8>, len: Int32) throws {
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32) throws {
         
         if let codecCtx = self.codecCtx,
             let inFrame = self.inFrame,
             let fifo = self.fifo {
         
-            let (outSampleBuffer, nb_samples) = try self.resample(pcm: buffer, len: len)
+            let (outSampleBuffer, nb_samples) = try self.resample(bytes: bytes, size: size)
         
             if nb_samples > 0 {
 
@@ -371,14 +375,25 @@ extension Codec.FFmpeg.Encoder.AudioSession {
                 if readFrameSize < 0 {
                     return
                 }
-                
-                self.nextPts += Int64(readFrameSize)
-                
+              
                 self.encode(inFrame, in: codecCtx, onFinisehd: { (packet, error) in
-                    if error != nil {
+                    
+                    if let onEncoded = self.onEncodedData {
+                        if packet != nil {
+                            let size = Int(packet!.pointee.size)
+                            let encodedBytes = unsafeBitCast(malloc(size), to: UnsafeMutablePointer<UInt8>.self)
+                            memcpy(encodedBytes, packet!.pointee.data, size)
+                            onEncoded((encodedBytes, Int32(size)), nil)
+                        }else {
+                            onEncoded(nil, error)
+                        }
                         
-                    }else if packet != nil {
-                        av_packet_unref(packet!)
+                    }
+                    
+                    if let onEncoded = self.onEncodedPacket {
+                        onEncoded(packet, error)
+                    }else {
+                        av_packet_unref(packet)
                     }
                 })
             }
@@ -395,8 +410,8 @@ extension Codec.FFmpeg.Encoder.AudioSession {
                        
             //pts(presentation timestamp): Calculate the time of the sum of sample count for now as the timestmap
             //计算目前为止的采用数所使用的时间作为显示时间戳
-            frame.pointee.pts = av_rescale_q(self.sampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
             self.sampleCount += Int64(frame.pointee.nb_samples)
+            frame.pointee.pts = av_rescale_q(self.sampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
             
             var ret = avcodec_send_frame(codecCtx, frame)
             if ret < 0 {
@@ -407,6 +422,8 @@ extension Codec.FFmpeg.Encoder.AudioSession {
             ret = avcodec_receive_packet(codecCtx, ptr)
             if ret == 0 {
                 //print("Encoded audio successfully...")
+                //更新packet与frame的present timestamp一致，用于muxing时音视频同步校准
+                ptr.pointee.pts = frame.pointee.pts
                 onFinisehd(ptr, nil)
             }else {
                 if ret == SWIFT_AV_ERROR_EOF {

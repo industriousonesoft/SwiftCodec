@@ -70,12 +70,14 @@ extension Codec.FFmpeg.Encoder {
         private var swsCtx: OpaquePointer?
 
         private var outVideoStream: UnsafeMutablePointer<AVStream>?
-        private var videoNextPts: Int64 = 0
-        
+      
         private var displayTimeBase: Double = 0
         
         private(set) var inSize: CGSize = .zero
         private(set) var outSize: CGSize = .zero
+        
+        var onEncodedData: EncodedDataCallback? = nil
+        var onEncodedPacket: EncodedPacketCallback? = nil
         
         init(config: Codec.FFmpeg.Video.Config) throws {
             super.init()
@@ -85,6 +87,8 @@ extension Codec.FFmpeg.Encoder {
         }
         
         deinit {
+            self.onEncodedData = nil
+            self.onEncodedPacket = nil
             self.destroyInFrame()
             self.destroyOutFrame()
             self.destroySwsCtx()
@@ -257,21 +261,37 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         
         if destSliceH > 0 {
             
+            //累计采样数
             let duration = displayTime - self.displayTimeBase
             let nb_samples_count = Int64(duration * Double(Timebase.den))
             
             //这一步很关键！在未知输入视频的帧率或者帧率是一个动态值时，使用视频采样率（一般都是90K）作为视频量增幅的参考标准
             //然后，将基于采样频率的增量计数方式转换为基于当前编码帧率的增量计数方式
             outFrame.pointee.pts = av_rescale_q(nb_samples_count, Timebase, codecCtx.pointee.time_base)
-            self.videoNextPts = outFrame.pointee.pts
- 
+         
 //                print("[Video] encode for now...")
             self.encode(self.outFrame!, in: codecCtx) { (packet, error) in
-                if error != nil {
+                
+                if let onEncoded = self.onEncodedData {
+                    if packet != nil {
+                        let size = Int(packet!.pointee.size)
+                        let encodedBytes = unsafeBitCast(malloc(size), to: UnsafeMutablePointer<UInt8>.self)
+                        memcpy(encodedBytes, packet!.pointee.data, size)
+                        onEncoded((encodedBytes, Int32(size)), nil)
+                    }else {
+                        onEncoded(nil, error)
+                    }
                     
-                }else if packet != nil {
-                    
-                    av_packet_unref(packet!)
+                }
+                
+                if let onEncoded = self.onEncodedPacket {
+                    if packet != nil {
+                        onEncoded(packet!, nil)
+                    }else {
+                        onEncoded(nil, error)
+                    }
+                }else {
+                    av_packet_unref(packet)
                 }
             }
             
@@ -295,6 +315,8 @@ extension Codec.FFmpeg.Encoder.VideoSession {
             
             ret = avcodec_receive_packet(codecCtx, ptr)
             if ret == 0 {
+                //更新packet与frame的present timestamp一致，用于muxing时音视频同步校准
+                ptr.pointee.pts = frame.pointee.pts
                 onFinished(ptr, nil)
             }else {
                 if ret == SWIFT_AV_ERROR_EOF {
