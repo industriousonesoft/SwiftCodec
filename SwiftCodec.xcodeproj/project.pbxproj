@@ -17,7 +17,6 @@
 		90D35BC224138E5C00A507BC /* FFmepgWrapperOCBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 90D0557F238FB51600DB766C /* FFmepgWrapperOCBridge.m */; };
 		90D35BC324138E5C00A507BC /* NSError+Extend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D4264023CDB1690077CF1A /* NSError+Extend.swift */; };
 		90D35BC424138E5C00A507BC /* AudioSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D4263E23CDA06B0077CF1A /* AudioSession.swift */; };
-		90D35BC524138E5C00A507BC /* Encoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D05579238FB51600DB766C /* Encoder.swift */; };
 		90D35BC624138F3400A507BC /* libavformat.58.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90D3E0AD2398E083009C2195 /* libavformat.58.dylib */; };
 		90D35BC724138F3400A507BC /* libswscale.5.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90CC7A2B238E114F005FCD2D /* libswscale.5.dylib */; };
 		90D35BC824138F3400A507BC /* libavutil.56.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90CC7A2C238E114F005FCD2D /* libavutil.56.dylib */; };
@@ -25,7 +24,6 @@
 		90D35BCA24138F3400A507BC /* libswresample.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05639238FC6CA00DB766C /* libswresample.3.dylib */; };
 		EE75C2342445930500711CA1 /* MuxerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE75C2332445930500711CA1 /* MuxerSession.swift */; };
 		EE75C2362445B10600711CA1 /* Codec.FFmpeg.Encoder.Muxer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE75C2352445B10600711CA1 /* Codec.FFmpeg.Encoder.Muxer.swift */; };
-		EE912B4D244414D9003907FC /* Encoder+Audio.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE912B4C244414D9003907FC /* Encoder+Audio.swift */; };
 		EE912B5024444779003907FC /* Codec.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE912B4F24444779003907FC /* Codec.swift */; };
 		EE912B54244456EA003907FC /* Codec.FFmpeg.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE912B53244456EA003907FC /* Codec.FFmpeg.swift */; };
 		EE912B5A24446958003907FC /* Codec.FFmpeg.Encoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE912B5924446958003907FC /* Codec.FFmpeg.Encoder.swift */; };
@@ -572,7 +570,6 @@
 			files = (
 				EE91CD6D244475E8000E6D71 /* Codec.FFmpeg.Encoder.Audio.swift in Sources */,
 				EE912B54244456EA003907FC /* Codec.FFmpeg.swift in Sources */,
-				90D35BC524138E5C00A507BC /* Encoder.swift in Sources */,
 				90D35BC224138E5C00A507BC /* FFmepgWrapperOCBridge.m in Sources */,
 				EE91CD6B24447364000E6D71 /* VideoSession.swift in Sources */,
 				EE912B5A24446958003907FC /* Codec.FFmpeg.Encoder.swift in Sources */,
@@ -582,7 +579,6 @@
 				EE75C2342445930500711CA1 /* MuxerSession.swift in Sources */,
 				EE75C2362445B10600711CA1 /* Codec.FFmpeg.Encoder.Muxer.swift in Sources */,
 				90D35BC424138E5C00A507BC /* AudioSession.swift in Sources */,
-				EE912B4D244414D9003907FC /* Encoder+Audio.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

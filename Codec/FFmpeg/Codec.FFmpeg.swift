@@ -13,6 +13,15 @@ import CoreAudio
 
 public extension Codec {
     struct FFmpeg {
+        public static let SWIFT_AV_SAMPLE_FMT_S16: Int32 = AV_SAMPLE_FMT_S16.rawValue
+        public static let SWIFT_AV_SAMPLE_FMT_S16P: Int32 = AV_SAMPLE_FMT_S16P.rawValue
+        public static let SWIFT_AV_SAMPLE_FMT_FLT: Int32 = AV_SAMPLE_FMT_FLT.rawValue
+        public static let SWIFT_AV_SAMPLE_FMT_FLTP: Int32 = AV_SAMPLE_FMT_FLTP.rawValue
+        
+        static let SWIFT_AV_PIX_FMT_RGB32 = AVPixelFormat(FFmepgWrapperOCBridge.avPixelFormatRGB32())
+        static let SWIFT_AV_ERROR_EOF = FFmepgWrapperOCBridge.avErrorEOF()
+        static let SWIFT_AV_ERROR_EAGAIN = FFmepgWrapperOCBridge.avErrorEagain()
+        static let SWIFT_AC_NOPTS_VALUE = FFmepgWrapperOCBridge.avNoPTSValue()
     }
 }
 

@@ -154,7 +154,7 @@ private
 extension Codec.FFmpeg.Encoder.VideoSession {
     
     func createInFrame(size: CGSize) throws {
-        self.inFrame = try self.createFrame(pixFmt: SWIFT_AV_PIX_FMT_RGB32, size: size)
+        self.inFrame = try self.createFrame(pixFmt: Codec.FFmpeg.SWIFT_AV_PIX_FMT_RGB32, size: size)
     }
     
     func destroyInFrame() {
@@ -206,7 +206,7 @@ private
 extension Codec.FFmpeg.Encoder.VideoSession {
     
     func createSwsCtx(inSize: CGSize, outSize: CGSize) throws {
-        if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), SWIFT_AV_PIX_FMT_RGB32, Int32(outSize.width), Int32(outSize.height), AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, nil, nil, nil) {
+        if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), Codec.FFmpeg.SWIFT_AV_PIX_FMT_RGB32, Int32(outSize.width), Int32(outSize.height), AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, nil, nil, nil) {
             self.swsCtx = sws
         }else {
             throw NSError.error(ErrorDomain, reason: "Can not create sws context.")!
@@ -319,9 +319,9 @@ extension Codec.FFmpeg.Encoder.VideoSession {
                 ptr.pointee.pts = frame.pointee.pts
                 onFinished(ptr, nil)
             }else {
-                if ret == SWIFT_AV_ERROR_EOF {
+                if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {
                     print("avcodec_recieve_packet() encoder flushed...")
-                }else if ret == SWIFT_AV_ERROR_EAGAIN {
+                }else if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EAGAIN {
                     print("avcodec_recieve_packet() need more input...")
                 }else if ret < 0 {
                     onFinished(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when encoding video.")!)

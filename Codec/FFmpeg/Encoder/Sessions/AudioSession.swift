@@ -426,9 +426,9 @@ extension Codec.FFmpeg.Encoder.AudioSession {
                 ptr.pointee.pts = frame.pointee.pts
                 onFinisehd(ptr, nil)
             }else {
-                if ret == SWIFT_AV_ERROR_EOF {
+                if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {
                     print("avcodec_recieve_packet() encoder flushed...")
-                }else if ret == SWIFT_AV_ERROR_EAGAIN {
+                }else if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EAGAIN {
                     print("avcodec_recieve_packet() need more input...")
                 }else if ret < 0 {
                     onFinisehd(nil, NSError.init(domain: ErrorDomain, code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when encoding audio."]))
