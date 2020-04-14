@@ -57,22 +57,22 @@ private
 extension Codec.FFmpeg.Encoder {
     
     func open(flags: MuxStreamFlags, format: Codec.FFmpeg.Encoder.MuxFormat, onMuxed: @escaping Codec.FFmpeg.Encoder.MuxedDataCallback) throws {
-        self.muxSession = try MuxSession.init(flags: flags, format: format, onMuxed: onMuxed)
+        self.muxerSession = try MuxerSession.init(flags: flags, format: format, onMuxed: onMuxed)
     }
     
     func addAudioStream(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
-        try self.muxSession?.addAudioStream(in: desc, config: config)
+        try self.muxerSession?.addAudioStream(in: desc, config: config)
     }
     
     func addVideoStream(config: Codec.FFmpeg.Video.Config) throws {
-        try self.muxSession?.addVideoStream(config: config)
+        try self.muxerSession?.addVideoStream(config: config)
     }
     
     func muxingVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) throws {
-        try self.muxSession?.muxingVideo(bytes: bytes, size: size, displayTime: displayTime)
+        try self.muxerSession?.muxingVideo(bytes: bytes, size: size, displayTime: displayTime)
     }
     
     func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32) throws  {
-        try self.muxSession?.muxingAudio(bytes: bytes, size: size)
+        try self.muxerSession?.muxingAudio(bytes: bytes, size: size)
     }
 }

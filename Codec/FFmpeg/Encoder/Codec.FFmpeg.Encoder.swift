@@ -13,7 +13,7 @@ extension Codec.FFmpeg {
     public class Encoder: NSObject {
         var audioSession: AudioSession? = nil
         var videoSession: VideoSession? = nil
-        var muxSession: MuxSession? = nil
+        var muxerSession: MuxerSession? = nil
     }
     
 }
@@ -45,5 +45,6 @@ public extension Codec.FFmpeg.Encoder {
     func close() {
         self.audioSession = nil
         self.videoSession = nil
+        self.muxerSession = nil
     }
 }

@@ -13,7 +13,7 @@ private let ZeroPts: Int64 = 0
 
 extension Codec.FFmpeg.Encoder {
     
-    class MuxSession: NSObject {
+    class MuxerSession: NSObject {
         
         private let fmtCtx: UnsafeMutablePointer<AVFormatContext>
         
@@ -70,7 +70,7 @@ extension Codec.FFmpeg.Encoder {
     }
 }
 
-extension Codec.FFmpeg.Encoder.MuxSession {
+extension Codec.FFmpeg.Encoder.MuxerSession {
     
     func addVideoStream(config: Codec.FFmpeg.Video.Config) throws {
         
@@ -134,7 +134,7 @@ extension Codec.FFmpeg.Encoder.MuxSession {
 }
 
 private
-extension Codec.FFmpeg.Encoder.MuxSession {
+extension Codec.FFmpeg.Encoder.MuxerSession {
     enum MuxingStream {
         case None
         case Audio
@@ -173,7 +173,7 @@ extension Codec.FFmpeg.Encoder.MuxSession {
 }
 
 private
-extension Codec.FFmpeg.Encoder.MuxSession {
+extension Codec.FFmpeg.Encoder.MuxerSession {
     
     func addStream(codecCtx: UnsafeMutablePointer<AVCodecContext>) throws -> UnsafeMutablePointer<AVStream> {
       
@@ -227,7 +227,7 @@ func muxerCallback(opaque: UnsafeMutableRawPointer?, buff: UnsafeMutablePointer<
         if opaque != nil {
             let encodedData = unsafeBitCast(malloc(Int(buffSize)), to: UnsafeMutablePointer<UInt8>.self)
             memcpy(encodedData, buff, Int(buffSize))
-            let session = unsafeBitCast(opaque, to: Codec.FFmpeg.Encoder.MuxSession.self)
+            let session = unsafeBitCast(opaque, to: Codec.FFmpeg.Encoder.MuxerSession.self)
             session.onMuxedData?((encodedData, buffSize), nil)
         }
     }
