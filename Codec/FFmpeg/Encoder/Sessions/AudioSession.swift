@@ -16,8 +16,7 @@ extension Codec.FFmpeg.Encoder {
         
         private var inDesc: Codec.FFmpeg.Audio.Description?
         private var config: Codec.FFmpeg.Audio.Config?
-        
-        private var codec: UnsafeMutablePointer<AVCodec>?
+
         private var codecCtx: UnsafeMutablePointer<AVCodecContext>?
         
         private var audioFifo: OpaquePointer?
@@ -53,8 +52,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         guard let codec = avcodec_find_encoder(codecId) else {
             throw NSError.error(ErrorDomain, reason: "Can not create audio codec...")!
         }
-        self.codec = codec
-        
+      
         //Codec Context
         guard let codecCtx = avcodec_alloc_context3(codec) else {
             throw NSError.error(ErrorDomain, reason: "Can not create audio codec context...")!
