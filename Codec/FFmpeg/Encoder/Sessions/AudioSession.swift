@@ -15,9 +15,8 @@ extension Codec.FFmpeg.Encoder {
     class AudioSession: NSObject {
         
         private var inDesc: Codec.FFmpeg.Audio.Description?
-        private var config: Codec.FFmpeg.Audio.Config?
-
-        private var codecCtx: UnsafeMutablePointer<AVCodecContext>?
+     
+        private(set) var codecCtx: UnsafeMutablePointer<AVCodecContext>?
         
         private var fifo: OpaquePointer?
         
@@ -32,8 +31,21 @@ extension Codec.FFmpeg.Encoder {
         
         private var outDesc = Codec.FFmpeg.Audio.Config.defaultDesc
         
+        init(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
+            self.inDesc = desc
+            super.init()
+            try self.createCodec(config: config)
+            try self.createFIFO(codecCtx: self.codecCtx!)
+            try self.createInFrame(codecCtx: self.codecCtx!)
+            try self.createSwrCtx()
+        }
+        
         deinit {
-            self.close()
+            self.freeSampleBuffer()
+            self.destroyInFrame()
+            self.destroyFIFO()
+            self.destroySwrCtx()
+            self.destroyCodec()
         }
         
     }
@@ -42,10 +54,7 @@ extension Codec.FFmpeg.Encoder {
 
 extension Codec.FFmpeg.Encoder.AudioSession {
     
-    func open(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
-        
-        self.inDesc = desc
-        self.config = config
+    func createCodec(config: Codec.FFmpeg.Audio.Config) throws {
         
         //Codec
         let codecId: AVCodecID = config.codec.toAVCodecID()
@@ -66,31 +75,22 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         codecCtx.pointee.bit_rate = config.bitRate//64000: 128kbps
         codecCtx.pointee.time_base.num = 1
         codecCtx.pointee.time_base.den = self.outDesc.sampleRate
-        self.codecCtx = codecCtx
-        
+       
         //看jsmpeg中mp2解码器代码，mp2格式对应的frame_size（nb_samples）似乎是定值：1152
         guard avcodec_open2(codecCtx, codec, nil) == 0 else {
             throw NSError.error(ErrorDomain, reason: "Can not open audio avcodec...")!
         }
         
-        try self.createFIFO(codecCtx: codecCtx)
-        try self.createInFrame(codecCtx: codecCtx)
-        try self.createSwrCtx()
+        self.codecCtx = codecCtx
+        
     }
     
-    func close() {
-    
-        self.freeSampleBuffer()
-        self.destroyInFrame()
-        self.destroyFIFO()
-        self.destroySwrCtx()
-
-        if let context = self.codecCtx {
-            avcodec_close(context)
+    func destroyCodec() {
+        if let ctx = self.codecCtx {
+            avcodec_close(ctx)
             avcodec_free_context(&self.codecCtx)
             self.codecCtx = nil
         }
-        
     }
     
 }

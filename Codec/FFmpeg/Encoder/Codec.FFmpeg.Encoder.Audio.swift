@@ -46,10 +46,10 @@ private
 extension Codec.FFmpeg.Encoder {
     
     func open(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
-        try self.audioSession.open(in: desc, config: config)
+        self.audioSession = try AudioSession.init(in: desc, config: config)
     }
     
     func encode(pcm buffer: UnsafeMutablePointer<UInt8>, len: Int32) throws {
-        try self.audioSession.encode(pcm: buffer, len: len)
+        try self.audioSession?.encode(pcm: buffer, len: len)
     }
 }

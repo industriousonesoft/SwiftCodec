@@ -541,10 +541,10 @@ extension FFmpegEncoder {
                 }
             }
             
-            let flags = fmtCtx.pointee.oformat.pointee.flags
-            if (flags & AVFMT_GLOBALHEADER) > 0 {
-                fmtCtx.pointee.oformat.pointee.flags |= AV_CODEC_FLAG_GLOBAL_HEADER
-            }
+//            let flags = fmtCtx.pointee.oformat.pointee.flags
+//            if (flags & AVFMT_GLOBALHEADER) > 0 {
+//                fmtCtx.pointee.oformat.pointee.flags |= AV_CODEC_FLAG_GLOBAL_HEADER
+//            }
             
             self.writeTSHeader()
             print("Muxer is ready...")

@@ -45,11 +45,11 @@ private
 extension Codec.FFmpeg.Encoder {
     
     func open(config: Codec.FFmpeg.Video.Config) throws {
-        try self.videoSession.open(config: config)
+        try self.videoSession = VideoSession.init(config: config)
     }
     
     func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) throws {
-        try videoSession.encode(bytes: bytes, size: size, displayTime: displayTime)
+        try videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime)
     }
 
 }

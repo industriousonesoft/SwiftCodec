@@ -11,21 +11,15 @@ import Foundation
 extension Codec.FFmpeg {
     
     public class Encoder: NSObject {
-        
-        internal lazy var audioSession = {
-            return AudioSession.init()
-        }()
-        
-        internal lazy var videoSession = {
-            return VideoSession.init()
-        }()
+        internal var audioSession: AudioSession? = nil
+        internal var videoSession: VideoSession? = nil
     }
     
 }
 
 extension Codec.FFmpeg.Encoder {
     func close() {
-        self.audioSession.close()
-        self.videoSession.close()
+        self.audioSession = nil
+        self.videoSession = nil
     }
 }

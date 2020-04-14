@@ -58,31 +58,45 @@ extension AVFrame {
     }
 }
 
+//MARK: - VideoSession
 extension Codec.FFmpeg.Encoder {
     
     class VideoSession: NSObject {
-        internal var codecCtx: UnsafeMutablePointer<AVCodecContext>?
+        private(set) var codecCtx: UnsafeMutablePointer<AVCodecContext>?
           
-        internal var inFrame: UnsafeMutablePointer<AVFrame>?
-        internal var outFrame: UnsafeMutablePointer<AVFrame>?
+        private var inFrame: UnsafeMutablePointer<AVFrame>?
+        private var outFrame: UnsafeMutablePointer<AVFrame>?
         
-        internal var swsCtx: OpaquePointer?
+        private var swsCtx: OpaquePointer?
 
-        internal var outVideoStream: UnsafeMutablePointer<AVStream>?
-        internal var videoNextPts: Int64 = 0
+        private var outVideoStream: UnsafeMutablePointer<AVStream>?
+        private var videoNextPts: Int64 = 0
         
-        internal var displayTimeBase: Double = 0
+        private var displayTimeBase: Double = 0
         
         private(set) var inSize: CGSize = .zero
         private(set) var outSize: CGSize = .zero
+        
+        init(config: Codec.FFmpeg.Video.Config) throws {
+            super.init()
+            self.outSize = config.outSize
+            try self.createCodec(config: config)
+            try self.createOutFrame(size: self.outSize)
+        }
+        
+        deinit {
+            self.destroyInFrame()
+            self.destroyOutFrame()
+            self.destroySwsCtx()
+            self.destroyCodec()
+        }
         
     }
 }
 
 extension Codec.FFmpeg.Encoder.VideoSession {
     
-    func open(config: Codec.FFmpeg.Video.Config) throws {
-        self.outSize = config.outSize
+    func createCodec(config: Codec.FFmpeg.Video.Config) throws {
         
         #warning("Deprecated, No neccessary any more!")
         //avcodec_register_all()
@@ -113,20 +127,16 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         //context.pointee.flags |= AV_CODEC_FLAG_QSCALE
         //context.pointee.rc_max_rate =
         //context.pointee.rc_min_rate =
-        self.codecCtx = codecCtx
-        
+       
         guard avcodec_open2(codecCtx, codec, nil) == 0 else {
             throw NSError.error(ErrorDomain, reason: "Failed to open video avcodec.")!
         }
         
-        try self.createOutFrame(size: outSize)
+        self.codecCtx = codecCtx
+        
     }
     
-    func close() {
-        self.destroyInFrame()
-        self.destroyOutFrame()
-        self.destroySwsCtx()
-        
+    func destroyCodec() {
         if let ctx = self.codecCtx {
             avcodec_close(ctx)
             avcodec_free_context(&self.codecCtx)
