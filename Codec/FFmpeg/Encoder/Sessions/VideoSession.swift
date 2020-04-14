@@ -126,6 +126,12 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         self.destroyInFrame()
         self.destroyOutFrame()
         self.destroySwsCtx()
+        
+        if let ctx = self.codecCtx {
+            avcodec_close(ctx)
+            avcodec_free_context(&self.codecCtx)
+            self.codecCtx = nil
+        }
     }
 }
 

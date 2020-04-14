@@ -22,3 +22,10 @@ extension Codec.FFmpeg {
     }
     
 }
+
+extension Codec.FFmpeg.Encoder {
+    func close() {
+        self.audioSession.close()
+        self.videoSession.close()
+    }
+}

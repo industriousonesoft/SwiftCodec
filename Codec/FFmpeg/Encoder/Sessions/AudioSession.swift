@@ -19,16 +19,16 @@ extension Codec.FFmpeg.Encoder {
 
         private var codecCtx: UnsafeMutablePointer<AVCodecContext>?
         
-        private var audioFifo: OpaquePointer?
+        private var fifo: OpaquePointer?
         
-        private var encodeInFrame: UnsafeMutablePointer<AVFrame>?
-        private var convertOutSampleBuffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?
+        private var inFrame: UnsafeMutablePointer<AVFrame>?
+        private var outSampleBuffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?
         
         private var swrCtx: OpaquePointer?
         
         private var resampleDstFrameSize: Int32 = 0
-        private var audioSampleCount: Int64 = 0
-        private var audioNextPts: Int64 = 0
+        private var sampleCount: Int64 = 0
+        private var nextPts: Int64 = 0
         
         private var outDesc = Codec.FFmpeg.Audio.Config.defaultDesc
         
@@ -68,7 +68,40 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         codecCtx.pointee.time_base.den = self.outDesc.sampleRate
         self.codecCtx = codecCtx
         
-        //in frame
+        //看jsmpeg中mp2解码器代码，mp2格式对应的frame_size（nb_samples）似乎是定值：1152
+        guard avcodec_open2(codecCtx, codec, nil) == 0 else {
+            throw NSError.error(ErrorDomain, reason: "Can not open audio avcodec...")!
+        }
+        
+        try self.createFIFO(codecCtx: codecCtx)
+        try self.createInFrame(codecCtx: codecCtx)
+        try self.createSwrCtx()
+    }
+    
+    func close() {
+    
+        self.freeSampleBuffer()
+        self.destroyInFrame()
+        self.destroyFIFO()
+        self.destroySwrCtx()
+
+        if let context = self.codecCtx {
+            avcodec_close(context)
+            avcodec_free_context(&self.codecCtx)
+            self.codecCtx = nil
+        }
+        
+    }
+    
+}
+
+
+//MARK: - Frame
+private
+extension Codec.FFmpeg.Encoder.AudioSession {
+    
+    func createInFrame(codecCtx: UnsafeMutablePointer<AVCodecContext>) throws {
+    
         guard let frame = av_frame_alloc() else {
             throw NSError.error(ErrorDomain, reason: "Can not create audio codec in frame...")!
         }
@@ -76,56 +109,22 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         frame.pointee.channel_layout = codecCtx.pointee.channel_layout
         frame.pointee.format = codecCtx.pointee.sample_fmt.rawValue
         frame.pointee.sample_rate = codecCtx.pointee.sample_rate
-        
+       
         guard av_frame_get_buffer(frame, 0) == 0 else {
             throw NSError.error(ErrorDomain, reason: "Failed to Allocate new buffer(s) for audio data:")!
         }
-        self.encodeInFrame = frame
-        
-        //看jsmpeg中mp2解码器代码，mp2格式对应的frame_size（nb_samples）似乎是定值：1152
-        guard avcodec_open2(codecCtx, codec, nil) == 0 else {
-            throw NSError.error(ErrorDomain, reason: "Can not open audio avcodec...")!
-        }
-        
-        //fifo
-        guard let fifo = self.createAudioFIFO(of: codecCtx) else {
-            throw NSError.error(ErrorDomain, reason: "Can not alloc audio fifo...")!
-        }
-        self.audioFifo = fifo
-        
-        //Create swrCtx if neccessary
-        if self.inDesc != self.outDesc {
-            self.swrCtx = try self.createConverter(inDesc: desc, outDesc: self.outDesc)
-        }
+        self.inFrame = frame
     }
     
-    func close() {
-    
-        self.freeSampleBuffer()
-        
-        if let swr = self.swrCtx {
-            swr_close(swr)
-            swr_free(&self.swrCtx)
-            self.swrCtx = nil
-        }
-
-        if let context = self.codecCtx {
-            avcodec_close(context)
-            avcodec_free_context(&self.codecCtx)
-            self.codecCtx = nil
-        }
-        if let fifo = self.audioFifo {
-            av_audio_fifo_free(fifo)
-            self.audioFifo = nil
-        }
-        if let frame = self.encodeInFrame {
+    func destroyInFrame() {
+        if let frame = self.inFrame {
             av_free(frame)
-            self.encodeInFrame = nil
+            self.inFrame = nil
         }
-    
     }
     
 }
+
 
 //MARK: - Initialize Helper
 private
@@ -188,18 +187,54 @@ extension Codec.FFmpeg.Encoder.AudioSession {
     }
     
     func freeSampleBuffer() {
-        if self.convertOutSampleBuffer != nil {
-            av_freep(self.convertOutSampleBuffer)
-            free(self.convertOutSampleBuffer)
-            self.convertOutSampleBuffer = nil
+        if self.outSampleBuffer != nil {
+            av_freep(self.outSampleBuffer)
+            free(self.outSampleBuffer)
+            self.outSampleBuffer = nil
         }
     }
     
-    func createAudioFIFO(of codecCtx: UnsafeMutablePointer<AVCodecContext>) -> OpaquePointer! {
-        return av_audio_fifo_alloc(codecCtx.pointee.sample_fmt, codecCtx.pointee.channels, codecCtx.pointee.frame_size)
+    func createFIFO(codecCtx: UnsafeMutablePointer<AVCodecContext>) throws {
+   
+        if let fifo = av_audio_fifo_alloc(codecCtx.pointee.sample_fmt, codecCtx.pointee.channels, codecCtx.pointee.frame_size) {
+            self.fifo = fifo
+        }else {
+            throw NSError.error(ErrorDomain, reason: "Failed to create audio fifo.")!
+        }
     }
     
-    func createConverter(inDesc: Codec.FFmpeg.Audio.Description, outDesc: Codec.FFmpeg.Audio.Description) throws -> OpaquePointer? {
+    func destroyFIFO() {
+        if let fifo = self.fifo {
+            av_audio_fifo_free(fifo)
+            self.fifo = nil
+        }
+    }
+    
+}
+
+//MARK: - Swr Context
+private
+extension Codec.FFmpeg.Encoder.AudioSession {
+    
+    func createSwrCtx() throws {
+        guard let inDesc = self.inDesc else {
+            throw NSError.error(ErrorDomain, reason: "Audio In Description not initialized yet.")!
+        }
+        //Create swrCtx if neccessary
+        if inDesc != self.outDesc {
+            self.swrCtx = try self.createSwrCtx(inDesc: inDesc, outDesc: self.outDesc)
+        }
+    }
+    
+    func destroySwrCtx() {
+        if let swr = self.swrCtx {
+            swr_close(swr)
+            swr_free(&self.swrCtx)
+            self.swrCtx = nil
+        }
+    }
+    
+    func createSwrCtx(inDesc: Codec.FFmpeg.Audio.Description, outDesc: Codec.FFmpeg.Audio.Description) throws -> OpaquePointer? {
         //swr
         if let swrCtx = swr_alloc_set_opts(nil,
                                     av_get_default_channel_layout(outDesc.channels),
@@ -291,13 +326,13 @@ extension Codec.FFmpeg.Encoder.AudioSession {
                     self.freeSampleBuffer()
                     let buffer = try self.createSampleBuffer(desc: self.outDesc, frameSize: Int32(dst_nb_samples))
                     self.resampleDstFrameSize = dst_nb_samples
-                    self.convertOutSampleBuffer = buffer
+                    self.outSampleBuffer = buffer
                 }
                
-                let nb_samples = swr_convert(swr, self.convertOutSampleBuffer, dst_nb_samples, ptr, src_nb_samples)
+                let nb_samples = swr_convert(swr, self.outSampleBuffer, dst_nb_samples, ptr, src_nb_samples)
                 
                 if nb_samples > 0 {
-                    return (self.convertOutSampleBuffer!, nb_samples)
+                    return (self.outSampleBuffer!, nb_samples)
                 }else {
                     throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) => Failed to convert sample buffer.")!
                 }
@@ -318,8 +353,8 @@ extension Codec.FFmpeg.Encoder.AudioSession {
     func encode(pcm buffer: UnsafeMutablePointer<UInt8>, len: Int32) throws {
         
         if let codecCtx = self.codecCtx,
-            let encodeInFrame = self.encodeInFrame,
-            let fifo = self.audioFifo {
+            let inFrame = self.inFrame,
+            let fifo = self.fifo {
         
             let (outSampleBuffer, nb_samples) = try self.resample(pcm: buffer, len: len)
         
@@ -332,14 +367,14 @@ extension Codec.FFmpeg.Encoder.AudioSession {
                     return
                 }
                 
-                let readFrameSize = self.read(from: fifo, frameSize: codecCtx.pointee.frame_size, to: encodeInFrame)
+                let readFrameSize = self.read(from: fifo, frameSize: codecCtx.pointee.frame_size, to: inFrame)
                 if readFrameSize < 0 {
                     return
                 }
                 
-                self.audioNextPts += Int64(readFrameSize)
+                self.nextPts += Int64(readFrameSize)
                 
-                self.encode(encodeInFrame, in: codecCtx, onFinisehd: { (packet, error) in
+                self.encode(inFrame, in: codecCtx, onFinisehd: { (packet, error) in
                     if error != nil {
                         
                     }else if packet != nil {
@@ -360,8 +395,8 @@ extension Codec.FFmpeg.Encoder.AudioSession {
                        
             //pts(presentation timestamp): Calculate the time of the sum of sample count for now as the timestmap
             //计算目前为止的采用数所使用的时间作为显示时间戳
-            frame.pointee.pts = av_rescale_q(self.audioSampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
-            self.audioSampleCount += Int64(frame.pointee.nb_samples)
+            frame.pointee.pts = av_rescale_q(self.sampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
+            self.sampleCount += Int64(frame.pointee.nb_samples)
             
             var ret = avcodec_send_frame(codecCtx, frame)
             if ret < 0 {
