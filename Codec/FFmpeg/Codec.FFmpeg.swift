@@ -130,6 +130,15 @@ public extension Codec.FFmpeg {
             public var gopSize: Int32
             public var dropB: Bool
             public var outSize: CGSize
+            
+            public init(outSize: CGSize, codec: CodecType, bitRate: Int64, fps: Int32, gopSize: Int32, dropB: Bool) {
+                self.outSize = outSize
+                self.codec = codec
+                self.bitRate = bitRate
+                self.fps = fps
+                self.gopSize = gopSize
+                self.dropB = dropB
+            }
         }
     }
 }

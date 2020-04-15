@@ -20,8 +20,8 @@ extension Codec.FFmpeg {
 
 extension Codec.FFmpeg.Encoder {
     public typealias MuxFormat = String
-    public typealias EncodedDataCallback = ((UnsafeMutablePointer<UInt8>, Int32)?, Error?) -> Void
-    public typealias MuxedDataCallback = ((UnsafeMutablePointer<UInt8>, Int32)?, Error?) -> Void
+    public typealias EncodedDataCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int32)?, Error?) -> Void
+    public typealias MuxedDataCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int32)?, Error?) -> Void
     
     public struct MuxStreamFlags: OptionSet {
         public let rawValue: Int

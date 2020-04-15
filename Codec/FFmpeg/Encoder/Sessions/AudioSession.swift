@@ -392,8 +392,8 @@ extension Codec.FFmpeg.Encoder.AudioSession {
                     
                     if let onEncoded = self.onEncodedPacket {
                         onEncoded(packet, error)
-                    }else {
-                        av_packet_unref(packet)
+                    }else if packet != nil {
+                        av_packet_unref(packet!)
                     }
                 })
             }
@@ -414,11 +414,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
             frame.pointee.pts = av_rescale_q(self.sampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
             
             var ret = avcodec_send_frame(codecCtx, frame)
-            if ret < 0 {
-                onFinisehd(nil, NSError.init(domain: ErrorDomain, code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error about sending a packet for audio encoding."]))
-                return
-            }
-               
+         
             ret = avcodec_receive_packet(codecCtx, ptr)
             if ret == 0 {
                 //print("Encoded audio successfully...")

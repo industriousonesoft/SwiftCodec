@@ -261,6 +261,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         
         if destSliceH > 0 {
             
+            print("[Video] encode for now...: \(displayTime) - \(self.displayTimeBase)")
             //累计采样数
             let duration = displayTime - self.displayTimeBase
             let nb_samples_count = Int64(duration * Double(Timebase.den))
@@ -269,7 +270,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
             //然后，将基于采样频率的增量计数方式转换为基于当前编码帧率的增量计数方式
             outFrame.pointee.pts = av_rescale_q(nb_samples_count, Timebase, codecCtx.pointee.time_base)
          
-//                print("[Video] encode for now...")
+            
             self.encode(self.outFrame!, in: codecCtx) { (packet, error) in
                 
                 if let onEncoded = self.onEncodedData {
@@ -290,8 +291,8 @@ extension Codec.FFmpeg.Encoder.VideoSession {
                     }else {
                         onEncoded(nil, error)
                     }
-                }else {
-                    av_packet_unref(packet)
+                }else if packet != nil {
+                    av_packet_unref(packet!)
                 }
             }
             
@@ -308,11 +309,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
             av_init_packet(ptr)
             
             var ret = avcodec_send_frame(codecCtx, frame)
-            if ret < 0 {
-                onFinished(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error about sending a packet for video encoding.")!)
-                return
-            }
-            
+           
             ret = avcodec_receive_packet(codecCtx, ptr)
             if ret == 0 {
                 //更新packet与frame的present timestamp一致，用于muxing时音视频同步校准

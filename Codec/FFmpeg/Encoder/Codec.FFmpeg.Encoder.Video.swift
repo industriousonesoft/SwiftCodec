@@ -29,7 +29,7 @@ extension Codec.FFmpeg.Encoder {
 }
 
 public
-extension AudioCompatible where Base: Codec.FFmpeg.Encoder {
+extension VideoCompatible where Base: Codec.FFmpeg.Encoder {
     
     func open(config: Codec.FFmpeg.Video.Config) throws {
         try self.base.open(config: config)
