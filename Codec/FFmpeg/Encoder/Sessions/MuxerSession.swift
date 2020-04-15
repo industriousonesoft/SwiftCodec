@@ -79,6 +79,7 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
             if packet != nil {
                 self.currVideoPts = packet!.pointee.pts
                 if self.currentMuxingStream() == .Video {
+                    print("muxing video...")
                     if let err = self.muxer(packet: packet!, stream: self.videoStream!, timebase: timebase) {
                         self.onMuxedData?(nil, err)
                     }
@@ -101,6 +102,7 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
             if packet != nil {
                 self.currAudioPts = packet!.pointee.pts
                 if self.currentMuxingStream() == .Audio {
+                    print("muxing audio...")
                     if let err = self.muxer(packet: packet!, stream: self.audioStream!, timebase: timebase) {
                         self.onMuxedData?(nil, err)
                     }
@@ -172,7 +174,7 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
                 */
             //Method two:
             let ret = av_compare_ts(self.currVideoPts, vCodecCtx.pointee.time_base, self.currAudioPts, aCodecCtx.pointee.time_base)
-            print("vPts \(self.currVideoPts) - aPts: \(self.currAudioPts)")
+            print("ret: \(ret) - vPts \(self.currVideoPts) - aPts: \(self.currAudioPts)")
             if ret <= 0 /*vCurTime <= aCurTime*/ {
                 return .Video
             }else {
