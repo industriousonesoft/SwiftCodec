@@ -435,9 +435,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
             
             ret = avcodec_receive_packet(codecCtx, ptr)
             if ret == 0 {
-                //print("Encoded audio successfully...")
-                //更新packet与frame的present timestamp一致，用于muxing时音视频同步校准
-                ptr.pointee.pts = frame.pointee.pts
+                //print("Audio: \(frame.pointee.pts) - \(packet.pts) - \(packet.dts)")
                 onFinished(ptr, nil)
             }else {
                 if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {

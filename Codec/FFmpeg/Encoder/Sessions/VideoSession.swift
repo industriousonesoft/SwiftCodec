@@ -348,9 +348,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         }
         
         if ret == 0 {
-            //更新packet与frame的present timestamp一致，用于muxing时音视频同步校准
-//            packet.pts = frame.pointee.pts
-            print("\(frame.pointee.pts) - \(packet.pts) - \(packet.dts)")
+//            print("Video: \(frame.pointee.pts) - \(packet.pts) - \(packet.dts)")
             onFinished(&packet, nil)
         }else {
             if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {

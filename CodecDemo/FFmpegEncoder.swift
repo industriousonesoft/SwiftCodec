@@ -39,15 +39,15 @@ extension FFmpegEncoder {
             self.currDesktopItem = item
             let config = Codec.FFmpeg.Video.Config.init(
                 outSize: .init(width: 1280, height: 720),
-                codec: .MPEG1,
+                codec: .H264,
                 bitRate: 1000000,
                 fps: 25,
                 gopSize: 50,
                 dropB: true
             )
             self.dataCacher.close()
-            self.dataCacher.reset(fileName: "muxing.ts")
-            try self.encoder.muxer.open(format: .mpegts, onMuxed: { [unowned self] (muxedData, err) in
+            self.dataCacher.reset(fileName: "muxing.h264")
+            try self.encoder.muxer.open(format: .h264, onMuxed: { [unowned self] (muxedData, err) in
                 if err != nil {
                     print("Error occured when encoding: \(err!.localizedDescription)")
                 }else if let (bytes, size) = muxedData {
