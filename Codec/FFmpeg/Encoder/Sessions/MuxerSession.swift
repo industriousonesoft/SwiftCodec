@@ -75,7 +75,6 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
         self.flags.insert(.Video)
         self.videoSession = session
         self.videoStream = try self.addStream(codecCtx: session.codecCtx!)
-        try self.addHeader()
         self.videoSession!.onEncodedPacket = { [unowned self] (packet, error) in
             if packet != nil {
                 self.currVideoPts = packet!.pointee.pts
@@ -119,10 +118,17 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
         if self.flags.contains(.Audio) && self.currAudioPts <= ZeroPts {
             return
         }
+        //Only Video
+        if self.currVideoPts == ZeroPts && self.flags.videoOnly {
+            self.addHeader()
+        }
         self.videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime)
     }
     
     func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32) {
+        if self.currAudioPts == ZeroPts {
+            self.addHeader()
+        }
         self.audioSession?.encode(bytes: bytes, size: size)
     }
    
@@ -139,13 +145,13 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
     func currentMuxingStream() -> MuxingStream {
        
         //Audio Only
-        if self.flags.contains(.Audio) && !self.flags.contains(.Video) {
+        if self.flags.audioOnly {
             return .Audio
         //Video Only
-        }else if !self.flags.contains(.Audio) && self.flags.contains(.Video) {
+        }else if self.flags.videoOnly {
             return .Video
         //Both
-        }else if self.flags.contains(.Audio) && self.flags.contains(.Video) {
+        }else if self.flags.both {
             
             guard let vCodecCtx = self.videoSession?.codecCtx, let aCodecCtx = self.audioSession?.codecCtx else {
                 return .None
@@ -196,15 +202,20 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
         return stream
     }
     
-    func addHeader() throws {
-        guard avformat_write_header(self.fmtCtx, nil) >= 0 else {
-            throw NSError.error(ErrorDomain, reason: "Failed to write output header.")!
+    func addHeader() {
+        self.muxingQueue.async { [unowned self] in
+            if avformat_write_header(self.fmtCtx, nil) < 0 {
+                self.onMuxedData?(nil, NSError.error(ErrorDomain, reason: "Failed to write output header.")!)
+            }
         }
+        
     }
     
-    func addTrailer() throws {
-        guard av_write_trailer(self.fmtCtx) >= 0 else {
-            throw NSError.error(ErrorDomain, reason: "Failed to write output trailer.")!
+    func addTrailer() {
+        self.muxingQueue.async { [unowned self] in
+            if av_write_trailer(self.fmtCtx) < 0 {
+                self.onMuxedData?(nil, NSError.error(ErrorDomain, reason: "Failed to write output trailer.")!)
+            }
         }
     }
     

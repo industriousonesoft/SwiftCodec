@@ -35,6 +35,10 @@ extension AudioCompatible where Base: Codec.FFmpeg.Encoder {
         try self.base.open(in: desc, config: config, queue: queue)
     }
     
+    func close() {
+        self.base.closeAudioSession()
+    }
+    
     func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedDataCallback) {
         self.base.encode(bytes: bytes, size: size, onEncoded: onEncoded)
     }
@@ -47,6 +51,10 @@ extension Codec.FFmpeg.Encoder {
     
     func open(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config, queue: DispatchQueue? = nil) throws {
         self.audioSession = try AudioSession.init(in: desc, config: config, queue: queue)
+    }
+    
+    func closeAudioSession() {
+        self.audioSession = nil
     }
     
     func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping EncodedDataCallback) {

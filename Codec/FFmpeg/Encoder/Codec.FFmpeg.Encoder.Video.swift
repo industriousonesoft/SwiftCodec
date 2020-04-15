@@ -35,6 +35,10 @@ extension VideoCompatible where Base: Codec.FFmpeg.Encoder {
         try self.base.open(config: config, queue: queue)
     }
     
+    func close() {
+        self.base.closeVideoSession()
+    }
+    
     func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedDataCallback) {
         self.base.encode(bytes: bytes, size: size, displayTime: displayTime, onEncoded: onEncoded)
     }
@@ -47,6 +51,10 @@ extension Codec.FFmpeg.Encoder {
     
     func open(config: Codec.FFmpeg.Video.Config, queue: DispatchQueue? = nil) throws {
         try self.videoSession = VideoSession.init(config: config, queue: queue)
+    }
+    
+    func closeVideoSession() {
+        self.videoSession = nil
     }
     
     func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping EncodedDataCallback) {

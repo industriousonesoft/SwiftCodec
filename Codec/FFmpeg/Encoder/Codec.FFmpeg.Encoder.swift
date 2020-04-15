@@ -32,6 +32,18 @@ extension Codec.FFmpeg.Encoder {
         public static let Video = MuxStreamFlags.init(rawValue: 1 << 0)
         public static let Audio = MuxStreamFlags.init(rawValue: 1 << 1)
         
+        public var videoOnly: Bool {
+            return !self.contains(.Audio) && self.contains(.Video)
+        }
+        
+        public var audioOnly: Bool {
+            return self.contains(.Audio) && !self.contains(.Video)
+        }
+        
+        public var both: Bool {
+            return self.contains(.Audio) && self.contains(.Video)
+        }
+        
     }
 
     typealias EncodedPacketCallback = (UnsafeMutablePointer<AVPacket>?, Error?) -> Void
@@ -41,10 +53,3 @@ public extension Codec.FFmpeg.Encoder.MuxFormat {
     static let mpegts = "mpegts"
 }
 
-public extension Codec.FFmpeg.Encoder {
-    func close() {
-        self.audioSession = nil
-        self.videoSession = nil
-        self.muxerSession = nil
-    }
-}

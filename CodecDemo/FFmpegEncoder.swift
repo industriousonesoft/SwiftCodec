@@ -63,7 +63,7 @@ extension FFmpegEncoder {
     }
     
     func close() {
-        self.encoder.close()
+        self.encoder.muxer.close()
     }
     
     func start() {
@@ -76,14 +76,13 @@ extension FFmpegEncoder {
                 if result == .success {
                     if let bytes = frame?.bytes {
                         self.encodeQueue.async { [unowned self] in
-                            do {
-                                 try self.encoder.muxer.muxingVideo(
-                                    bytes: bytes,
-                                    size: frame!.size,
-                                    displayTime: Utilities.shared.machAbsoluteToSeconds(machAbsolute: displayTime)
-                                )
-                                /*
-                                try self.encoder.video.encode(
+                            self.encoder.muxer.muxingVideo(
+                                bytes: bytes,
+                                size: frame!.size,
+                                displayTime: Utilities.shared.machAbsoluteToSeconds(machAbsolute: displayTime)
+                            )
+                            /*
+                                    self.encoder.video.encode(
                                     bytes: bytes,
                                     size: frame!.size,
                                     displayTime: Utilities.shared.machAbsoluteToSeconds(machAbsolute: displayTime),
@@ -96,9 +95,7 @@ extension FFmpegEncoder {
                                         }
                                 })
                                 */
-                            }catch let err {
-                                print("Failed to encode: \(err.localizedDescription)")
-                            }
+                        
                         }
                     }
                 }else if result == .temporaryErr {

@@ -35,6 +35,10 @@ extension MuxerCompatible where Base: Codec.FFmpeg.Encoder {
         try self.base.open(format: format, onMuxed: onMuxed, queue: queue)
     }
     
+    func close() {
+        self.base.closeMuxerSession()
+    }
+    
     func addAudioStream(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
         try self.base.addAudioStream(in: desc, config: config)
     }
@@ -58,6 +62,10 @@ extension Codec.FFmpeg.Encoder {
     
     func open(format: Codec.FFmpeg.Encoder.MuxFormat, onMuxed: @escaping Codec.FFmpeg.Encoder.MuxedDataCallback, queue: DispatchQueue? = nil) throws {
         self.muxerSession = try MuxerSession.init(format: format, onMuxed: onMuxed, queue: queue)
+    }
+    
+    func closeMuxerSession() {
+        self.muxerSession = nil
     }
     
     func addAudioStream(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
