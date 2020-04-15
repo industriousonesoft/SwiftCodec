@@ -76,6 +76,8 @@ extension Codec.FFmpeg.Encoder {
         private(set) var inSize: CGSize = .zero
         private(set) var outSize: CGSize = .zero
         
+        private(set) var lastPts: Int64 = -1
+        
         var onEncodedData: EncodedDataCallback? = nil
         var onEncodedPacket: EncodedPacketCallback? = nil
         
@@ -87,6 +89,7 @@ extension Codec.FFmpeg.Encoder {
         }
         
         deinit {
+            self.lastPts = -1
             self.onEncodedData = nil
             self.onEncodedPacket = nil
             self.destroyInFrame()
@@ -229,21 +232,35 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         //let inDataArray = unsafeBitCast([rgbPixels], to: UnsafePointer<UnsafePointer<UInt8>?>?.self)
         //let inLineSizeArray = unsafeBitCast([self.inWidth * 4], to: UnsafePointer<Int32>.self)
         //print("Video display time: \(displayTime)")
-            
-        if __CGSizeEqualToSize(self.inSize, size) == false {
-            self.destroyInFrame()
-            self.destroySwsCtx()
-            try self.createInFrame(size: size)
-            try self.createSwsCtx(inSize: size, outSize: self.outSize)
-            self.inSize = size
+         
+        guard let codecCtx = self.codecCtx else {
+            throw NSError.error(ErrorDomain, reason: "Audio Codec not initilized yet.")!
         }
         
         if self.displayTimeBase == 0 {
             self.displayTimeBase = displayTime
         }
         
-        guard let codecCtx = self.codecCtx else {
-            throw NSError.error(ErrorDomain, reason: "Audio Codec not initilized yet.")!
+        //累计采样数
+        let duration = displayTime - self.displayTimeBase
+        let nb_samples_count = Int64(duration * Double(Timebase.den))
+       
+        //这一步很关键！在未知输入视频的帧率或者帧率是一个动态值时，使用视频采样率（一般都是90K）作为视频量增幅的参考标准
+        //然后，将基于采样频率的增量计数方式转换为基于当前编码帧率的增量计数方式
+        let pts = av_rescale_q(nb_samples_count, Timebase, codecCtx.pointee.time_base)
+        print("[Video] encode for now...: \(duration) - \(nb_samples_count) - \(pts)")
+        //如果前后两帧间隔时间很短，可能会出现计算出的pts是一样的，此处过滤一下
+        if self.lastPts == pts {
+            return
+        }
+
+        //输入数据尺寸出现变化时更新格式转换器
+        if __CGSizeEqualToSize(self.inSize, size) == false {
+            self.destroyInFrame()
+            self.destroySwsCtx()
+            try self.createInFrame(size: size)
+            try self.createSwsCtx(inSize: size, outSize: self.outSize)
+            self.inSize = size
         }
         
         guard let outFrame = self.outFrame, let inFrame = self.inFrame else {
@@ -261,17 +278,10 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         
         if destSliceH > 0 {
             
-            print("[Video] encode for now...: \(displayTime) - \(self.displayTimeBase)")
-            //累计采样数
-            let duration = displayTime - self.displayTimeBase
-            let nb_samples_count = Int64(duration * Double(Timebase.den))
+            self.lastPts = pts
+            outFrame.pointee.pts = pts
             
-            //这一步很关键！在未知输入视频的帧率或者帧率是一个动态值时，使用视频采样率（一般都是90K）作为视频量增幅的参考标准
-            //然后，将基于采样频率的增量计数方式转换为基于当前编码帧率的增量计数方式
-            outFrame.pointee.pts = av_rescale_q(nb_samples_count, Timebase, codecCtx.pointee.time_base)
-         
-            
-            self.encode(self.outFrame!, in: codecCtx) { (packet, error) in
+            self.encode(outFrame, in: codecCtx) { (packet, error) in
                 
                 if let onEncoded = self.onEncodedData {
                     if packet != nil {
