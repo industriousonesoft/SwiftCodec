@@ -77,11 +77,13 @@ extension Codec.FFmpeg.Encoder {
         private(set) var outSize: CGSize = .zero
         
         private(set) var lastPts: Int64 = -1
+        private var encodeQueue: DispatchQueue
         
         var onEncodedData: EncodedDataCallback? = nil
         var onEncodedPacket: EncodedPacketCallback? = nil
         
-        init(config: Codec.FFmpeg.Video.Config) throws {
+        init(config: Codec.FFmpeg.Video.Config, queue: DispatchQueue? = nil) throws {
+            self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.encode.queue")
             super.init()
             self.outSize = config.outSize
             try self.createCodec(config: config)
@@ -227,7 +229,17 @@ extension Codec.FFmpeg.Encoder.VideoSession {
 //MARK: - Encode
 extension Codec.FFmpeg.Encoder.VideoSession {
     
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) throws {
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) {
+        self.encodeQueue.async { [unowned self] in
+            do {
+                try self.innerEncode(bytes: bytes, size: size, displayTime: displayTime)
+            } catch let err {
+                self.onEncodedData?(nil, err)
+            }
+        }
+    }
+    
+    func innerEncode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) throws {
          
         //let inDataArray = unsafeBitCast([rgbPixels], to: UnsafePointer<UnsafePointer<UInt8>?>?.self)
         //let inLineSizeArray = unsafeBitCast([self.inWidth * 4], to: UnsafePointer<Int32>.self)
@@ -242,17 +254,19 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         }
         
         //累计采样数
-        let duration = displayTime - self.displayTimeBase
-        let nb_samples_count = Int64(duration * Double(Timebase.den))
+        let elapseTime = displayTime - self.displayTimeBase
+        let nb_samples_count = Int64(elapseTime * Double(Timebase.den))
        
         //这一步很关键！在未知输入视频的帧率或者帧率是一个动态值时，使用视频采样率（一般都是90K）作为视频量增幅的参考标准
         //然后，将基于采样频率的增量计数方式转换为基于当前编码帧率的增量计数方式
         let pts = av_rescale_q(nb_samples_count, Timebase, codecCtx.pointee.time_base)
-        print("[Video] encode for now...: \(duration) - \(nb_samples_count) - \(pts)")
+        
         //如果前后两帧间隔时间很短，可能会出现计算出的pts是一样的，此处过滤一下
-        if self.lastPts == pts {
+        if pts <= self.lastPts {
             return
         }
+        
+        print("[Video] encode for now...: \(elapseTime) - \(nb_samples_count) - \(pts)")
 
         //输入数据尺寸出现变化时更新格式转换器
         if __CGSizeEqualToSize(self.inSize, size) == false {
@@ -313,29 +327,39 @@ extension Codec.FFmpeg.Encoder.VideoSession {
     private
     func encode(_ frame: UnsafeMutablePointer<AVFrame>, in codecCtx: UnsafeMutablePointer<AVCodecContext>, onFinished: (UnsafeMutablePointer<AVPacket>?, Error?)->Void) {
   
-        var videoPacket = AVPacket.init()
-        withUnsafeMutablePointer(to: &videoPacket) { (ptr) in
+        var packet = AVPacket.init()
+        
+        let ret = withUnsafeMutablePointer(to: &packet) { (ptr) -> Int32 in
             
             av_init_packet(ptr)
             
             var ret = avcodec_send_frame(codecCtx, frame)
-           
-            ret = avcodec_receive_packet(codecCtx, ptr)
+            
             if ret == 0 {
-                //更新packet与frame的present timestamp一致，用于muxing时音视频同步校准
-                ptr.pointee.pts = frame.pointee.pts
-                onFinished(ptr, nil)
-            }else {
-                if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {
-                    print("avcodec_recieve_packet() encoder flushed...")
-                }else if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EAGAIN {
-                    print("avcodec_recieve_packet() need more input...")
-                }else if ret < 0 {
-                    onFinished(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when encoding video.")!)
-                }
+                ret = avcodec_receive_packet(codecCtx, ptr)
+            }
+            
+            if ret < 0 {
                 av_packet_unref(ptr)
             }
-    
+            
+            return ret
+            
+        }
+        
+        if ret == 0 {
+            //更新packet与frame的present timestamp一致，用于muxing时音视频同步校准
+//            packet.pts = frame.pointee.pts
+            print("\(frame.pointee.pts) - \(packet.pts) - \(packet.dts)")
+            onFinished(&packet, nil)
+        }else {
+            if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {
+                print("avcodec_recieve_packet() encoder flushed...")
+            }else if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EAGAIN {
+                print("avcodec_recieve_packet() need more input...")
+            }else if ret < 0 {
+                onFinished(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when encoding video.")!)
+            }
         }
      
     }

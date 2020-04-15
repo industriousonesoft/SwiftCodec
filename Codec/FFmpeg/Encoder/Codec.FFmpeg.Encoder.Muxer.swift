@@ -31,8 +31,8 @@ extension Codec.FFmpeg.Encoder {
 public
 extension MuxerCompatible where Base: Codec.FFmpeg.Encoder {
     
-    func open(flags: Codec.FFmpeg.Encoder.MuxStreamFlags, format: Codec.FFmpeg.Encoder.MuxFormat, onMuxed: @escaping Codec.FFmpeg.Encoder.MuxedDataCallback) throws {
-        try self.base.open(flags: flags, format: format, onMuxed: onMuxed)
+    func open(format: Codec.FFmpeg.Encoder.MuxFormat, onMuxed: @escaping Codec.FFmpeg.Encoder.MuxedDataCallback, queue: DispatchQueue? = nil) throws {
+        try self.base.open(format: format, onMuxed: onMuxed, queue: queue)
     }
     
     func addAudioStream(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
@@ -43,12 +43,12 @@ extension MuxerCompatible where Base: Codec.FFmpeg.Encoder {
         try self.base.addVideoStream(config: config)
     }
     
-    func muxingVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) throws {
-        try self.base.muxingVideo(bytes: bytes, size: size, displayTime: displayTime)
+    func muxingVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) {
+        self.base.muxingVideo(bytes: bytes, size: size, displayTime: displayTime)
     }
     
-    func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32) throws  {
-        try self.base.muxingAudio(bytes: bytes, size: size)
+    func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32) {
+        self.base.muxingAudio(bytes: bytes, size: size)
     }
 }
 
@@ -56,8 +56,8 @@ extension MuxerCompatible where Base: Codec.FFmpeg.Encoder {
 private
 extension Codec.FFmpeg.Encoder {
     
-    func open(flags: MuxStreamFlags, format: Codec.FFmpeg.Encoder.MuxFormat, onMuxed: @escaping Codec.FFmpeg.Encoder.MuxedDataCallback) throws {
-        self.muxerSession = try MuxerSession.init(flags: flags, format: format, onMuxed: onMuxed)
+    func open(format: Codec.FFmpeg.Encoder.MuxFormat, onMuxed: @escaping Codec.FFmpeg.Encoder.MuxedDataCallback, queue: DispatchQueue? = nil) throws {
+        self.muxerSession = try MuxerSession.init(format: format, onMuxed: onMuxed, queue: queue)
     }
     
     func addAudioStream(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
@@ -68,11 +68,11 @@ extension Codec.FFmpeg.Encoder {
         try self.muxerSession?.addVideoStream(config: config)
     }
     
-    func muxingVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) throws {
-        try self.muxerSession?.muxingVideo(bytes: bytes, size: size, displayTime: displayTime)
+    func muxingVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) {
+        self.muxerSession?.muxingVideo(bytes: bytes, size: size, displayTime: displayTime)
     }
     
-    func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32) throws  {
-        try self.muxerSession?.muxingAudio(bytes: bytes, size: size)
+    func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32) {
+        self.muxerSession?.muxingAudio(bytes: bytes, size: size)
     }
 }

@@ -27,14 +27,16 @@ extension Codec.FFmpeg.Encoder {
         
         private var resampleDstFrameSize: Int32 = 0
         private var sampleCount: Int64 = 0
-      
-        private var outDesc = Codec.FFmpeg.Audio.Config.defaultDesc
+        
+        private var encodeQueue: DispatchQueue
+        private(set) var outDesc = Codec.FFmpeg.Audio.Config.defaultDesc
         
         var onEncodedData: EncodedDataCallback? = nil
         var onEncodedPacket: EncodedPacketCallback? = nil
         
-        init(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
+        init(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config, queue: DispatchQueue? = nil) throws {
             self.inDesc = desc
+            self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.AudioSession.encode.queue")
             super.init()
             try self.createCodec(config: config)
             try self.createFIFO(codecCtx: self.codecCtx!)
@@ -353,8 +355,19 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 
 //MARK: - Encode
 extension Codec.FFmpeg.Encoder.AudioSession {
+    
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32) {
+        self.encodeQueue.async { [unowned self] in
+            do {
+                try self.innerEncode(bytes: bytes, size: size)
+            }catch let err {
+                self.onEncodedData?(nil, err)
+            }
+        }
+    }
 
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32) throws {
+    private
+    func innerEncode(bytes: UnsafeMutablePointer<UInt8>, size: Int32) throws {
         
         if let codecCtx = self.codecCtx,
             let inFrame = self.inFrame,
@@ -376,7 +389,12 @@ extension Codec.FFmpeg.Encoder.AudioSession {
                     return
                 }
               
-                self.encode(inFrame, in: codecCtx, onFinisehd: { (packet, error) in
+                //pts(presentation timestamp): Calculate the time of the sum of sample count for now as the timestmap
+                //计算目前为止的采用数所使用的时间作为显示时间戳
+                self.sampleCount += Int64(inFrame.pointee.nb_samples)
+                inFrame.pointee.pts = av_rescale_q(self.sampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
+                
+                self.encode(inFrame, in: codecCtx, onFinished: { (packet, error) in
                     
                     if let onEncoded = self.onEncodedData {
                         if packet != nil {
@@ -401,36 +419,35 @@ extension Codec.FFmpeg.Encoder.AudioSession {
     }
   
     private
-    func encode(_ frame: UnsafeMutablePointer<AVFrame>, in codecCtx: UnsafeMutablePointer<AVCodecContext>, onFinisehd: (UnsafeMutablePointer<AVPacket>?, Error?)->Void) {
+    func encode(_ frame: UnsafeMutablePointer<AVFrame>, in codecCtx: UnsafeMutablePointer<AVCodecContext>, onFinished: (UnsafeMutablePointer<AVPacket>?, Error?)->Void) {
         
-        var audioPacket = AVPacket.init()
-        withUnsafeMutablePointer(to: &audioPacket) { [unowned self] (ptr) in
+        var packet = AVPacket.init()
+        withUnsafeMutablePointer(to: &packet) { (ptr) in
             
             av_init_packet(ptr)
-                       
-            //pts(presentation timestamp): Calculate the time of the sum of sample count for now as the timestmap
-            //计算目前为止的采用数所使用的时间作为显示时间戳
-            self.sampleCount += Int64(frame.pointee.nb_samples)
-            frame.pointee.pts = av_rescale_q(self.sampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
-            
+                
             var ret = avcodec_send_frame(codecCtx, frame)
-         
+            if ret < 0 {
+                av_packet_unref(ptr)
+                onFinished(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when sending frame.")!)
+                return
+            }
+            
             ret = avcodec_receive_packet(codecCtx, ptr)
             if ret == 0 {
                 //print("Encoded audio successfully...")
                 //更新packet与frame的present timestamp一致，用于muxing时音视频同步校准
                 ptr.pointee.pts = frame.pointee.pts
-                onFinisehd(ptr, nil)
+                onFinished(ptr, nil)
             }else {
                 if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {
                     print("avcodec_recieve_packet() encoder flushed...")
                 }else if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EAGAIN {
                     print("avcodec_recieve_packet() need more input...")
                 }else if ret < 0 {
-                    onFinisehd(nil, NSError.init(domain: ErrorDomain, code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when encoding audio."]))
-                    return
+                    onFinished(nil, NSError.init(domain: ErrorDomain, code: Int(ret), userInfo: [NSLocalizedDescriptionKey : "Error occured when encoding audio."]))
+                    av_packet_unref(ptr)
                 }
-                av_packet_unref(ptr)
             }
         }
         

@@ -31,12 +31,12 @@ extension Codec.FFmpeg.Encoder {
 public
 extension VideoCompatible where Base: Codec.FFmpeg.Encoder {
     
-    func open(config: Codec.FFmpeg.Video.Config) throws {
-        try self.base.open(config: config)
+    func open(config: Codec.FFmpeg.Video.Config, queue: DispatchQueue? = nil) throws {
+        try self.base.open(config: config, queue: queue)
     }
     
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedDataCallback) throws {
-        try self.base.encode(bytes: bytes, size: size, displayTime: displayTime, onEncoded: onEncoded)
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedDataCallback) {
+        self.base.encode(bytes: bytes, size: size, displayTime: displayTime, onEncoded: onEncoded)
     }
     
 }
@@ -45,13 +45,13 @@ extension VideoCompatible where Base: Codec.FFmpeg.Encoder {
 private
 extension Codec.FFmpeg.Encoder {
     
-    func open(config: Codec.FFmpeg.Video.Config) throws {
-        try self.videoSession = VideoSession.init(config: config)
+    func open(config: Codec.FFmpeg.Video.Config, queue: DispatchQueue? = nil) throws {
+        try self.videoSession = VideoSession.init(config: config, queue: queue)
     }
     
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping EncodedDataCallback) throws {
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping EncodedDataCallback) {
         self.videoSession?.onEncodedData = onEncoded
-        try videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime)
+        videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime)
     }
 
 }

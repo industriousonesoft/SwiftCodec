@@ -45,7 +45,20 @@ extension FFmpegEncoder {
                 gopSize: 50,
                 dropB: true
             )
-            try self.encoder.video.open(config: config)
+            self.dataCacher.close()
+            self.dataCacher.reset(fileName: "muxing.ts")
+            try self.encoder.muxer.open(format: .mpegts, onMuxed: { [unowned self] (muxedData, err) in
+                if err != nil {
+                    print("Error occured when encoding: \(err!.localizedDescription)")
+                }else if let (bytes, size) = muxedData {
+                    let data = Data.init(bytes: bytes, count: Int(size))
+                    self.dataCacher.write(data: data)
+                    free(bytes)
+                }
+                
+            })
+            
+            try self.encoder.muxer.addVideoStream(config: config)
         }
     }
     
@@ -55,8 +68,6 @@ extension FFmpegEncoder {
     
     func start() {
         if let item = self.currDesktopItem {
-            self.dataCacher.close()
-            self.dataCacher.reset(fileName: "Encoded.data")
             self.screenCapturer.start(item: item, onSucceed: { (error) in
                 if error != nil {
                     print("Failed to capture screen.")
@@ -66,6 +77,12 @@ extension FFmpegEncoder {
                     if let bytes = frame?.bytes {
                         self.encodeQueue.async { [unowned self] in
                             do {
+                                 try self.encoder.muxer.muxingVideo(
+                                    bytes: bytes,
+                                    size: frame!.size,
+                                    displayTime: Utilities.shared.machAbsoluteToSeconds(machAbsolute: displayTime)
+                                )
+                                /*
                                 try self.encoder.video.encode(
                                     bytes: bytes,
                                     size: frame!.size,
@@ -73,11 +90,12 @@ extension FFmpegEncoder {
                                     onEncoded: { (encodedFrame, error) in
                                         if error != nil {
                                             print("Error occured when encoding: \(error!.localizedDescription)")
-                                        }else if encodedFrame != nil {
-                                            let data = Data.init(bytes: encodedFrame!.bytes, count: Int(encodedFrame!.size))
+                                        }else if let (bytes, size) = encodedFrame {
+                                            let data = Data.init(bytes: bytes, count: Int(size))
                                             self.dataCacher.write(data: data)
                                         }
                                 })
+                                */
                             }catch let err {
                                 print("Failed to encode: \(err.localizedDescription)")
                             }

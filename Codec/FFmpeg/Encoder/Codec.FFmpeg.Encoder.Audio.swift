@@ -31,12 +31,12 @@ extension Codec.FFmpeg.Encoder {
 public
 extension AudioCompatible where Base: Codec.FFmpeg.Encoder {
     
-    func open(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
-        try self.base.open(in: desc, config: config)
+    func open(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config, queue: DispatchQueue? = nil) throws {
+        try self.base.open(in: desc, config: config, queue: queue)
     }
     
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedDataCallback) throws {
-        try self.base.encode(bytes: bytes, size: size, onEncoded: onEncoded)
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedDataCallback) {
+        self.base.encode(bytes: bytes, size: size, onEncoded: onEncoded)
     }
     
 }
@@ -45,12 +45,12 @@ extension AudioCompatible where Base: Codec.FFmpeg.Encoder {
 private
 extension Codec.FFmpeg.Encoder {
     
-    func open(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
-        self.audioSession = try AudioSession.init(in: desc, config: config)
+    func open(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config, queue: DispatchQueue? = nil) throws {
+        self.audioSession = try AudioSession.init(in: desc, config: config, queue: queue)
     }
     
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping EncodedDataCallback) throws {
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping EncodedDataCallback) {
         self.audioSession?.onEncodedData = onEncoded
-        try self.audioSession?.encode(bytes: bytes, size: size)
+        self.audioSession?.encode(bytes: bytes, size: size)
     }
 }
