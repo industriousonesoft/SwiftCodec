@@ -53,4 +53,3 @@ public extension Codec.FFmpeg.Encoder.MuxFormat {
     static let mpegts: String = "mpegts"
     static let h264: String = "h264"
 }
-

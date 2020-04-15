@@ -20,7 +20,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         do {
             try self.ffmpegEncoder.open()
-            self.ffmpegEncoder.start()
         } catch let err {
             print(err.localizedDescription)
         }
@@ -30,6 +29,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         self.ffmpegEncoder.close()
     }
 
+}
 
+extension AppDelegate {
+    
+    @IBAction func start(_ sender: Any) {
+        self.ffmpegEncoder.start()
+    }
+    
+    @IBAction func stop(_ sender: Any) {
+        self.ffmpegEncoder.close()
+    }
 }
 

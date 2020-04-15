@@ -1,0 +1,5 @@
+module AudioManager [System] {
+    header "ZDAudioManager_shim.h"
+    link "libZDAudioManager"
+    export *
+}

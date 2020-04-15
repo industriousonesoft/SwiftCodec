@@ -52,6 +52,9 @@
 		EE8438592446C0B900266C6F /* libx264.152.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05635238FC6CA00DB766C /* libx264.152.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		EE84385A2446C0B900266C6F /* libx265.169.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D0563B238FC6CB00DB766C /* libx265.169.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		EE84385C2446C12D00266C6F /* libmp3lame.0.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = EE84385B2446C12500266C6F /* libmp3lame.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		EE84385E2447090400266C6F /* AudioCapturer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE84385D2447090400266C6F /* AudioCapturer.swift */; };
+		EE84387A244709EA00266C6F /* libZDAudioManager.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = EE843877244709EA00266C6F /* libZDAudioManager.dylib */; };
+		EE84387C24470A0500266C6F /* libZDAudioManager.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = EE843877244709EA00266C6F /* libZDAudioManager.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		EE912B5024444779003907FC /* Codec.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE912B4F24444779003907FC /* Codec.swift */; };
 		EE912B54244456EA003907FC /* Codec.FFmpeg.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE912B53244456EA003907FC /* Codec.FFmpeg.swift */; };
 		EE912B5A24446958003907FC /* Codec.FFmpeg.Encoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE912B5924446958003907FC /* Codec.FFmpeg.Encoder.swift */; };
@@ -77,6 +80,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
+				EE84387C24470A0500266C6F /* libZDAudioManager.dylib in Embed Frameworks */,
 				EE84383E2446B4A200266C6F /* SwiftyDesktopCapturer.framework in Embed Frameworks */,
 				EE8438412446B4A500266C6F /* SwiftyCodec.framework in Embed Frameworks */,
 				EE84384A2446C0B900266C6F /* libavformat.58.dylib in Embed Frameworks */,
@@ -210,7 +214,6 @@
 		90CC7A2B238E114F005FCD2D /* libswscale.5.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libswscale.5.dylib; sourceTree = "<group>"; };
 		90CC7A2C238E114F005FCD2D /* libavutil.56.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libavutil.56.dylib; sourceTree = "<group>"; };
 		90CC7A2D238E114F005FCD2D /* libavcodec.58.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libavcodec.58.dylib; sourceTree = "<group>"; };
-		90D05579238FB51600DB766C /* Encoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Encoder.swift; sourceTree = "<group>"; };
 		90D0557B238FB51600DB766C /* avutil_shim.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = avutil_shim.h; sourceTree = "<group>"; };
 		90D0557C238FB51600DB766C /* FFmepgWrapperOCBridge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FFmepgWrapperOCBridge.h; sourceTree = "<group>"; };
 		90D0557D238FB51600DB766C /* swscale_shim.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = swscale_shim.h; sourceTree = "<group>"; };
@@ -253,7 +256,10 @@
 		EE8438462446BDF900266C6F /* Utilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
 		EE8438482446BEC200266C6F /* DataCacher.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DataCacher.swift; sourceTree = "<group>"; };
 		EE84385B2446C12500266C6F /* libmp3lame.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libmp3lame.0.dylib; sourceTree = "<group>"; };
-		EE912B4C244414D9003907FC /* Encoder+Audio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Encoder+Audio.swift"; sourceTree = "<group>"; };
+		EE84385D2447090400266C6F /* AudioCapturer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AudioCapturer.swift; sourceTree = "<group>"; };
+		EE843877244709EA00266C6F /* libZDAudioManager.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libZDAudioManager.dylib; sourceTree = "<group>"; };
+		EE84387E24470B4400266C6F /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
+		EE84387F24470B8200266C6F /* ZDAudioManager_shim.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ZDAudioManager_shim.h; sourceTree = "<group>"; };
 		EE912B4F24444779003907FC /* Codec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.swift; sourceTree = "<group>"; };
 		EE912B53244456EA003907FC /* Codec.FFmpeg.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.swift; sourceTree = "<group>"; };
 		EE912B5924446958003907FC /* Codec.FFmpeg.Encoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Encoder.swift; sourceTree = "<group>"; };
@@ -281,6 +287,7 @@
 			files = (
 				EE84383D2446B4A200266C6F /* SwiftyDesktopCapturer.framework in Frameworks */,
 				EE8438402446B4A500266C6F /* SwiftyCodec.framework in Frameworks */,
+				EE84387A244709EA00266C6F /* libZDAudioManager.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -547,8 +554,11 @@
 		EE84382C2446B33000266C6F /* CodecDemo */ = {
 			isa = PBXGroup;
 			children = (
+				EE84387D24470B2400266C6F /* Modules */,
+				EE843864244709EA00266C6F /* AudioIODevice */,
 				EE8438462446BDF900266C6F /* Utilities.swift */,
 				EE8438482446BEC200266C6F /* DataCacher.swift */,
+				EE84385D2447090400266C6F /* AudioCapturer.swift */,
 				EE8438442446B50300266C6F /* FFmpegEncoder.swift */,
 				EE8438392446B37800266C6F /* AppDelegate.swift */,
 				EE84382F2446B33300266C6F /* Assets.xcassets */,
@@ -567,6 +577,31 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		EE843864244709EA00266C6F /* AudioIODevice */ = {
+			isa = PBXGroup;
+			children = (
+				EE843876244709EA00266C6F /* lib */,
+			);
+			path = AudioIODevice;
+			sourceTree = "<group>";
+		};
+		EE843876244709EA00266C6F /* lib */ = {
+			isa = PBXGroup;
+			children = (
+				EE843877244709EA00266C6F /* libZDAudioManager.dylib */,
+			);
+			path = lib;
+			sourceTree = "<group>";
+		};
+		EE84387D24470B2400266C6F /* Modules */ = {
+			isa = PBXGroup;
+			children = (
+				EE84387E24470B4400266C6F /* module.modulemap */,
+				EE84387F24470B8200266C6F /* ZDAudioManager_shim.h */,
+			);
+			path = Modules;
+			sourceTree = "<group>";
+		};
 		EE912B4E24444715003907FC /* Common */ = {
 			isa = PBXGroup;
 			children = (
@@ -583,8 +618,6 @@
 				EE91CD6C244475E8000E6D71 /* Codec.FFmpeg.Encoder.Audio.swift */,
 				EE91CD6E244475EF000E6D71 /* Codec.FFmpeg.Encoder.Video.swift */,
 				EE75C2352445B10600711CA1 /* Codec.FFmpeg.Encoder.Muxer.swift */,
-				90D05579238FB51600DB766C /* Encoder.swift */,
-				EE912B4C244414D9003907FC /* Encoder+Audio.swift */,
 			);
 			path = Encoder;
 			sourceTree = "<group>";
@@ -592,8 +625,8 @@
 		EE912B522444478D003907FC /* Codec */ = {
 			isa = PBXGroup;
 			children = (
-				90D05578238FB51600DB766C /* FFmpeg */,
 				EE912B4E24444715003907FC /* Common */,
+				90D05578238FB51600DB766C /* FFmpeg */,
 				EE912B4F24444779003907FC /* Codec.swift */,
 				90CC79C1238E108A005FCD2D /* LinkedFramework */,
 				90D35BB424138D6A00A507BC /* SupportFiles */,
@@ -742,6 +775,7 @@
 				EE84383A2446B37900266C6F /* AppDelegate.swift in Sources */,
 				EE8438452446B50300266C6F /* FFmpegEncoder.swift in Sources */,
 				EE8438492446BEC200266C6F /* DataCacher.swift in Sources */,
+				EE84385E2447090400266C6F /* AudioCapturer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -958,14 +992,20 @@
 				CODE_SIGN_ENTITLEMENTS = CodecDemo/CodecDemo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/CodecDemo/AudioIODevice/include\"";
 				INFOPLIST_FILE = CodecDemo/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/CodecDemo/AudioIODevice/lib\"",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.zdnet.CodecDemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_INCLUDE_PATHS = "\"$(SRCROOT)/CodecDemo/Modules\"";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
@@ -979,14 +1019,20 @@
 				CODE_SIGN_ENTITLEMENTS = CodecDemo/CodecDemo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/CodecDemo/AudioIODevice/include\"";
 				INFOPLIST_FILE = CodecDemo/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/CodecDemo/AudioIODevice/lib\"",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.zdnet.CodecDemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_INCLUDE_PATHS = "\"$(SRCROOT)/CodecDemo/Modules\"";
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
 			};

@@ -51,6 +51,21 @@ public extension Codec.FFmpeg {
                         return AVSampleFormat(AV_SAMPLE_FMT_FLTP.rawValue)
                     }
                 }
+                
+                public static func wraps(from flags: AudioFormatFlags) -> SampleFMT? {
+                    if (flags & kAudioFormatFlagIsFloat) != 0 && (flags & kAudioFormatFlagIsNonInterleaved) != 0 {
+                        return .FLTP
+                    }else if (flags & kAudioFormatFlagIsFloat) != 0 && (flags & kAudioFormatFlagIsPacked) != 0 {
+                        return .FLT
+                    }else if (flags & kAudioFormatFlagIsSignedInteger) != 0 && (flags & kAudioFormatFlagIsPacked) != 0 {
+                        return .S16
+                    }else if (flags & kAudioFormatFlagIsSignedInteger) != 0 && (flags & kAudioFormatFlagIsNonInterleaved) != 0 {
+                        return .S16P
+                    }else {
+                        return nil
+                    }
+                }
+                
             }
             
             public var sampleRate: Int32
@@ -58,18 +73,11 @@ public extension Codec.FFmpeg {
             public var bitsPerChannel: Int32
             public var sampleFormat: SampleFMT
             
-            public func sampleFMT(from flags: AudioFormatFlags) -> SampleFMT? {
-                if (flags & kAudioFormatFlagIsFloat) != 0 && (flags & kAudioFormatFlagIsNonInterleaved) != 0 {
-                    return .FLTP
-                }else if (flags & kAudioFormatFlagIsFloat) != 0 && (flags & kAudioFormatFlagIsPacked) != 0 {
-                    return .FLT
-                }else if (flags & kAudioFormatFlagIsSignedInteger) != 0 && (flags & kAudioFormatFlagIsPacked) != 0 {
-                    return .S16
-                }else if (flags & kAudioFormatFlagIsSignedInteger) != 0 && (flags & kAudioFormatFlagIsNonInterleaved) != 0 {
-                    return .S16P
-                }else {
-                    return nil
-                }
+            public init(channels: Int32, bitsPerChannel: Int32, sampleRate: Int32, sampleFormat: SampleFMT) {
+                self.channels = channels
+                self.bitsPerChannel = bitsPerChannel
+                self.sampleRate = sampleRate
+                self.sampleFormat = sampleFormat
             }
             
             public static func == (lhs: Self, rhs: Self) -> Bool {
@@ -99,7 +107,12 @@ public extension Codec.FFmpeg {
             public var codec: CodecType
             public var bitRate: Int64
             
-            internal static let defaultDesc = Audio.Description.init(sampleRate: Int32(44100), channels: Int32(2), bitsPerChannel: Int32(16), sampleFormat: .S16)
+            public init(codec: CodecType, bitRate: Int64) {
+                self.codec = codec
+                self.bitRate = bitRate
+            }
+            
+            internal static let defaultDesc = Audio.Description.init(channels: Int32(2), bitsPerChannel: Int32(16), sampleRate: Int32(44100), sampleFormat: .S16)
         }
     }
 }
