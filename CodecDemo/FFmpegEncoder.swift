@@ -14,7 +14,7 @@ private let DEFAULT_AUDIO_DEVICE_UID: String = "ZDAudioPlayThroughDevice_UID"
 
 class FFmpegEncoder: NSObject {
     
-    lazy var audioCapturer: AudioCapturer = {
+    lazy var audioCapturer: AudioCapturer? = {
         return AudioCapturer.init(deviceUID: DEFAULT_AUDIO_DEVICE_UID)
     }()
     
@@ -140,15 +140,19 @@ extension FFmpegEncoder {
 extension FFmpegEncoder {
 
     func openAudio() throws {
+        
+        guard let capturer = self.audioCapturer else {
+            throw NSError.init(domain: #function, code: -1, userInfo: [NSLocalizedDescriptionKey : "No audio capturer found."])
+        }
   
-        guard let fmt = Codec.FFmpeg.Audio.Description.SampleFMT.wraps(from: self.audioCapturer.audioFormatFlags) else {
-            throw NSError.init(domain: #function, code: -1, userInfo: [NSLocalizedDescriptionKey : "Unsupported audio format flags: \(self.audioCapturer.audioFormatFlags)"])
+        guard let fmt = Codec.FFmpeg.Audio.Description.SampleFMT.wraps(from: capturer.audioFormatFlags) else {
+            throw NSError.init(domain: #function, code: -1, userInfo: [NSLocalizedDescriptionKey : "Unsupported audio format flags: \(capturer.audioFormatFlags)"])
         }
         
         let inDesc = Codec.FFmpeg.Audio.Description.init(
-            channels: self.audioCapturer.channelCount,
-            bitsPerChannel: self.audioCapturer.bitsPerChannel,
-            sampleRate: self.audioCapturer.sampleRate,
+            channels: capturer.channelCount,
+            bitsPerChannel: capturer.bitsPerChannel,
+            sampleRate: capturer.sampleRate,
             sampleFormat: fmt)
         
         let config = Codec.FFmpeg.Audio.Config.init(codec: .MP2, bitRate: 64000)
@@ -157,7 +161,7 @@ extension FFmpegEncoder {
     }
     
     func startAudio() {
-        self.audioCapturer.start { [unowned self] (bytes, size, displayTime) in
+        self.audioCapturer?.start { [unowned self] (bytes, size, displayTime) in
             if bytes != nil, size > 0 {
                 self.encoder.muxer.muxingAudio(bytes: bytes!, size: size)
             }
@@ -165,6 +169,6 @@ extension FFmpegEncoder {
     }
     
     func stopAudio() {
-        self.audioCapturer.stop()
+        self.audioCapturer?.stop()
     }
 }

@@ -64,7 +64,8 @@ class AudioCapturer: NSObject {
             self.device = filter
             self.recorder = ZDAudioDeviceAVRecorder.init(deviceUID: deviceUID)
         }else {
-            fatalError("No audio device found.")
+//            fatalError("No audio device found.")
+            return nil
         }
         
         super.init()
