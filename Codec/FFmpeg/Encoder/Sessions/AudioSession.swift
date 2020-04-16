@@ -349,22 +349,43 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         
     }
 }
+#if AudioFluencyPriority
+extension Codec.FFmpeg.Encoder.AudioSession {
+    
+    func write(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onFinished: @escaping (Error?) -> Void) {
+        self.encodeQueue.async { [unowned self] in
+            if let fifo = self.fifo {
+                self.write(bytes: bytes, size: size, to: fifo, onFinished: onFinished)
+            }else {
+                onFinished(NSError.error(ErrorDomain, reason: "Not for ready to encode yet."))
+            }
+        }
+    }
+    
+    func readAndEncode(onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
+        self.encodeQueue.async { [unowned self] in
+            if let fifo = self.fifo {
+                self.readAndEncode(from: fifo, onEncoded: onEncoded)
+            }else {
+                onEncoded(nil, NSError.error(ErrorDomain, reason: "Not for ready to encode yet."))
+            }
+        }
+        
+    }
+}
+#endif
 
 //MARK: - Encode
 extension Codec.FFmpeg.Encoder.AudioSession {
-    
+ 
     func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
         self.encodeQueue.async { [unowned self] in
-            do {
-                try self.innerEncode(bytes: bytes, size: size, onEncoded: onEncoded)
-            }catch let err {
-                onEncoded(nil, err)
-            }
+            self.innerEncode(bytes: bytes, size: size, onEncoded: onEncoded)
         }
     }
 
     private
-    func innerEncode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) throws {
+    func innerEncode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
         
         if let fifo = self.fifo {
         
@@ -421,9 +442,9 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         
           //pts(presentation timestamp): Calculate the time of the sum of sample count for now as the timestmap
           //计算目前为止的采用数所使用的时间作为显示时间戳
+          self.sampleCount += Int64(inFrame.pointee.nb_samples)
           let pts = av_rescale_q(self.sampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
           inFrame.pointee.pts = pts
-          self.sampleCount += Int64(inFrame.pointee.nb_samples)
           
           print("[Audio] encode for now...: \(self.sampleCount) - \(pts)")
           

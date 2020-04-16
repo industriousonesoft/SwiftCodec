@@ -223,7 +223,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
 
 //MARK: - Encode
 extension Codec.FFmpeg.Encoder.VideoSession {
-    
+
     func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
         self.encodeQueue.async { [unowned self] in
             do {

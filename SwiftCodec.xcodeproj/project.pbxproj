@@ -936,7 +936,10 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/Codec/LinkedFramework/FFMpeg/lib\"",
 				);
+				MACRO_AUDIO_FLUENCY_PRIORITY = AudioFluencyPriority;
 				MY_LIB_NAME = SwiftyCodec;
+				MY_MACROS = "";
+				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.zdnet.FFmpegWrapper;
 				PRODUCT_NAME = "${MY_LIB_NAME}";
 				SKIP_INSTALL = YES;
@@ -971,7 +974,10 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/Codec/LinkedFramework/FFMpeg/lib\"",
 				);
+				MACRO_AUDIO_FLUENCY_PRIORITY = AudioFluencyPriority;
 				MY_LIB_NAME = SwiftyCodec;
+				MY_MACROS = "";
+				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.zdnet.FFmpegWrapper;
 				PRODUCT_NAME = "${MY_LIB_NAME}";
 				SKIP_INSTALL = YES;

@@ -82,8 +82,8 @@ extension FFmpegEncoder {
                 outSize: .init(width: 1280, height: 720),
                 codec: .MPEG1,
                 bitRate: 1000000,
-                fps: 25,
-                gopSize: 50,
+                fps: 60,
+                gopSize: 120,
                 dropB: true
             )
             try self.encoder.muxer.addVideoStream(config: config)

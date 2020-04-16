@@ -38,6 +38,8 @@ extension Codec.FFmpeg.Encoder {
         
         private var muxingQueue: DispatchQueue
         
+        private var isToMuxingVideo: Bool = false
+        
         var onMuxedData: MuxedDataCallback? = nil
         
         init(onMuxed: @escaping Codec.FFmpeg.Encoder.MuxedDataCallback, queue: DispatchQueue? = nil) throws {
@@ -78,7 +80,7 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
     
     func addVideoStream(config: Codec.FFmpeg.Video.Config) throws {
         
-        let session = try Codec.FFmpeg.Encoder.VideoSession.init(config: config, queue: self.muxingQueue)
+        let session = try Codec.FFmpeg.Encoder.VideoSession.init(config: config)
         self.flags.insert(.Video)
         self.videoSession = session
         self.videoStream = try self.addStream(codecCtx: session.codecCtx!)
@@ -87,7 +89,7 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
     
     func addAudioStream(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
         
-        let session = try Codec.FFmpeg.Encoder.AudioSession.init(in: desc, config: config, queue: self.muxingQueue)
+        let session = try Codec.FFmpeg.Encoder.AudioSession.init(in: desc, config: config)
         self.flags.insert(.Audio)
         self.audioSession = session
         self.audioStream = try self.addStream(codecCtx: session.codecCtx!)
@@ -103,32 +105,67 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
             self.addHeader()
         }
         self.videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime, onEncoded: { [unowned self] (packet, error) in
-            if packet != nil {
-                self.currVideoPts = packet!.pointee.pts
-                if self.couldToMuxVideo() {
-                    print("muxing video...")
-                    if let err = self.muxer(packet: packet!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
-                        self.onMuxedData?(nil, err)
+            let newPacket = av_packet_clone(packet)
+            av_packet_unref(packet!)
+            self.muxingQueue.async { [unowned self] in
+                if newPacket != nil {
+                    self.currVideoPts = newPacket!.pointee.pts
+#if AudioFluencyPriority
+                    //为了保证延时，不能合成时则丢弃掉当前视频帧
+                    //如果不考虑延时，可以采用类似音频的处理方式，对视频帧进行缓存，即需即取
+                    if self.isToMuxingVideo == true {
+                        print("muxing video...")
+                        if let err = self.muxer(packet: newPacket!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
+                            self.onMuxedData?(nil, err)
+                        }
+                        self.isToMuxingVideo = false
+                    }else {
+                        self.muxingAudio()
                     }
+#else
+                    //为了保证延时，不能合成时则丢弃掉当前视频帧
+                    if self.couldToMuxVideo() {
+                        print("muxing video...")
+                        if let err = self.muxer(packet: newPacket!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
+                            self.onMuxedData?(nil, err)
+                        }
+                    }
+#endif
+                    av_packet_unref(newPacket!)
+                }else {
+                    self.onMuxedData?(nil, error)
                 }
-                av_packet_unref(packet!)
-            }else {
-                self.onMuxedData?(nil, error)
             }
         })
         
     }
     
+    //由于人对声音的敏锐程度远高于视觉（eg: 视觉有视网膜影像停留机制）,所以如果需要合成音频流，则必须确保音频流优先合成，而视频流则根据相关计算插入。
     func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32, displayTime: Double) {
         if self.currAudioPts == ZeroPts {
             self.addHeader()
         }
+#if AudioFluencyPriority
+        //音频优先合成，确保音频的连续性，但是视频可能会出现比较严重的掉帧情况
+        self.audioSession?.write(bytes: bytes, size: size, onFinished: { [unowned self] (error) in
+            if error != nil {
+                self.onMuxedData?(nil, error)
+            }else {
+                self.muxingQueue.async { [unowned self] in
+                    if self.couldToMuxVideo() == false &&
+                        self.isToMuxingVideo == false {
+                        self.muxingAudio()
+                    }else {
+                        self.isToMuxingVideo = true
+                        print("Audio: could to mux video...")
+                    }
+                }
+            }
+        })
+#else
+        //根据编码速度进行合成，可能会出现音频杂音，但是视频会比较流畅
         self.audioSession?.encode(bytes: bytes, size: size, onEncoded: { [unowned self] (packet, error) in
             if packet != nil {
-                //由于人对声音的敏锐程度远高于视觉（eg: 视觉有视网膜影像停留机制）,所以如果需要合成音频流，则必须确保音频流优先合成，而视频流则根据相关计算插入。
-                if self.couldToMuxVideo() {
-                    print("could To Mux Video...")
-                }
                 self.currAudioPts = packet!.pointee.pts
                 print("muxing audio...")
                 if let err = self.muxer(
@@ -143,6 +180,8 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
                 self.onMuxedData?(nil, error)
             }
         })
+#endif
+
     }
    
 }
@@ -163,6 +202,11 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
                 let aCodecCtx = self.audioSession?.codecCtx else {
                 return false
             }
+            //优先合成音频
+            if self.currAudioPts == 0 {
+                return false
+            }
+            
             //The both of two methods are the same thing
             //Method One:
             /*
@@ -186,7 +230,35 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
             return false
         }
     }
+#if AudioFluencyPriority
+    func muxingAudio() {
+        
+        self.audioSession?.readAndEncode { [unowned self] (packet, error) in
+            let newPacket = av_packet_clone(packet)
+            av_packet_unref(packet!)
+            self.muxingQueue.async { [unowned self] in
+                if newPacket != nil {
+                    //由于人对声音的敏锐程度远高于视觉（eg: 视觉有视网膜影像停留机制）,所以如果需要合成音频流，则必须确保音频流优先合成，而视频流则根据相关计算插入。
+                    self.currAudioPts = newPacket!.pointee.pts
+                    print("muxing audio...")
+                    if let err = self.muxer(
+                        packet: newPacket!,
+                        stream: self.audioStream!,
+                        timebase: self.audioSession!.codecCtx!.pointee.time_base)
+                    {
+                        self.onMuxedData?(nil, err)
+                    }
+                    av_packet_unref(newPacket)
+                }else {
+                    self.onMuxedData?(nil, error)
+                }
+            }
+        }
+    }
+#endif
+    
 }
+
 
 private
 extension Codec.FFmpeg.Encoder.MuxerSession {
