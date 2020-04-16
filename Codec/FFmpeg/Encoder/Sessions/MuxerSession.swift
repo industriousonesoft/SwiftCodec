@@ -126,6 +126,9 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
         self.audioSession?.encode(bytes: bytes, size: size, onEncoded: { [unowned self] (packet, error) in
             if packet != nil {
                 //由于人对声音的敏锐程度远高于视觉（eg: 视觉有视网膜影像停留机制）,所以如果需要合成音频流，则必须确保音频流优先合成，而视频流则根据相关计算插入。
+                if self.couldToMuxVideo() {
+                    print("could To Mux Video...")
+                }
                 self.currAudioPts = packet!.pointee.pts
                 print("muxing audio...")
                 if let err = self.muxer(

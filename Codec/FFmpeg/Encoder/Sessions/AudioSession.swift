@@ -366,9 +366,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
     private
     func innerEncode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) throws {
         
-        if let codecCtx = self.codecCtx,
-            let inFrame = self.inFrame,
-            let fifo = self.fifo {
+        if let fifo = self.fifo {
         
             let (outSampleBuffer, nb_samples) = try self.resample(bytes: bytes, size: size)
         
@@ -377,30 +375,44 @@ extension Codec.FFmpeg.Encoder.AudioSession {
                 if let error = outSampleBuffer.withMemoryRebound(to: UnsafeMutableRawPointer?.self, capacity: 1, { (buffer)-> Error? in
                     return self.write(buffer: buffer, frameSize: nb_samples, to: fifo)
                 }) {
-                    print("Can not write audio samples to fifo...\(error.localizedDescription)")
+                    onEncoded(nil, error)
                     return
                 }
                 
-                let readFrameSize = self.read(from: fifo, frameSize: codecCtx.pointee.frame_size, to: inFrame)
-                if readFrameSize < 0 {
-                    return
-                }
-              
-                //pts(presentation timestamp): Calculate the time of the sum of sample count for now as the timestmap
-                //计算目前为止的采用数所使用的时间作为显示时间戳
-                let pts = av_rescale_q(self.sampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
-                inFrame.pointee.pts = pts
-                self.sampleCount += Int64(inFrame.pointee.nb_samples)
-                
-                print("[Audio] encode for now...: \(self.sampleCount) - \(pts)")
-                
-                self.encode(inFrame, in: codecCtx, onFinished: onEncoded)
+                self.encode(from: fifo, onEncoded: onEncoded)
             }
+        }else {
+            onEncoded(nil, NSError.error(ErrorDomain, reason: "Not for ready to encode yet.")!)
         }
+    }
+    
+    private
+    func encode(from fifo: OpaquePointer, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
+        
+        guard let codecCtx = self.codecCtx, let inFrame = self.inFrame else {
+            onEncoded(nil, NSError.error(ErrorDomain, reason: "Not for ready to encode yet.")!)
+            return
+        }
+        
+        let readFrameSize = self.read(from: fifo, frameSize: codecCtx.pointee.frame_size, to: inFrame)
+          //当前编码对应的缓存区未填充满
+          if readFrameSize < 0 {
+              return
+          }
+        
+          //pts(presentation timestamp): Calculate the time of the sum of sample count for now as the timestmap
+          //计算目前为止的采用数所使用的时间作为显示时间戳
+          let pts = av_rescale_q(self.sampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
+          inFrame.pointee.pts = pts
+          self.sampleCount += Int64(inFrame.pointee.nb_samples)
+          
+          print("[Audio] encode for now...: \(self.sampleCount) - \(pts)")
+          
+          self.encode(inFrame, with: codecCtx, onFinished: onEncoded)
     }
   
     private
-    func encode(_ frame: UnsafeMutablePointer<AVFrame>, in codecCtx: UnsafeMutablePointer<AVCodecContext>, onFinished: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
+    func encode(_ frame: UnsafeMutablePointer<AVFrame>, with codecCtx: UnsafeMutablePointer<AVCodecContext>, onFinished: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
         
         var packet = AVPacket.init()
         withUnsafeMutablePointer(to: &packet) { (ptr) in
