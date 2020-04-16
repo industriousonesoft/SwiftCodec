@@ -26,6 +26,10 @@ class FFmpegEncoder: NSObject {
        return Codec.FFmpeg.Encoder.init()
     }()
     
+    lazy var muxer: Codec.FFmpeg.Muxer = {
+       return Codec.FFmpeg.Muxer.init()
+    }()
+    
     lazy var dataCacher: DataCacher = {
         return DataCacher.init()
     }()
@@ -42,7 +46,7 @@ extension FFmpegEncoder {
     func open() throws {
         self.dataCacher.close()
         self.dataCacher.reset(fileName: "muxing.ts")
-        try self.encoder.muxer.open(onMuxed: { [unowned self] (muxedData, err) in
+        try self.muxer.open(flags: [.Audio, .Video] ,onMuxed: { [unowned self] (muxedData, err) in
             if err != nil {
                 print("Error occured when encoding: \(err!.localizedDescription)")
             }else if let (bytes, size) = muxedData {
@@ -57,7 +61,7 @@ extension FFmpegEncoder {
     
     func close() {
         self.stop()
-        self.encoder.muxer.close()
+        self.muxer.close()
     }
     
     func start() {
@@ -86,7 +90,7 @@ extension FFmpegEncoder {
                 gopSize: 120,
                 dropB: true
             )
-            try self.encoder.muxer.addVideoStream(config: config)
+            try self.muxer.setVideoStream(config: config)
         }
     }
     
@@ -100,7 +104,7 @@ extension FFmpegEncoder {
                 if result == .success {
                     if let bytes = frame?.bytes {
                         self.encodeQueue.async { [unowned self] in
-                            self.encoder.muxer.muxingVideo(
+                            self.muxer.muxingVideo(
                                 bytes: bytes,
                                 size: frame!.size,
                                 displayTime: Utilities.shared.machAbsoluteToSeconds(machAbsolute: displayTime)
@@ -157,13 +161,13 @@ extension FFmpegEncoder {
         
         let config = Codec.FFmpeg.Audio.Config.init(codec: .MP2, bitRate: 64000)
         
-        try self.encoder.muxer.addAudioStream(in: inDesc, config: config)
+        try self.muxer.setAudioStream(in: inDesc, config: config)
     }
     
     func startAudio() {
         self.audioCapturer?.start { [unowned self] (bytes, size, displayTime) in
             if bytes != nil, size > 0 {
-                self.encoder.muxer.muxingAudio(
+                self.muxer.muxingAudio(
                     bytes: bytes!,
                     size: size,
                     displayTime: Utilities.shared.machAbsoluteToSeconds(machAbsolute: displayTime)

@@ -17,7 +17,7 @@ fileprivate extension MuxFormat {
     static let mpegts: String = "mpegts"
 }
 
-extension Codec.FFmpeg.Encoder {
+extension Codec.FFmpeg.Muxer {
     
     class MuxerSession: NSObject {
         
@@ -26,15 +26,15 @@ extension Codec.FFmpeg.Encoder {
         private var videoStream: UnsafeMutablePointer<AVStream>?
         private var audioStream: UnsafeMutablePointer<AVStream>?
         
-        private var audioSession: AudioSession? = nil
-        private var videoSession: VideoSession? = nil
+        private var audioSession: Codec.FFmpeg.Encoder.AudioSession? = nil
+        private var videoSession: Codec.FFmpeg.Encoder.VideoSession? = nil
         
         private var currVideoPts: Int64 = ZeroPts
         private var currAudioPts: Int64 = ZeroPts
         
         private var displayTimeBase: Double = 0
         
-        private var flags: MuxStreamFlags = []
+        private let flags: MuxStreamFlags
         
         private var muxingQueue: DispatchQueue
         
@@ -42,7 +42,7 @@ extension Codec.FFmpeg.Encoder {
         
         var onMuxedData: MuxedDataCallback? = nil
         
-        init(onMuxed: @escaping Codec.FFmpeg.Encoder.MuxedDataCallback, queue: DispatchQueue? = nil) throws {
+        init(flags: MuxStreamFlags, onMuxed: @escaping MuxedDataCallback, queue: DispatchQueue? = nil) throws {
             
             var fmtCtx: UnsafeMutablePointer<AVFormatContext>?
             guard avformat_alloc_output_context2(&fmtCtx, nil, MuxFormat.mpegts, nil) >= 0  else {
@@ -50,7 +50,7 @@ extension Codec.FFmpeg.Encoder {
             }
             self.fmtCtx = fmtCtx!
             self.onMuxedData = onMuxed
-            self.flags = []
+            self.flags = flags
             self.muxingQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.MuxerSession.muxing.Queue")
             super.init()
             let ioBufferSize: Int = 512*1024 //32768
@@ -76,35 +76,58 @@ extension Codec.FFmpeg.Encoder {
     }
 }
 
-extension Codec.FFmpeg.Encoder.MuxerSession {
+//MARK: - Stream Manager
+extension Codec.FFmpeg.Muxer.MuxerSession {
     
-    func addVideoStream(config: Codec.FFmpeg.Video.Config) throws {
+    func setVideoStream(config: Codec.FFmpeg.Video.Config) throws {
+        
+        guard self.flags.contains(.Video) else {
+            throw NSError.error(ErrorDomain, reason: "Muxer not support to mux video.")!
+        }
+        
+        guard self.videoStream == nil else {
+            throw NSError.error(ErrorDomain, reason: "Video stream is set.")!
+        }
         
         let session = try Codec.FFmpeg.Encoder.VideoSession.init(config: config)
-        self.flags.insert(.Video)
         self.videoSession = session
         self.videoStream = try self.addStream(codecCtx: session.codecCtx!)
-  
+        //Add ts header when all stream set
+        if self.flags.contains(.Audio) && self.audioStream != nil {
+            self.addHeader()
+        }
     }
     
-    func addAudioStream(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
+    func setAudioStream(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
+        guard self.flags.contains(.Audio) else {
+            throw NSError.error(ErrorDomain, reason: "Muxer not support to mux audio.")!
+        }
+        
+        guard self.audioSession == nil else {
+            throw NSError.error(ErrorDomain, reason: "Video stream is set.")!
+        }
         
         let session = try Codec.FFmpeg.Encoder.AudioSession.init(in: desc, config: config)
-        self.flags.insert(.Audio)
         self.audioSession = session
         self.audioStream = try self.addStream(codecCtx: session.codecCtx!)
+        //Add ts header when all stream set
+        if self.flags.contains(.Video) && self.videoStream != nil {
+            self.addHeader()
+        }
     }
+
+}
+
+//MARK: - Muxing
+extension Codec.FFmpeg.Muxer.MuxerSession {
     
     func muxingVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) {
         //如果同时合成音视频，则确保先合成音频再合成视频
         if self.flags.both && self.currAudioPts == ZeroPts {
             return
         }
-        //Only Video
-        if self.currVideoPts == ZeroPts && self.flags.videoOnly {
-            self.addHeader()
-        }
         self.videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime, onEncoded: { [unowned self] (packet, error) in
+            //此处如果不clone一次，会出现野指针错误。原因在于packet相关内存是由ffmepg内部函数管理，也作用域就在当前{}，即便是muxingQueue捕获后也只是引用计数加1，packet中的数据内存还是会被释放
             let newPacket = av_packet_clone(packet)
             av_packet_unref(packet!)
             self.muxingQueue.async { [unowned self] in
@@ -142,9 +165,6 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
     
     //由于人对声音的敏锐程度远高于视觉（eg: 视觉有视网膜影像停留机制）,所以如果需要合成音频流，则必须确保音频流优先合成，而视频流则根据相关计算插入。
     func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32, displayTime: Double) {
-        if self.currAudioPts == ZeroPts {
-            self.addHeader()
-        }
 #if AudioFluencyPriority
         //音频优先合成，确保音频的连续性，但是视频可能会出现比较严重的掉帧情况
         self.audioSession?.write(bytes: bytes, size: size, onFinished: { [unowned self] (error) in
@@ -163,7 +183,8 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
             }
         })
 #else
-        //根据编码速度进行合成，可能会出现音频杂音，但是视频会比较流畅
+        //根据音视频编码速度进行合成
+        //FIXME: 当音视频编码以及合成都在一个queue时会出现杂音，具体原因不清楚，将当音视频编码以及合成分别放不同的queue时暂时未出现杂音
         self.audioSession?.encode(bytes: bytes, size: size, onEncoded: { [unowned self] (packet, error) in
             if packet != nil {
                 self.currAudioPts = packet!.pointee.pts
@@ -183,11 +204,10 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
 #endif
 
     }
-   
 }
 
 private
-extension Codec.FFmpeg.Encoder.MuxerSession {
+extension Codec.FFmpeg.Muxer.MuxerSession {
    
     func couldToMuxVideo() -> Bool {
        
@@ -261,7 +281,7 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
 
 
 private
-extension Codec.FFmpeg.Encoder.MuxerSession {
+extension Codec.FFmpeg.Muxer.MuxerSession {
     
     func addStream(codecCtx: UnsafeMutablePointer<AVCodecContext>) throws -> UnsafeMutablePointer<AVStream> {
       
@@ -320,7 +340,7 @@ func muxerCallback(opaque: UnsafeMutableRawPointer?, buff: UnsafeMutablePointer<
         if opaque != nil {
             let encodedData = unsafeBitCast(malloc(Int(buffSize)), to: UnsafeMutablePointer<UInt8>.self)
             memcpy(encodedData, buff, Int(buffSize))
-            let session = unsafeBitCast(opaque, to: Codec.FFmpeg.Encoder.MuxerSession.self)
+            let session = unsafeBitCast(opaque, to: Codec.FFmpeg.Muxer.MuxerSession.self)
             session.onMuxedData?((encodedData, buffSize), nil)
         }
     }

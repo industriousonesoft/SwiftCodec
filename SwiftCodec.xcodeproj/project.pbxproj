@@ -23,7 +23,7 @@
 		90D35BC924138F3400A507BC /* libavcodec.58.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90CC7A2D238E114F005FCD2D /* libavcodec.58.dylib */; };
 		90D35BCA24138F3400A507BC /* libswresample.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05639238FC6CA00DB766C /* libswresample.3.dylib */; };
 		EE75C2342445930500711CA1 /* MuxerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE75C2332445930500711CA1 /* MuxerSession.swift */; };
-		EE75C2362445B10600711CA1 /* Codec.FFmpeg.Encoder.Muxer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE75C2352445B10600711CA1 /* Codec.FFmpeg.Encoder.Muxer.swift */; };
+		EE75C2362445B10600711CA1 /* Codec.FFmpeg.Muxer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE75C2352445B10600711CA1 /* Codec.FFmpeg.Muxer.swift */; };
 		EE8438302446B33300266C6F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EE84382F2446B33300266C6F /* Assets.xcassets */; };
 		EE8438332446B33300266C6F /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = EE8438312446B33300266C6F /* MainMenu.xib */; };
 		EE84383A2446B37900266C6F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8438392446B37800266C6F /* AppDelegate.swift */; };
@@ -244,7 +244,7 @@
 		90D4263E23CDA06B0077CF1A /* AudioSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSession.swift; sourceTree = "<group>"; };
 		90D4264023CDB1690077CF1A /* NSError+Extend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSError+Extend.swift"; sourceTree = "<group>"; };
 		EE75C2332445930500711CA1 /* MuxerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuxerSession.swift; sourceTree = "<group>"; };
-		EE75C2352445B10600711CA1 /* Codec.FFmpeg.Encoder.Muxer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Encoder.Muxer.swift; sourceTree = "<group>"; };
+		EE75C2352445B10600711CA1 /* Codec.FFmpeg.Muxer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Muxer.swift; sourceTree = "<group>"; };
 		EE84382B2446B33000266C6F /* CodecDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodecDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE84382F2446B33300266C6F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		EE8438322446B33300266C6F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
@@ -617,7 +617,7 @@
 				EE912B5924446958003907FC /* Codec.FFmpeg.Encoder.swift */,
 				EE91CD6C244475E8000E6D71 /* Codec.FFmpeg.Encoder.Audio.swift */,
 				EE91CD6E244475EF000E6D71 /* Codec.FFmpeg.Encoder.Video.swift */,
-				EE75C2352445B10600711CA1 /* Codec.FFmpeg.Encoder.Muxer.swift */,
+				EE75C2352445B10600711CA1 /* Codec.FFmpeg.Muxer.swift */,
 			);
 			path = Encoder;
 			sourceTree = "<group>";
@@ -762,7 +762,7 @@
 				90D35BC324138E5C00A507BC /* NSError+Extend.swift in Sources */,
 				EE91CD6F244475EF000E6D71 /* Codec.FFmpeg.Encoder.Video.swift in Sources */,
 				EE75C2342445930500711CA1 /* MuxerSession.swift in Sources */,
-				EE75C2362445B10600711CA1 /* Codec.FFmpeg.Encoder.Muxer.swift in Sources */,
+				EE75C2362445B10600711CA1 /* Codec.FFmpeg.Muxer.swift in Sources */,
 				90D35BC424138E5C00A507BC /* AudioSession.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
