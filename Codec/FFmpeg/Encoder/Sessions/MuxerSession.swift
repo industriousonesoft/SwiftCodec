@@ -79,46 +79,18 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
     func addVideoStream(config: Codec.FFmpeg.Video.Config) throws {
         
         let session = try Codec.FFmpeg.Encoder.VideoSession.init(config: config, queue: self.muxingQueue)
-        let timebase = session.codecCtx!.pointee.time_base
         self.flags.insert(.Video)
         self.videoSession = session
         self.videoStream = try self.addStream(codecCtx: session.codecCtx!)
-        self.videoSession!.onEncodedPacket = { [unowned self] (packet, error) in
-            if packet != nil {
-                self.currVideoPts = packet!.pointee.pts
-                if self.couldToMuxVideo() {
-                    print("muxing video...")
-                    if let err = self.muxer(packet: packet!, stream: self.videoStream!, timebase: timebase) {
-                        self.onMuxedData?(nil, err)
-                    }
-                }
-                av_packet_unref(packet!)
-            }else {
-                self.onMuxedData?(nil, error)
-            }
-        }
+  
     }
     
     func addAudioStream(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
         
         let session = try Codec.FFmpeg.Encoder.AudioSession.init(in: desc, config: config, queue: self.muxingQueue)
-        let timebase = session.codecCtx!.pointee.time_base
         self.flags.insert(.Audio)
         self.audioSession = session
         self.audioStream = try self.addStream(codecCtx: session.codecCtx!)
-        self.audioSession!.onEncodedPacket = { [unowned self] (packet, error) in
-            if packet != nil {
-                //由于人对声音的敏锐程度远高于视觉（eg: 视觉有视网膜影像停留机制）,所以如果需要合成音频流，则必须确保音频流优先合成，而视频流则根据相关计算插入。
-                self.currAudioPts = packet!.pointee.pts
-                print("muxing audio...")
-                if let err = self.muxer(packet: packet!, stream: self.audioStream!, timebase: timebase) {
-                    self.onMuxedData?(nil, err)
-                }
-                av_packet_unref(packet)
-            }else {
-                self.onMuxedData?(nil, error)
-            }
-        }
     }
     
     func muxingVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) {
@@ -130,7 +102,20 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
         if self.currVideoPts == ZeroPts && self.flags.videoOnly {
             self.addHeader()
         }
-        self.videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime)
+        self.videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime, onEncoded: { [unowned self] (packet, error) in
+            if packet != nil {
+                self.currVideoPts = packet!.pointee.pts
+                if self.couldToMuxVideo() {
+                    print("muxing video...")
+                    if let err = self.muxer(packet: packet!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
+                        self.onMuxedData?(nil, err)
+                    }
+                }
+                av_packet_unref(packet!)
+            }else {
+                self.onMuxedData?(nil, error)
+            }
+        })
         
     }
     
@@ -138,7 +123,23 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
         if self.currAudioPts == ZeroPts {
             self.addHeader()
         }
-        self.audioSession?.encode(bytes: bytes, size: size)
+        self.audioSession?.encode(bytes: bytes, size: size, onEncoded: { [unowned self] (packet, error) in
+            if packet != nil {
+                //由于人对声音的敏锐程度远高于视觉（eg: 视觉有视网膜影像停留机制）,所以如果需要合成音频流，则必须确保音频流优先合成，而视频流则根据相关计算插入。
+                self.currAudioPts = packet!.pointee.pts
+                print("muxing audio...")
+                if let err = self.muxer(
+                    packet: packet!,
+                    stream: self.audioStream!,
+                    timebase: self.audioSession!.codecCtx!.pointee.time_base)
+                {
+                    self.onMuxedData?(nil, err)
+                }
+                av_packet_unref(packet)
+            }else {
+                self.onMuxedData?(nil, error)
+            }
+        })
     }
    
 }

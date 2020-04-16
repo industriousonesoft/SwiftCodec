@@ -79,9 +79,6 @@ extension Codec.FFmpeg.Encoder {
         private(set) var lastPts: Int64 = -1
         private var encodeQueue: DispatchQueue
         
-        var onEncodedData: EncodedDataCallback? = nil
-        var onEncodedPacket: EncodedPacketCallback? = nil
-        
         init(config: Codec.FFmpeg.Video.Config, queue: DispatchQueue? = nil) throws {
             self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.encode.queue")
             super.init()
@@ -92,8 +89,6 @@ extension Codec.FFmpeg.Encoder {
         
         deinit {
             self.lastPts = -1
-            self.onEncodedData = nil
-            self.onEncodedPacket = nil
             self.destroyInFrame()
             self.destroyOutFrame()
             self.destroySwsCtx()
@@ -229,17 +224,17 @@ extension Codec.FFmpeg.Encoder.VideoSession {
 //MARK: - Encode
 extension Codec.FFmpeg.Encoder.VideoSession {
     
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) {
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
         self.encodeQueue.async { [unowned self] in
             do {
-                try self.innerEncode(bytes: bytes, size: size, displayTime: displayTime)
+                try self.innerEncode(bytes: bytes, size: size, displayTime: displayTime, onEncoded: onEncoded)
             } catch let err {
-                self.onEncodedData?(nil, err)
+                onEncoded(nil, err)
             }
         }
     }
     
-    func innerEncode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) throws {
+    func innerEncode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) throws {
          
         //let inDataArray = unsafeBitCast([rgbPixels], to: UnsafePointer<UnsafePointer<UInt8>?>?.self)
         //let inLineSizeArray = unsafeBitCast([self.inWidth * 4], to: UnsafePointer<Int32>.self)
@@ -295,37 +290,14 @@ extension Codec.FFmpeg.Encoder.VideoSession {
             self.lastPts = pts
             outFrame.pointee.pts = pts
             
-            self.encode(outFrame, in: codecCtx) { (packet, error) in
-                
-                if let onEncoded = self.onEncodedData {
-                    if packet != nil {
-                        let size = Int(packet!.pointee.size)
-                        let encodedBytes = unsafeBitCast(malloc(size), to: UnsafeMutablePointer<UInt8>.self)
-                        memcpy(encodedBytes, packet!.pointee.data, size)
-                        onEncoded((encodedBytes, Int32(size)), nil)
-                    }else {
-                        onEncoded(nil, error)
-                    }
-                    
-                }
-                
-                if let onEncoded = self.onEncodedPacket {
-                    if packet != nil {
-                        onEncoded(packet!, nil)
-                    }else {
-                        onEncoded(nil, error)
-                    }
-                }else if packet != nil {
-                    av_packet_unref(packet!)
-                }
-            }
+            self.encode(outFrame, in: codecCtx, onFinished: onEncoded)
             
         }
         
     }
     
     private
-    func encode(_ frame: UnsafeMutablePointer<AVFrame>, in codecCtx: UnsafeMutablePointer<AVCodecContext>, onFinished: (UnsafeMutablePointer<AVPacket>?, Error?)->Void) {
+    func encode(_ frame: UnsafeMutablePointer<AVFrame>, in codecCtx: UnsafeMutablePointer<AVCodecContext>, onFinished: Codec.FFmpeg.Encoder.EncodedPacketCallback) {
   
         var packet = AVPacket.init()
         
@@ -357,10 +329,6 @@ extension Codec.FFmpeg.Encoder.VideoSession {
                 }
             }
        
-            
         }
-        
-       
-     
     }
 }

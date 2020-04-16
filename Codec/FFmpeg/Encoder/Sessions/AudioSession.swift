@@ -31,9 +31,6 @@ extension Codec.FFmpeg.Encoder {
         private var encodeQueue: DispatchQueue
         private(set) var outDesc = Codec.FFmpeg.Audio.Config.defaultDesc
         
-        var onEncodedData: EncodedDataCallback? = nil
-        var onEncodedPacket: EncodedPacketCallback? = nil
-        
         init(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config, queue: DispatchQueue? = nil) throws {
             self.inDesc = desc
             self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.AudioSession.encode.queue")
@@ -47,8 +44,6 @@ extension Codec.FFmpeg.Encoder {
         }
         
         deinit {
-            self.onEncodedData = nil
-            self.onEncodedPacket = nil
             self.freeSampleBuffer()
             self.destroyInFrame()
             self.destroyFIFO()
@@ -358,18 +353,18 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 //MARK: - Encode
 extension Codec.FFmpeg.Encoder.AudioSession {
     
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32) {
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
         self.encodeQueue.async { [unowned self] in
             do {
-                try self.innerEncode(bytes: bytes, size: size)
+                try self.innerEncode(bytes: bytes, size: size, onEncoded: onEncoded)
             }catch let err {
-                self.onEncodedData?(nil, err)
+                onEncoded(nil, err)
             }
         }
     }
 
     private
-    func innerEncode(bytes: UnsafeMutablePointer<UInt8>, size: Int32) throws {
+    func innerEncode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) throws {
         
         if let codecCtx = self.codecCtx,
             let inFrame = self.inFrame,
@@ -399,32 +394,13 @@ extension Codec.FFmpeg.Encoder.AudioSession {
                 
                 print("[Audio] encode for now...: \(self.sampleCount) - \(pts)")
                 
-                self.encode(inFrame, in: codecCtx, onFinished: { (packet, error) in
-                    
-                    if let onEncoded = self.onEncodedData {
-                        if packet != nil {
-                            let size = Int(packet!.pointee.size)
-                            let encodedBytes = unsafeBitCast(malloc(size), to: UnsafeMutablePointer<UInt8>.self)
-                            memcpy(encodedBytes, packet!.pointee.data, size)
-                            onEncoded((encodedBytes, Int32(size)), nil)
-                        }else {
-                            onEncoded(nil, error)
-                        }
-                        
-                    }
-                    
-                    if let onEncoded = self.onEncodedPacket {
-                        onEncoded(packet, error)
-                    }else if packet != nil {
-                        av_packet_unref(packet!)
-                    }
-                })
+                self.encode(inFrame, in: codecCtx, onFinished: onEncoded)
             }
         }
     }
   
     private
-    func encode(_ frame: UnsafeMutablePointer<AVFrame>, in codecCtx: UnsafeMutablePointer<AVCodecContext>, onFinished: (UnsafeMutablePointer<AVPacket>?, Error?)->Void) {
+    func encode(_ frame: UnsafeMutablePointer<AVFrame>, in codecCtx: UnsafeMutablePointer<AVCodecContext>, onFinished: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
         
         var packet = AVPacket.init()
         withUnsafeMutablePointer(to: &packet) { (ptr) in

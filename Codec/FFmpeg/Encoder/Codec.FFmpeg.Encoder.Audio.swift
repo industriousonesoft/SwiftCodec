@@ -58,7 +58,17 @@ extension Codec.FFmpeg.Encoder {
     }
     
     func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping EncodedDataCallback) {
-        self.audioSession?.onEncodedData = onEncoded
-        self.audioSession?.encode(bytes: bytes, size: size)
+        self.audioSession?.encode(bytes: bytes, size: size, onEncoded: { (packet, error) in
+            if packet != nil {
+                let size = Int(packet!.pointee.size)
+                let encodedBytes = unsafeBitCast(malloc(size), to: UnsafeMutablePointer<UInt8>.self)
+                memcpy(encodedBytes, packet!.pointee.data, size)
+                onEncoded((encodedBytes, Int32(size)), nil)
+                av_packet_unref(packet!)
+            }else {
+                onEncoded(nil, error)
+            }
+        })
+        
     }
 }
