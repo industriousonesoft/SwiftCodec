@@ -439,6 +439,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
             }
             
             ret = avcodec_receive_packet(codecCtx, ptr)
+            
             if ret == 0 {
                 //print("Audio: \(frame.pointee.pts) - \(packet.pts) - \(packet.dts)")
                 onFinished(ptr, nil)

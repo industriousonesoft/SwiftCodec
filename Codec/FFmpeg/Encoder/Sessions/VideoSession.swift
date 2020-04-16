@@ -253,11 +253,11 @@ extension Codec.FFmpeg.Encoder.VideoSession {
             self.displayTimeBase = displayTime
         }
         
-        //累计采样数
+        //累计采样时长
         let elapseTime = displayTime - self.displayTimeBase
-        let nb_samples_count = Int64(elapseTime * Double(SampleTimebase.den))
-       
+        //累计采样数
         //这一步很关键！在未知输入视频的帧率或者帧率是一个动态值时，使用视频采样率（一般都是90K）作为视频量增幅的参考标准
+        let nb_samples_count = Int64(elapseTime * Double(SampleTimebase.den))
         //然后，将基于采样频率的增量计数方式转换为基于当前编码帧率的增量计数方式
         let pts = av_rescale_q(nb_samples_count, SampleTimebase, codecCtx.pointee.time_base)
         
@@ -329,36 +329,38 @@ extension Codec.FFmpeg.Encoder.VideoSession {
   
         var packet = AVPacket.init()
         
-        let ret = withUnsafeMutablePointer(to: &packet) { (ptr) -> Int32 in
+        withUnsafeMutablePointer(to: &packet) { (ptr) in
             
             av_init_packet(ptr)
             
             var ret = avcodec_send_frame(codecCtx, frame)
             
-            if ret == 0 {
-                ret = avcodec_receive_packet(codecCtx, ptr)
-            }
-            
             if ret < 0 {
                 av_packet_unref(ptr)
+                onFinished(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when sending frame.")!)
+                return
             }
             
-            return ret
+            ret = avcodec_receive_packet(codecCtx, ptr)
+            
+            if ret == 0 {
+                //print("Video: \(frame.pointee.pts) - \(packet.pts) - \(packet.dts)")
+                onFinished(ptr, nil)
+            }else {
+                if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {
+                    print("avcodec_recieve_packet() encoder flushed...")
+                }else if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EAGAIN {
+                    print("avcodec_recieve_packet() need more input...")
+                }else if ret < 0 {
+                    onFinished(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when encoding video.")!)
+                    av_packet_unref(ptr)
+                }
+            }
+       
             
         }
         
-        if ret == 0 {
-//            print("Video: \(frame.pointee.pts) - \(packet.pts) - \(packet.dts)")
-            onFinished(&packet, nil)
-        }else {
-            if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {
-                print("avcodec_recieve_packet() encoder flushed...")
-            }else if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EAGAIN {
-                print("avcodec_recieve_packet() need more input...")
-            }else if ret < 0 {
-                onFinished(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when encoding video.")!)
-            }
-        }
+       
      
     }
 }
