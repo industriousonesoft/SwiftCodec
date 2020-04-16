@@ -46,7 +46,7 @@ extension FFmpegEncoder {
     func open() throws {
         self.dataCacher.close()
         self.dataCacher.reset(fileName: "muxing.ts")
-        try self.muxer.open(flags: [.Audio, .Video] ,onMuxed: { [unowned self] (muxedData, err) in
+        try self.muxer.open(mode: .RealTime, flags: [.Audio, .Video] ,onMuxed: { [unowned self] (muxedData, err) in
             if err != nil {
                 print("Error occured when encoding: \(err!.localizedDescription)")
             }else if let (bytes, size) = muxedData {

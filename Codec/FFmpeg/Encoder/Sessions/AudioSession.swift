@@ -349,7 +349,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         
     }
 }
-#if AudioFluencyPriority
+
 extension Codec.FFmpeg.Encoder.AudioSession {
     
     func write(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onFinished: @escaping (Error?) -> Void) {
@@ -373,7 +373,6 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         
     }
 }
-#endif
 
 //MARK: - Encode
 extension Codec.FFmpeg.Encoder.AudioSession {

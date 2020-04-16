@@ -34,7 +34,8 @@ extension Codec.FFmpeg.Muxer {
         
         private var displayTimeBase: Double = 0
         
-        private let flags: MuxStreamFlags
+        let flags: StreamFlags
+        let mode: MuxingMode
         
         private var muxingQueue: DispatchQueue
         
@@ -42,15 +43,16 @@ extension Codec.FFmpeg.Muxer {
         
         var onMuxedData: MuxedDataCallback? = nil
         
-        init(flags: MuxStreamFlags, onMuxed: @escaping MuxedDataCallback, queue: DispatchQueue? = nil) throws {
+        init(mode: MuxingMode, flags: StreamFlags, onMuxed: @escaping MuxedDataCallback, queue: DispatchQueue? = nil) throws {
             
             var fmtCtx: UnsafeMutablePointer<AVFormatContext>?
             guard avformat_alloc_output_context2(&fmtCtx, nil, MuxFormat.mpegts, nil) >= 0  else {
                 throw NSError.error(ErrorDomain, reason: "Failed to create output context.")!
             }
             self.fmtCtx = fmtCtx!
-            self.onMuxedData = onMuxed
+            self.mode = mode
             self.flags = flags
+            self.onMuxedData = onMuxed
             self.muxingQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.MuxerSession.muxing.Queue")
             super.init()
             let ioBufferSize: Int = 512*1024 //32768
@@ -127,33 +129,33 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
             return
         }
         self.videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime, onEncoded: { [unowned self] (packet, error) in
-            //此处如果不clone一次，会出现野指针错误。原因在于packet相关内存是由ffmepg内部函数管理，也作用域就在当前{}，即便是muxingQueue捕获后也只是引用计数加1，packet中的数据内存还是会被释放
+            //此处如果不clone一次，会出现野指针错误。原因在于packet相关内存是由ffmepg内部函数管理，作用域就在当前{}，即便是muxingQueue捕获后也只是引用计数加1，packet中的数据内存还是会被释放
             let newPacket = av_packet_clone(packet)
             av_packet_unref(packet!)
             self.muxingQueue.async { [unowned self] in
                 if newPacket != nil {
                     self.currVideoPts = newPacket!.pointee.pts
-#if AudioFluencyPriority
-                    //为了保证延时，不能合成时则丢弃掉当前视频帧
-                    //如果不考虑延时，可以采用类似音频的处理方式，对视频帧进行缓存，即需即取
-                    if self.isToMuxingVideo == true {
-                        print("muxing video...")
-                        if let err = self.muxer(packet: newPacket!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
-                            self.onMuxedData?(nil, err)
+                    if self.mode == .Dump {
+                        //为了保证延时，不能合成时则丢弃掉当前视频帧
+                        //如果不考虑延时，可以采用类似音频的处理方式，对视频帧进行缓存，即需即取
+                        if self.isToMuxingVideo == true {
+                            print("muxing video...")
+                            if let err = self.muxer(packet: newPacket!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
+                                self.onMuxedData?(nil, err)
+                            }
+                            self.isToMuxingVideo = false
+                        }else {
+                            self.muxingAudio()
                         }
-                        self.isToMuxingVideo = false
-                    }else {
-                        self.muxingAudio()
-                    }
-#else
-                    //为了保证延时，不能合成时则丢弃掉当前视频帧
-                    if self.couldToMuxVideo() {
-                        print("muxing video...")
-                        if let err = self.muxer(packet: newPacket!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
-                            self.onMuxedData?(nil, err)
+                    }else if self.mode == .RealTime {
+                        //为了保证延时，不能合成时则丢弃掉当前视频帧
+                        if self.couldToMuxVideo() {
+                            print("muxing video...")
+                            if let err = self.muxer(packet: newPacket!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
+                                self.onMuxedData?(nil, err)
+                            }
                         }
                     }
-#endif
                     av_packet_unref(newPacket!)
                 }else {
                     self.onMuxedData?(nil, error)
@@ -165,44 +167,44 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
     
     //由于人对声音的敏锐程度远高于视觉（eg: 视觉有视网膜影像停留机制）,所以如果需要合成音频流，则必须确保音频流优先合成，而视频流则根据相关计算插入。
     func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32, displayTime: Double) {
-#if AudioFluencyPriority
-        //音频优先合成，确保音频的连续性，但是视频可能会出现比较严重的掉帧情况
-        self.audioSession?.write(bytes: bytes, size: size, onFinished: { [unowned self] (error) in
-            if error != nil {
-                self.onMuxedData?(nil, error)
-            }else {
-                self.muxingQueue.async { [unowned self] in
-                    if self.couldToMuxVideo() == false &&
-                        self.isToMuxingVideo == false {
-                        self.muxingAudio()
-                    }else {
-                        self.isToMuxingVideo = true
-                        print("Audio: could to mux video...")
+     
+        if self.mode == .Dump {
+            //音频优先合成，确保音频的连续性，但是视频可能会出现比较严重的掉帧情况
+            self.audioSession?.write(bytes: bytes, size: size, onFinished: { [unowned self] (error) in
+                if error != nil {
+                    self.onMuxedData?(nil, error)
+                }else {
+                    self.muxingQueue.async { [unowned self] in
+                        if self.couldToMuxVideo() == false &&
+                            self.isToMuxingVideo == false {
+                            self.muxingAudio()
+                        }else {
+                            self.isToMuxingVideo = true
+                            print("Audio: could to mux video...")
+                        }
                     }
                 }
-            }
-        })
-#else
-        //根据音视频编码速度进行合成
-        //FIXME: 当音视频编码以及合成都在一个queue时会出现杂音，具体原因不清楚，将当音视频编码以及合成分别放不同的queue时暂时未出现杂音
-        self.audioSession?.encode(bytes: bytes, size: size, onEncoded: { [unowned self] (packet, error) in
-            if packet != nil {
-                self.currAudioPts = packet!.pointee.pts
-                print("muxing audio...")
-                if let err = self.muxer(
-                    packet: packet!,
-                    stream: self.audioStream!,
-                    timebase: self.audioSession!.codecCtx!.pointee.time_base)
-                {
-                    self.onMuxedData?(nil, err)
+            })
+        }else if self.mode == .RealTime {
+            //FIXME: 根据音视频编码速度进行合成，音频可能出现杂音，频率不高，具体原因不清楚
+            self.audioSession?.encode(bytes: bytes, size: size, onEncoded: { [unowned self] (packet, error) in
+                if packet != nil {
+                    self.currAudioPts = packet!.pointee.pts
+                    print("muxing audio...")
+                    if let err = self.muxer(
+                        packet: packet!,
+                        stream: self.audioStream!,
+                        timebase: self.audioSession!.codecCtx!.pointee.time_base)
+                    {
+                        self.onMuxedData?(nil, err)
+                    }
+                    av_packet_unref(packet)
+                }else {
+                    self.onMuxedData?(nil, error)
                 }
-                av_packet_unref(packet)
-            }else {
-                self.onMuxedData?(nil, error)
-            }
-        })
-#endif
-
+            })
+        }
+        
     }
 }
 
@@ -250,7 +252,7 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
             return false
         }
     }
-#if AudioFluencyPriority
+
     func muxingAudio() {
         
         self.audioSession?.readAndEncode { [unowned self] (packet, error) in
@@ -275,7 +277,7 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
             }
         }
     }
-#endif
+
     
 }
 
