@@ -11,6 +11,12 @@ import Foundation
 private let ErrorDomain = "FFmpeg:Muxer"
 private let ZeroPts: Int64 = 0
 
+
+private typealias MuxFormat = String
+fileprivate extension MuxFormat {
+    static let mpegts: String = "mpegts"
+}
+
 extension Codec.FFmpeg.Encoder {
     
     class MuxerSession: NSObject {
@@ -26,16 +32,18 @@ extension Codec.FFmpeg.Encoder {
         private var currVideoPts: Int64 = ZeroPts
         private var currAudioPts: Int64 = ZeroPts
         
+        private var displayTimeBase: Double = 0
+        
         private var flags: MuxStreamFlags = []
         
         private var muxingQueue: DispatchQueue
         
         var onMuxedData: MuxedDataCallback? = nil
         
-        init(format: Codec.FFmpeg.Encoder.MuxFormat, onMuxed: @escaping Codec.FFmpeg.Encoder.MuxedDataCallback, queue: DispatchQueue? = nil) throws {
+        init(onMuxed: @escaping Codec.FFmpeg.Encoder.MuxedDataCallback, queue: DispatchQueue? = nil) throws {
             
             var fmtCtx: UnsafeMutablePointer<AVFormatContext>?
-            guard avformat_alloc_output_context2(&fmtCtx, nil, format, nil) >= 0  else {
+            guard avformat_alloc_output_context2(&fmtCtx, nil, MuxFormat.mpegts, nil) >= 0  else {
                 throw NSError.error(ErrorDomain, reason: "Failed to create output context.")!
             }
             self.fmtCtx = fmtCtx!
@@ -78,7 +86,7 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
         self.videoSession!.onEncodedPacket = { [unowned self] (packet, error) in
             if packet != nil {
                 self.currVideoPts = packet!.pointee.pts
-                if self.currentMuxingStream() == .Video {
+                if self.couldToMuxVideo() {
                     print("muxing video...")
                     if let err = self.muxer(packet: packet!, stream: self.videoStream!, timebase: timebase) {
                         self.onMuxedData?(nil, err)
@@ -100,15 +108,13 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
         self.audioStream = try self.addStream(codecCtx: session.codecCtx!)
         self.audioSession!.onEncodedPacket = { [unowned self] (packet, error) in
             if packet != nil {
+                //由于人对声音的敏锐程度远高于视觉（eg: 视觉有视网膜影像停留机制）,所以如果需要合成音频流，则必须确保音频流优先合成，而视频流则根据相关计算插入。
                 self.currAudioPts = packet!.pointee.pts
-                if self.currentMuxingStream() == .Audio {
-                    print("muxing audio...")
-                    if let err = self.muxer(packet: packet!, stream: self.audioStream!, timebase: timebase) {
-                        self.onMuxedData?(nil, err)
-                    }
-                }else {
-                    av_packet_unref(packet)
+                print("muxing audio...")
+                if let err = self.muxer(packet: packet!, stream: self.audioStream!, timebase: timebase) {
+                    self.onMuxedData?(nil, err)
                 }
+                av_packet_unref(packet)
             }else {
                 self.onMuxedData?(nil, error)
             }
@@ -116,8 +122,8 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
     }
     
     func muxingVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) {
-        //由于人对声音的敏锐程度远高于视觉（eg: 视觉有视网膜影像停留机制）,所以如果需要合成音频流，则必须确保视频流在音频流后合成，以确保音视频同步。
-        if self.flags.contains(.Audio) && self.currAudioPts <= ZeroPts {
+        //如果同时合成音视频，则确保先合成音频再合成视频
+        if self.flags.both && self.currAudioPts == ZeroPts {
             return
         }
         //Only Video
@@ -125,9 +131,10 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
             self.addHeader()
         }
         self.videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime)
+        
     }
     
-    func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32) {
+    func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32, displayTime: Double) {
         if self.currAudioPts == ZeroPts {
             self.addHeader()
         }
@@ -138,50 +145,42 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
 
 private
 extension Codec.FFmpeg.Encoder.MuxerSession {
-    enum MuxingStream {
-        case None
-        case Audio
-        case Video
-    }
-    
-    func currentMuxingStream() -> MuxingStream {
+   
+    func couldToMuxVideo() -> Bool {
        
-        //Audio Only
-        if self.flags.audioOnly {
-            return .Audio
-        //Video Only
-        }else if self.flags.videoOnly {
-            return .Video
+        if self.flags.videoOnly {
+            return true
         //Both
         }else if self.flags.both {
             
             guard let vCodecCtx = self.videoSession?.codecCtx, let aCodecCtx = self.audioSession?.codecCtx else {
-                return .None
+                return false
             }
             //The both of two methods are the same thing
             //Method One:
-               /*
-                let vCurTime = Double(self.videoNextPts) * av_q2d(vCodecCtx.pointee.time_base)
-                let aCurTime = Double(self.audioNextPts) * av_q2d(aCodecCtx.pointee.time_base)
+            /*
+            let vCurTime = Double(self.currVideoPts) * av_q2d(vCodecCtx.pointee.time_base)
+            let aCurTime = Double(self.currAudioPts) * av_q2d(aCodecCtx.pointee.time_base)
                 
-                if vCurTime <= aCurTime {
-                    print("V: \(vCurTime) < A: \(aCurTime)")
-                    return .video
-                }else {
-                    print("V: \(vCurTime) > A: \(aCurTime)")
-                    return .audio
-                }
-                */
+            if vCurTime <= aCurTime {
+                print("V: \(vCurTime) < A: \(aCurTime)")
+                return true
+            }else {
+                print("V: \(vCurTime) > A: \(aCurTime)")
+                return false
+            }
+               */
             //Method two:
+            
             let ret = av_compare_ts(self.currVideoPts, vCodecCtx.pointee.time_base, self.currAudioPts, aCodecCtx.pointee.time_base)
             print("ret: \(ret) - vPts \(self.currVideoPts) - aPts: \(self.currAudioPts)")
-            if ret <= 0 /*vCurTime <= aCurTime*/ {
-                return .Video
+            if ret <= 0 {
+                return true
             }else {
-                return .Audio
+                return false
             }
         }else {
-            return .None
+            return false
         }
     }
 }

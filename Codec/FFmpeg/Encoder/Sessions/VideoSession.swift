@@ -9,7 +9,7 @@
 import Foundation
 
 private let ErrorDomain = "FFmpeg:Video:Encoder"
-private let Timebase = AVRational.init(num: 1, den: 90000)
+private let SampleTimebase = AVRational.init(num: 1, den: 90000)
 
 extension AVFrame {
     var sliceArray: [UnsafePointer<UInt8>?] {
@@ -255,11 +255,11 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         
         //累计采样数
         let elapseTime = displayTime - self.displayTimeBase
-        let nb_samples_count = Int64(elapseTime * Double(Timebase.den))
+        let nb_samples_count = Int64(elapseTime * Double(SampleTimebase.den))
        
         //这一步很关键！在未知输入视频的帧率或者帧率是一个动态值时，使用视频采样率（一般都是90K）作为视频量增幅的参考标准
         //然后，将基于采样频率的增量计数方式转换为基于当前编码帧率的增量计数方式
-        let pts = av_rescale_q(nb_samples_count, Timebase, codecCtx.pointee.time_base)
+        let pts = av_rescale_q(nb_samples_count, SampleTimebase, codecCtx.pointee.time_base)
         
         //如果前后两帧间隔时间很短，可能会出现计算出的pts是一样的，此处过滤一下
         if pts <= self.lastPts {

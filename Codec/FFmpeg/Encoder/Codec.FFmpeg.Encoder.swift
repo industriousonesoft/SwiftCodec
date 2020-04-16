@@ -19,7 +19,6 @@ extension Codec.FFmpeg {
 }
 
 extension Codec.FFmpeg.Encoder {
-    public typealias MuxFormat = String
     public typealias EncodedDataCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int32)?, Error?) -> Void
     public typealias MuxedDataCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int32)?, Error?) -> Void
     
@@ -47,9 +46,4 @@ extension Codec.FFmpeg.Encoder {
     }
 
     typealias EncodedPacketCallback = (UnsafeMutablePointer<AVPacket>?, Error?) -> Void
-}
-
-public extension Codec.FFmpeg.Encoder.MuxFormat {
-    static let mpegts: String = "mpegts"
-    static let h264: String = "h264"
 }

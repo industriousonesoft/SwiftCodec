@@ -31,8 +31,8 @@ extension Codec.FFmpeg.Encoder {
 public
 extension MuxerCompatible where Base: Codec.FFmpeg.Encoder {
     
-    func open(format: Codec.FFmpeg.Encoder.MuxFormat, onMuxed: @escaping Codec.FFmpeg.Encoder.MuxedDataCallback, queue: DispatchQueue? = nil) throws {
-        try self.base.open(format: format, onMuxed: onMuxed, queue: queue)
+    func open(onMuxed: @escaping Codec.FFmpeg.Encoder.MuxedDataCallback, queue: DispatchQueue? = nil) throws {
+        try self.base.open(onMuxed: onMuxed, queue: queue)
     }
     
     func close() {
@@ -51,8 +51,8 @@ extension MuxerCompatible where Base: Codec.FFmpeg.Encoder {
         self.base.muxingVideo(bytes: bytes, size: size, displayTime: displayTime)
     }
     
-    func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32) {
-        self.base.muxingAudio(bytes: bytes, size: size)
+    func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32, displayTime: Double) {
+        self.base.muxingAudio(bytes: bytes, size: size, displayTime: displayTime)
     }
 }
 
@@ -60,8 +60,8 @@ extension MuxerCompatible where Base: Codec.FFmpeg.Encoder {
 private
 extension Codec.FFmpeg.Encoder {
     
-    func open(format: Codec.FFmpeg.Encoder.MuxFormat, onMuxed: @escaping Codec.FFmpeg.Encoder.MuxedDataCallback, queue: DispatchQueue? = nil) throws {
-        self.muxerSession = try MuxerSession.init(format: format, onMuxed: onMuxed, queue: queue)
+    func open(onMuxed: @escaping Codec.FFmpeg.Encoder.MuxedDataCallback, queue: DispatchQueue? = nil) throws {
+        self.muxerSession = try MuxerSession.init(onMuxed: onMuxed, queue: queue)
     }
     
     func closeMuxerSession() {
@@ -80,7 +80,7 @@ extension Codec.FFmpeg.Encoder {
         self.muxerSession?.muxingVideo(bytes: bytes, size: size, displayTime: displayTime)
     }
     
-    func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32) {
-        self.muxerSession?.muxingAudio(bytes: bytes, size: size)
+    func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32, displayTime: Double) {
+        self.muxerSession?.muxingAudio(bytes: bytes, size: size, displayTime: displayTime)
     }
 }

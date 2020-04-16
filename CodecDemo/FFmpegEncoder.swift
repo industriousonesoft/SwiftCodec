@@ -42,7 +42,7 @@ extension FFmpegEncoder {
     func open() throws {
         self.dataCacher.close()
         self.dataCacher.reset(fileName: "muxing.ts")
-        try self.encoder.muxer.open(format: .mpegts, onMuxed: { [unowned self] (muxedData, err) in
+        try self.encoder.muxer.open(onMuxed: { [unowned self] (muxedData, err) in
             if err != nil {
                 print("Error occured when encoding: \(err!.localizedDescription)")
             }else if let (bytes, size) = muxedData {
@@ -51,8 +51,8 @@ extension FFmpegEncoder {
                 free(bytes)
             }
         })
-        try self.openVideo()
         try self.openAudio()
+        try self.openVideo()
     }
     
     func close() {
@@ -163,7 +163,11 @@ extension FFmpegEncoder {
     func startAudio() {
         self.audioCapturer?.start { [unowned self] (bytes, size, displayTime) in
             if bytes != nil, size > 0 {
-                self.encoder.muxer.muxingAudio(bytes: bytes!, size: size)
+                self.encoder.muxer.muxingAudio(
+                    bytes: bytes!,
+                    size: size,
+                    displayTime: Utilities.shared.machAbsoluteToSeconds(machAbsolute: displayTime)
+                )
             }
         }
     }
