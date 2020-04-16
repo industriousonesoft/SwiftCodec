@@ -368,26 +368,45 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         
         if let fifo = self.fifo {
         
-            let (outSampleBuffer, nb_samples) = try self.resample(bytes: bytes, size: size)
-        
-            if nb_samples > 0 {
-
-                if let error = outSampleBuffer.withMemoryRebound(to: UnsafeMutableRawPointer?.self, capacity: 1, { (buffer)-> Error? in
-                    return self.write(buffer: buffer, frameSize: nb_samples, to: fifo)
-                }) {
+            self.write(bytes: bytes, size: size, to: fifo) { (error) in
+                if error != nil {
                     onEncoded(nil, error)
-                    return
+                }else {
+                    self.readAndEncode(from: fifo, onEncoded: onEncoded)
                 }
-                
-                self.encode(from: fifo, onEncoded: onEncoded)
             }
+            
         }else {
             onEncoded(nil, NSError.error(ErrorDomain, reason: "Not for ready to encode yet.")!)
         }
     }
     
     private
-    func encode(from fifo: OpaquePointer, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
+    func write(bytes: UnsafeMutablePointer<UInt8>, size: Int32, to fifo: OpaquePointer, onFinished: (Error?) -> Void) {
+        
+        do {
+            let (outSampleBuffer, nb_samples) = try self.resample(bytes: bytes, size: size)
+            
+            if nb_samples > 0 {
+
+                if let error = outSampleBuffer.withMemoryRebound(to: UnsafeMutableRawPointer?.self, capacity: 1, { (buffer)-> Error? in
+                    return self.write(buffer: buffer, frameSize: nb_samples, to: fifo)
+                }) {
+                    onFinished(error)
+                    return
+                }else {
+                    onFinished(nil)
+                }
+            
+            }
+            
+        } catch let err {
+            onFinished(err)
+        }
+    }
+    
+    private
+    func readAndEncode(from fifo: OpaquePointer, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
         
         guard let codecCtx = self.codecCtx, let inFrame = self.inFrame else {
             onEncoded(nil, NSError.error(ErrorDomain, reason: "Not for ready to encode yet.")!)
