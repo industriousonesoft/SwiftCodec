@@ -393,9 +393,9 @@ extension Codec.FFmpeg.Encoder.AudioSession {
               
                 //pts(presentation timestamp): Calculate the time of the sum of sample count for now as the timestmap
                 //计算目前为止的采用数所使用的时间作为显示时间戳
-                self.sampleCount += Int64(inFrame.pointee.nb_samples)
                 let pts = av_rescale_q(self.sampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
                 inFrame.pointee.pts = pts
+                self.sampleCount += Int64(inFrame.pointee.nb_samples)
                 
                 print("[Audio] encode for now...: \(self.sampleCount) - \(pts)")
                 

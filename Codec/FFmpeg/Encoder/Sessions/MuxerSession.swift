@@ -149,11 +149,14 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
     func couldToMuxVideo() -> Bool {
        
         if self.flags.videoOnly {
+            return false
+        }else if self.flags.videoOnly {
             return true
         //Both
         }else if self.flags.both {
             
-            guard let vCodecCtx = self.videoSession?.codecCtx, let aCodecCtx = self.audioSession?.codecCtx else {
+            guard let vCodecCtx = self.videoSession?.codecCtx,
+                let aCodecCtx = self.audioSession?.codecCtx else {
                 return false
             }
             //The both of two methods are the same thing
@@ -174,11 +177,7 @@ extension Codec.FFmpeg.Encoder.MuxerSession {
             
             let ret = av_compare_ts(self.currVideoPts, vCodecCtx.pointee.time_base, self.currAudioPts, aCodecCtx.pointee.time_base)
             print("ret: \(ret) - vPts \(self.currVideoPts) - aPts: \(self.currAudioPts)")
-            if ret <= 0 {
-                return true
-            }else {
-                return false
-            }
+            return ret <= 0 ? true : false
         }else {
             return false
         }
