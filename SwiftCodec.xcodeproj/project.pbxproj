@@ -22,15 +22,15 @@
 		90D35BC824138F3400A507BC /* libavutil.56.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90CC7A2C238E114F005FCD2D /* libavutil.56.dylib */; };
 		90D35BC924138F3400A507BC /* libavcodec.58.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90CC7A2D238E114F005FCD2D /* libavcodec.58.dylib */; };
 		90D35BCA24138F3400A507BC /* libswresample.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05639238FC6CA00DB766C /* libswresample.3.dylib */; };
+		EE744430244B07B200499733 /* SwiftyDesktopCapturer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EE74442F244B07B200499733 /* SwiftyDesktopCapturer.framework */; };
+		EE744431244B07B200499733 /* SwiftyDesktopCapturer.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = EE74442F244B07B200499733 /* SwiftyDesktopCapturer.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		EE744432244B0F4000499733 /* SwiftyCodec.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 90D35BAB24138BD400A507BC /* SwiftyCodec.framework */; };
+		EE744433244B0F4000499733 /* SwiftyCodec.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D35BAB24138BD400A507BC /* SwiftyCodec.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		EE75C2342445930500711CA1 /* MuxerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE75C2332445930500711CA1 /* MuxerSession.swift */; };
 		EE75C2362445B10600711CA1 /* Codec.FFmpeg.Muxer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE75C2352445B10600711CA1 /* Codec.FFmpeg.Muxer.swift */; };
 		EE8438302446B33300266C6F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EE84382F2446B33300266C6F /* Assets.xcassets */; };
 		EE8438332446B33300266C6F /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = EE8438312446B33300266C6F /* MainMenu.xib */; };
 		EE84383A2446B37900266C6F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8438392446B37800266C6F /* AppDelegate.swift */; };
-		EE84383D2446B4A200266C6F /* SwiftyDesktopCapturer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EE84383C2446B4A200266C6F /* SwiftyDesktopCapturer.framework */; };
-		EE84383E2446B4A200266C6F /* SwiftyDesktopCapturer.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = EE84383C2446B4A200266C6F /* SwiftyDesktopCapturer.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		EE8438402446B4A500266C6F /* SwiftyCodec.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 90D35BAB24138BD400A507BC /* SwiftyCodec.framework */; };
-		EE8438412446B4A500266C6F /* SwiftyCodec.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D35BAB24138BD400A507BC /* SwiftyCodec.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		EE8438452446B50300266C6F /* FFmpegEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8438442446B50300266C6F /* FFmpegEncoder.swift */; };
 		EE8438472446BDF900266C6F /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8438462446BDF900266C6F /* Utilities.swift */; };
 		EE8438492446BEC200266C6F /* DataCacher.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8438482446BEC200266C6F /* DataCacher.swift */; };
@@ -64,7 +64,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		EE8438422446B4A500266C6F /* PBXContainerItemProxy */ = {
+		EE744434244B0F4000499733 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 90CC79AA238E0E8F005FCD2D /* Project object */;
 			proxyType = 1;
@@ -81,8 +81,6 @@
 			dstSubfolderSpec = 10;
 			files = (
 				EE84387C24470A0500266C6F /* libZDAudioManager.dylib in Embed Frameworks */,
-				EE84383E2446B4A200266C6F /* SwiftyDesktopCapturer.framework in Embed Frameworks */,
-				EE8438412446B4A500266C6F /* SwiftyCodec.framework in Embed Frameworks */,
 				EE84384A2446C0B900266C6F /* libavformat.58.dylib in Embed Frameworks */,
 				EE84384B2446C0B900266C6F /* libswscale.5.dylib in Embed Frameworks */,
 				EE84384C2446C0B900266C6F /* libavutil.56.dylib in Embed Frameworks */,
@@ -98,6 +96,8 @@
 				EE8438562446C0B900266C6F /* libtheoraenc.1.dylib in Embed Frameworks */,
 				EE84385C2446C12D00266C6F /* libmp3lame.0.dylib in Embed Frameworks */,
 				EE8438572446C0B900266C6F /* libvorbis.0.dylib in Embed Frameworks */,
+				EE744431244B07B200499733 /* SwiftyDesktopCapturer.framework in Embed Frameworks */,
+				EE744433244B0F4000499733 /* SwiftyCodec.framework in Embed Frameworks */,
 				EE8438582446C0B900266C6F /* libvorbisenc.2.dylib in Embed Frameworks */,
 				EE8438592446C0B900266C6F /* libx264.152.dylib in Embed Frameworks */,
 				EE84385A2446C0B900266C6F /* libx265.169.dylib in Embed Frameworks */,
@@ -243,6 +243,7 @@
 		90D3E0B32398E0E3009C2195 /* avformat_shim.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = avformat_shim.h; sourceTree = "<group>"; };
 		90D4263E23CDA06B0077CF1A /* AudioSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSession.swift; sourceTree = "<group>"; };
 		90D4264023CDB1690077CF1A /* NSError+Extend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSError+Extend.swift"; sourceTree = "<group>"; };
+		EE74442F244B07B200499733 /* SwiftyDesktopCapturer.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftyDesktopCapturer.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE75C2332445930500711CA1 /* MuxerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuxerSession.swift; sourceTree = "<group>"; };
 		EE75C2352445B10600711CA1 /* Codec.FFmpeg.Muxer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Muxer.swift; sourceTree = "<group>"; };
 		EE84382B2446B33000266C6F /* CodecDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodecDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -285,9 +286,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				EE84383D2446B4A200266C6F /* SwiftyDesktopCapturer.framework in Frameworks */,
-				EE8438402446B4A500266C6F /* SwiftyCodec.framework in Frameworks */,
 				EE84387A244709EA00266C6F /* libZDAudioManager.dylib in Frameworks */,
+				EE744430244B07B200499733 /* SwiftyDesktopCapturer.framework in Frameworks */,
+				EE744432244B0F4000499733 /* SwiftyCodec.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -308,8 +309,8 @@
 			children = (
 				EE912B522444478D003907FC /* Codec */,
 				EE84382C2446B33000266C6F /* CodecDemo */,
-				90CC79B3238E0E8F005FCD2D /* Products */,
 				EE84383B2446B4A200266C6F /* Frameworks */,
+				90CC79B3238E0E8F005FCD2D /* Products */,
 			);
 			sourceTree = "<group>";
 		};
@@ -572,6 +573,7 @@
 		EE84383B2446B4A200266C6F /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				EE74442F244B07B200499733 /* SwiftyDesktopCapturer.framework */,
 				EE84383C2446B4A200266C6F /* SwiftyDesktopCapturer.framework */,
 			);
 			name = Frameworks;
@@ -684,7 +686,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				EE8438432446B4A500266C6F /* PBXTargetDependency */,
+				EE744435244B0F4000499733 /* PBXTargetDependency */,
 			);
 			name = CodecDemo;
 			productName = CodecDemo;
@@ -782,10 +784,10 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		EE8438432446B4A500266C6F /* PBXTargetDependency */ = {
+		EE744435244B0F4000499733 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 90D35BAA24138BD400A507BC /* SwiftCodec */;
-			targetProxy = EE8438422446B4A500266C6F /* PBXContainerItemProxy */;
+			targetProxy = EE744434244B0F4000499733 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

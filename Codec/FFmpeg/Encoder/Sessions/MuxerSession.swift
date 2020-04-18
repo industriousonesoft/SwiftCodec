@@ -34,6 +34,10 @@ extension Codec.FFmpeg.Muxer {
         
         private var displayTimeBase: Double = 0
         
+        private lazy var videoEncodeQueue: DispatchQueue = {
+            return DispatchQueue.init(label: "com.zdnet.ffmpeg.MuxerSession.video.encode.Queue")
+        }()
+        
         let flags: StreamFlags
         let mode: MuxingMode
         
@@ -123,46 +127,47 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
 //MARK: - Muxing
 extension Codec.FFmpeg.Muxer.MuxerSession {
     
-    func muxingVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double) {
-        //如果同时合成音视频，则确保先合成音频再合成视频
-        if self.flags.both && self.currAudioPts == ZeroPts {
-            return
-        }
-        self.videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime, onEncoded: { [unowned self] (packet, error) in
-            //此处如果不clone一次，会出现野指针错误。原因在于packet相关内存是由ffmepg内部函数管理，作用域就在当前{}，即便是muxingQueue捕获后也只是引用计数加1，packet中的数据内存还是会被释放
-            let newPacket = av_packet_clone(packet)
-            av_packet_unref(packet!)
-            self.muxingQueue.async { [unowned self] in
-                if newPacket != nil {
-                    self.currVideoPts = newPacket!.pointee.pts
-                    if self.mode == .Dump {
-                        //为了保证延时，不能合成时则丢弃掉当前视频帧
-                        //如果不考虑延时，可以采用类似音频的处理方式，对视频帧进行缓存，即需即取
-                        if self.isToMuxingVideo == true {
-                            print("muxing video...")
-                            if let err = self.muxer(packet: newPacket!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
-                                self.onMuxedData?(nil, err)
-                            }
-                            self.isToMuxingVideo = false
-                        }else {
-                            self.muxingAudio()
-                        }
-                    }else if self.mode == .RealTime {
-                        //为了保证延时，不能合成时则丢弃掉当前视频帧
-                        if self.couldToMuxVideo() {
-                            print("muxing video...")
-                            if let err = self.muxer(packet: newPacket!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
-                                self.onMuxedData?(nil, err)
-                            }
-                        }
-                    }
-                    av_packet_unref(newPacket!)
-                }else {
-                    self.onMuxedData?(nil, error)
-                }
+    func muxingVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onScaled: @escaping Codec.FFmpeg.Encoder.ScaledCallback) {
+        self.videoEncodeQueue.async { [unowned self] in
+            //如果同时合成音视频，则确保先合成音频再合成视频
+            if self.flags.both && self.currAudioPts == ZeroPts {
+                return
             }
-        })
-        
+            self.videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime, onScaled: onScaled, onEncoded: { [unowned self] (packet, error) in
+                //此处如果不clone一次，会出现野指针错误。原因在于packet相关内存是由ffmepg内部函数管理，作用域就在当前{}，即便是muxingQueue捕获后也只是引用计数加1，packet中的数据内存还是会被释放
+                let newPacket = av_packet_clone(packet)
+                av_packet_unref(packet!)
+                self.muxingQueue.async { [unowned self] in
+                    if newPacket != nil {
+                        self.currVideoPts = newPacket!.pointee.pts
+                        if self.mode == .Dump {
+                            //为了保证延时，不能合成时则丢弃掉当前视频帧
+                            //如果不考虑延时，可以采用类似音频的处理方式，对视频帧进行缓存，即需即取
+                            if self.isToMuxingVideo == true {
+                                print("muxing video...")
+                                if let err = self.muxer(packet: newPacket!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
+                                    self.onMuxedData?(nil, err)
+                                }
+                                self.isToMuxingVideo = false
+                            }else {
+                                self.muxingAudio()
+                            }
+                        }else if self.mode == .RealTime {
+                            //为了保证延时，不能合成时则丢弃掉当前视频帧
+                            if self.couldToMuxVideo() {
+                                print("muxing video...")
+                                if let err = self.muxer(packet: newPacket!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
+                                    self.onMuxedData?(nil, err)
+                                }
+                            }
+                        }
+                        av_packet_unref(newPacket!)
+                    }else {
+                        self.onMuxedData?(nil, error)
+                    }
+                }
+            })
+        }
     }
     
     //由于人对声音的敏锐程度远高于视觉（eg: 视觉有视网膜影像停留机制）,所以如果需要合成音频流，则必须确保音频流优先合成，而视频流则根据相关计算插入。

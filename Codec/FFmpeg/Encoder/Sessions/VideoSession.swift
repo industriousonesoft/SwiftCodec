@@ -154,7 +154,15 @@ private
 extension Codec.FFmpeg.Encoder.VideoSession {
     
     func createInFrame(size: CGSize) throws {
-        self.inFrame = try self.createFrame(pixFmt: Codec.FFmpeg.SWIFT_AV_PIX_FMT_RGB32, size: size)
+        //编码过程中，输出frame指向内存块是动态的，因此不必在初始化时创建（fill = false）
+        self.inFrame = try self.createFrame(pixFmt: Codec.FFmpeg.SWIFT_AV_PIX_FMT_RGB32, size: size, fill: false)
+    }
+    
+    func fillInFrame(bytes: UnsafeMutablePointer<UInt8>, size: CGSize) -> Bool {
+        guard let frame = self.inFrame else {
+            return false
+        }
+        return av_image_fill_arrays(&(frame.pointee.data.0), &(frame.pointee.linesize.0), bytes, Codec.FFmpeg.SWIFT_AV_PIX_FMT_RGB32, Int32(size.width), Int32(size.height), 1) > 0
     }
     
     func destroyInFrame() {
@@ -165,7 +173,8 @@ extension Codec.FFmpeg.Encoder.VideoSession {
     }
     
     func createOutFrame(size: CGSize) throws {
-        self.outFrame = try self.createFrame(pixFmt: AV_PIX_FMT_YUV420P, size: size)
+        //编码过程中，输出frame指向内存块是固定的，因此在初始化时创建（fill = true）
+        self.outFrame = try self.createFrame(pixFmt: AV_PIX_FMT_YUV420P, size: size, fill: true)
     }
     
     func destroyOutFrame() {
@@ -175,7 +184,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         }
     }
  
-    func createFrame(pixFmt: AVPixelFormat, size: CGSize) throws -> UnsafeMutablePointer<AVFrame>? {
+    func createFrame(pixFmt: AVPixelFormat, size: CGSize, fill: Bool) throws -> UnsafeMutablePointer<AVFrame>? {
         
         guard let frame = av_frame_alloc() else {
             throw NSError.error(ErrorDomain, reason: "Failed to alloc frame.")!
@@ -185,20 +194,21 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         frame.pointee.width = Int32(size.width)
         frame.pointee.height = Int32(size.height)
         frame.pointee.pts = 0
-           
-        let frameSize = av_image_get_buffer_size(pixFmt,  Int32(size.width), Int32(size.height), 1)
-        if frameSize < 0 {
-            throw NSError.error(ErrorDomain, reason: "Can not get the video output frame buffer size.")!
-        }
-           
-        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: Int(frameSize))
-        if av_image_fill_arrays(&(frame.pointee.data.0), &(frame.pointee.linesize.0), buffer, AV_PIX_FMT_YUV420P, Int32(size.width), Int32(size.height), 1) < 0 {
-            throw NSError.error(ErrorDomain, reason: "Can not get the video output frame buffer size.")!
-        }
         
+        if fill {
+            let frameSize = av_image_get_buffer_size(pixFmt,  Int32(size.width), Int32(size.height), 1)
+            if frameSize < 0 {
+                throw NSError.error(ErrorDomain, reason: "Can not get the video output frame buffer size.")!
+            }
+               
+            let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: Int(frameSize))
+            if av_image_fill_arrays(&(frame.pointee.data.0), &(frame.pointee.linesize.0), buffer, AV_PIX_FMT_YUV420P, Int32(size.width), Int32(size.height), 1) < 0 {
+                throw NSError.error(ErrorDomain, reason: "Faild to initialize out frame buffer.")!
+            }
+        }
         return frame
     }
-
+    
 }
 
 //MARK: - Sws Context
@@ -223,23 +233,63 @@ extension Codec.FFmpeg.Encoder.VideoSession {
 
 //MARK: - Encode
 extension Codec.FFmpeg.Encoder.VideoSession {
+    
+    private
+    func innerFill(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, onScaled: Codec.FFmpeg.Encoder.ScaledCallback) {
+        
+         //输入数据尺寸出现变化时更新格式转换器
+        if __CGSizeEqualToSize(self.inSize, size) == false {
+            self.destroyInFrame()
+            self.destroySwsCtx()
+            do {
+                try self.createInFrame(size: size)
+                try self.createSwsCtx(inSize: size, outSize: self.outSize)
+            } catch let err {
+                onScaled(nil, err)
+            }
+            self.inSize = size
+        }
+          
+        guard let outFrame = self.outFrame, let inFrame = self.inFrame else {
+            onScaled(nil, NSError.error(ErrorDomain, reason: "Video Frame not initailized."))
+            return
+        }
+        
+//            inFrame.pointee.data.0 = bytes
+//            //输入使用的是AV_PIX_FMT_RGB32: width x 4(RGBA有4个颜色通道个数) = bytesPerRow = stride
+//            inFrame.pointee.linesize.0 = Int32(size.width) * 4
+        guard self.fillInFrame(bytes: bytes, size: size) else {
+            onScaled(nil, NSError.error(ErrorDomain, reason: "Failed to fill in frame buffer."))
+            return
+        }
+        //TODO: Using libyuv to convert RGB32 to YUV420 is faster then sws_scale
+        //Return the height of the output slice
+        //不同于音频重采样，视频格式转换不影响视频采样率，所以转换前后的同一时间内采样数量不变
+        let destSliceH = sws_scale(self.swsCtx, inFrame.pointee.sliceArray, inFrame.pointee.strideArray, 0, Int32(size.height), outFrame.pointee.mutablleSliceArray, outFrame.pointee.strideArray)
+          
+        if destSliceH > 0 {
+            onScaled(outFrame, nil)
+        }else {
+            onScaled(nil, NSError.error(ErrorDomain, reason: "Failed to convert frame format."))
+        }
 
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
+    }
+
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onScaled: @escaping Codec.FFmpeg.Encoder.ScaledCallback, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
         self.encodeQueue.async { [unowned self] in
             do {
-                try self.innerEncode(bytes: bytes, size: size, displayTime: displayTime, onEncoded: onEncoded)
+                self.innerFill(bytes: bytes, size: size, onScaled: onScaled)
+//                print("encoding....\(String(describing: onScaled))")
+                try self.innerEncode(displayTime: displayTime, onEncoded: onEncoded)
             } catch let err {
                 onEncoded(nil, err)
             }
         }
     }
     
-    func innerEncode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) throws {
-         
-        //let inDataArray = unsafeBitCast([rgbPixels], to: UnsafePointer<UnsafePointer<UInt8>?>?.self)
-        //let inLineSizeArray = unsafeBitCast([self.inWidth * 4], to: UnsafePointer<Int32>.self)
-        //print("Video display time: \(displayTime)")
-         
+    private
+    func innerEncode(displayTime: Double, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) throws {
+       
         guard let codecCtx = self.codecCtx else {
             throw NSError.error(ErrorDomain, reason: "Audio Codec not initilized yet.")!
         }
@@ -263,36 +313,14 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         
         print("[Video] encode for now...: \(elapseTime) - \(nb_samples_count) - \(pts)")
 
-        //输入数据尺寸出现变化时更新格式转换器
-        if __CGSizeEqualToSize(self.inSize, size) == false {
-            self.destroyInFrame()
-            self.destroySwsCtx()
-            try self.createInFrame(size: size)
-            try self.createSwsCtx(inSize: size, outSize: self.outSize)
-            self.inSize = size
+        guard let outFrame = self.outFrame else {
+            throw NSError.error(ErrorDomain, reason: "Encode Video Frame not initailized.")!
         }
+    
+        self.lastPts = pts
+        outFrame.pointee.pts = pts
         
-        guard let outFrame = self.outFrame, let inFrame = self.inFrame else {
-            throw NSError.error(ErrorDomain, reason: "Video Frame not initailized.")!
-        }
-      
-        inFrame.pointee.data.0 = bytes
-        //输入使用的是AV_PIX_FMT_RGB32: width x 4(RGBA有4个颜色通道个数) = bytesPerRow = stride
-        inFrame.pointee.linesize.0 = Int32(size.width) * 4
-       
-        //TODO: Using libyuv to convert RGB32 to YUV420 is faster then sws_scale
-        //Return the height of the output slice
-        //不同于音频重采样，视频格式转换不影响视频采样率，所以转换前后的同一时间内采样数量不变
-        let destSliceH = sws_scale(self.swsCtx, inFrame.pointee.sliceArray, inFrame.pointee.strideArray, 0, Int32(size.height), outFrame.pointee.mutablleSliceArray, outFrame.pointee.strideArray)
-        
-        if destSliceH > 0 {
-            
-            self.lastPts = pts
-            outFrame.pointee.pts = pts
-            
-            self.encode(outFrame, in: codecCtx, onFinished: onEncoded)
-            
-        }
+        self.encode(outFrame, in: codecCtx, onFinished: onEncoded)
         
     }
     

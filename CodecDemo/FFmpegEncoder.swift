@@ -33,11 +33,7 @@ class FFmpegEncoder: NSObject {
     lazy var dataCacher: DataCacher = {
         return DataCacher.init()
     }()
-    
-    lazy var encodeQueue: DispatchQueue = {
-        return DispatchQueue.init(label: "com.zdnet.FFmpegEncoder.queue")
-    }()
-    
+
     private var currDesktopItem: AnyObject? = nil
 }
 
@@ -100,31 +96,33 @@ extension FFmpegEncoder {
                 if error != nil {
                     print("Failed to capture screen.")
                 }
-            }) { [unowned self] (result, frame, displayTime) in
-                if result == .success {
-                    if let bytes = frame?.bytes {
-                        self.encodeQueue.async { [unowned self] in
-                            self.muxer.muxingVideo(
+            }) { [unowned self] (result, desktopFrame, displayTime) in
+                if result == .success, let frame = desktopFrame {
+                    frame.lock()
+                    if let bytes = frame.getBytes() {
+                        self.muxer.muxingVideo(
+                            bytes: bytes,
+                            size: frame.size,
+                            displayTime: Utilities.shared.machAbsoluteToSeconds(machAbsolute: displayTime),
+                            onScaled: { (avFrame, err) in
+                                frame.unlock()
+                            })
+                        /*
+                                self.encoder.video.encode(
                                 bytes: bytes,
                                 size: frame!.size,
-                                displayTime: Utilities.shared.machAbsoluteToSeconds(machAbsolute: displayTime)
-                            )
-                            /*
-                                    self.encoder.video.encode(
-                                    bytes: bytes,
-                                    size: frame!.size,
-                                    displayTime: Utilities.shared.machAbsoluteToSeconds(machAbsolute: displayTime),
-                                    onEncoded: { (encodedFrame, error) in
-                                        if error != nil {
-                                            print("Error occured when encoding: \(error!.localizedDescription)")
-                                        }else if let (bytes, size) = encodedFrame {
-                                            let data = Data.init(bytes: bytes, count: Int(size))
-                                            self.dataCacher.write(data: data)
-                                        }
-                                })
-                                */
-                        
-                        }
+                                displayTime: Utilities.shared.machAbsoluteToSeconds(machAbsolute: displayTime),
+                                onEncoded: { (encodedFrame, error) in
+                                    if error != nil {
+                                        print("Error occured when encoding: \(error!.localizedDescription)")
+                                    }else if let (bytes, size) = encodedFrame {
+                                        let data = Data.init(bytes: bytes, count: Int(size))
+                                        self.dataCacher.write(data: data)
+                                    }
+                            })
+                            */
+                    }else {
+                        frame.unlock()
                     }
                 }else if result == .temporaryErr {
                     print("Temporary Error Occured.")

@@ -39,8 +39,8 @@ extension VideoCompatible where Base: Codec.FFmpeg.Encoder {
         self.base.closeVideoSession()
     }
     
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedDataCallback) {
-        self.base.encode(bytes: bytes, size: size, displayTime: displayTime, onEncoded: onEncoded)
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onScaled: @escaping Codec.FFmpeg.Encoder.ScaledCallback, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedDataCallback) {
+        self.base.encode(bytes: bytes, size: size, displayTime: displayTime, onScaled: onScaled, onEncoded: onEncoded)
     }
     
 }
@@ -50,15 +50,15 @@ private
 extension Codec.FFmpeg.Encoder {
     
     func open(config: Codec.FFmpeg.Video.Config, queue: DispatchQueue? = nil) throws {
-        try self.videoSession = VideoSession.init(config: config, queue: queue)
+        try self.videoSession = VideoSession.init(config: config)
     }
     
     func closeVideoSession() {
         self.videoSession = nil
     }
     
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping EncodedDataCallback) {
-        videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime, onEncoded: { (packet, error) in
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onScaled: @escaping Codec.FFmpeg.Encoder.ScaledCallback, onEncoded: @escaping EncodedDataCallback) {
+        videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime, onScaled: onScaled, onEncoded: { (packet, error) in
             if packet != nil {
                 let size = Int(packet!.pointee.size)
                 let encodedBytes = unsafeBitCast(malloc(size), to: UnsafeMutablePointer<UInt8>.self)
