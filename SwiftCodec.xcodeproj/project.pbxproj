@@ -252,7 +252,6 @@
 		EE8438342446B33300266C6F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		EE8438352446B33300266C6F /* CodecDemo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CodecDemo.entitlements; sourceTree = "<group>"; };
 		EE8438392446B37800266C6F /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		EE84383C2446B4A200266C6F /* SwiftyDesktopCapturer.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftyDesktopCapturer.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE8438442446B50300266C6F /* FFmpegEncoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FFmpegEncoder.swift; sourceTree = "<group>"; };
 		EE8438462446BDF900266C6F /* Utilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
 		EE8438482446BEC200266C6F /* DataCacher.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DataCacher.swift; sourceTree = "<group>"; };
@@ -574,7 +573,6 @@
 			isa = PBXGroup;
 			children = (
 				EE74442F244B07B200499733 /* SwiftyDesktopCapturer.framework */,
-				EE84383C2446B4A200266C6F /* SwiftyDesktopCapturer.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
