@@ -169,8 +169,8 @@ extension Codec.FFmpeg.Encoder.VideoSession {
     }
     
     func destroyInFrame() {
-        if let frame = self.inFrame {
-            av_free(frame)
+        if self.inFrame != nil {
+            av_frame_free(&self.inFrame)
             self.inFrame = nil
         }
     }
@@ -181,8 +181,8 @@ extension Codec.FFmpeg.Encoder.VideoSession {
     }
     
     func destroyOutFrame() {
-        if let frame = self.outFrame {
-            av_free(frame)
+        if self.outFrame != nil {
+            av_frame_free(&self.outFrame)
             self.outFrame = nil
         }
     }
@@ -221,15 +221,12 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         guard let packet = av_packet_alloc() else {
             throw NSError.error(ErrorDomain, reason: "Failed to alloc packet.")!
         }
-        av_init_packet(packet)
         self.packet = packet
     }
     
     func destroyOutPacket() {
-        if let ptr = self.packet {
-            //av_free_packet is deprecated, using av_packet_unref instead
-//            av_free_packet(ptr)
-            av_packet_unref(ptr)
+        if self.packet != nil {
+            av_packet_free(&self.packet)
             self.packet = nil
         }
     }
@@ -238,7 +235,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
 //MARK: - Sws Context
 private
 extension Codec.FFmpeg.Encoder.VideoSession {
-    
+
     func createSwsCtx(inSize: CGSize, outSize: CGSize) throws {
         if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), Codec.FFmpeg.SWIFT_AV_PIX_FMT_RGB32, Int32(outSize.width), Int32(outSize.height), AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, nil, nil, nil) {
             self.swsCtx = sws
@@ -352,26 +349,32 @@ extension Codec.FFmpeg.Encoder.VideoSession {
             onFinished(nil, NSError.error(ErrorDomain, reason: "Encode Video Packet not initailized."))
             return
         }
-        //Reset to default values
-        av_packet_unref(packet)
-        
         var ret = avcodec_send_frame(codecCtx, frame)
         
         if ret < 0 {
-            av_packet_unref(packet)
             onFinished(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when sending frame.")!)
             return
         }
+
+        //Reset to default values
+        av_init_packet(packet)
         
         ret = avcodec_receive_packet(codecCtx, packet)
         
         if ret == 0 {
-            print("Video: \(frame.pointee.pts) - \(packet.pointee.pts) - \(packet.pointee.dts)")
-            if packet.pointee.pts != Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE && packet.pointee.dts != Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE {
+            
+            //Filter: Only muxing packet with available pts and dts, otherwise do nothing!
+            if packet.pointee.pts != Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE
+                && packet.pointee.dts != Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE {
+                
+                //TODO: How to change keyframe interval in ffmpeg？It seems every frame is key frame for now.
                 if frame.pointee.key_frame == 1 {
                     packet.pointee.flags |= AV_PKT_FLAG_KEY
                 }
+//                print("Muxing Video Packet: \(frame.pointee.pts) - \(packet.pointee.pts) - \(packet.pointee.dts)")
                 onFinished(packet, nil)
+            }else {
+//                print("Drop Video Packet: \(frame.pointee.pts) - \(packet.pointee.pts) - \(packet.pointee.dts)")
             }
         }else {
             if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {
