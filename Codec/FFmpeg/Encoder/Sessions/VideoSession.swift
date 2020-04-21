@@ -368,6 +368,9 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         if ret == 0 {
             print("Video: \(frame.pointee.pts) - \(packet.pointee.pts) - \(packet.pointee.dts)")
             if packet.pointee.pts != Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE && packet.pointee.dts != Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE {
+                if frame.pointee.key_frame == 1 {
+                    packet.pointee.flags |= AV_PKT_FLAG_KEY
+                }
                 onFinished(packet, nil)
             }
         }else {
