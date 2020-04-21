@@ -55,6 +55,18 @@ extension Codec.FFmpeg.Muxer {
 public
 extension Codec.FFmpeg.Muxer {
     
+    var flags: StreamFlags? {
+        get {
+            return self.muxerSession?.flags
+        }
+    }
+    
+    var mode: MuxingMode? {
+        get {
+            self.muxerSession?.mode
+        }
+    }
+    
     func open(mode: MuxingMode, flags: StreamFlags, onMuxed: @escaping MuxedDataCallback, queue: DispatchQueue? = nil) throws {
         self.muxerSession = try MuxerSession.init(mode: mode, flags: flags, onMuxed: onMuxed, queue: queue)
     }

@@ -66,6 +66,7 @@ extension Codec.FFmpeg.Encoder {
           
         private var inFrame: UnsafeMutablePointer<AVFrame>?
         private var outFrame: UnsafeMutablePointer<AVFrame>?
+        private var packet: UnsafeMutablePointer<AVPacket>?
         
         private var swsCtx: OpaquePointer?
 
@@ -85,12 +86,14 @@ extension Codec.FFmpeg.Encoder {
             self.outSize = config.outSize
             try self.createCodec(config: config)
             try self.createOutFrame(size: self.outSize)
+            try self.createOutPakcet()
         }
         
         deinit {
             self.lastPts = -1
             self.destroyInFrame()
             self.destroyOutFrame()
+            self.destroyOutPacket()
             self.destroySwsCtx()
             self.destroyCodec()
         }
@@ -189,7 +192,6 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         guard let frame = av_frame_alloc() else {
             throw NSError.error(ErrorDomain, reason: "Failed to alloc frame.")!
         }
-        
         frame.pointee.format = pixFmt.rawValue
         frame.pointee.width = Int32(size.width)
         frame.pointee.height = Int32(size.height)
@@ -209,6 +211,28 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         return frame
     }
     
+}
+
+//MARK: - AVPacket
+private
+extension Codec.FFmpeg.Encoder.VideoSession {
+    
+    func createOutPakcet() throws {
+        guard let packet = av_packet_alloc() else {
+            throw NSError.error(ErrorDomain, reason: "Failed to alloc packet.")!
+        }
+        av_init_packet(packet)
+        self.packet = packet
+    }
+    
+    func destroyOutPacket() {
+        if let ptr = self.packet {
+            //av_free_packet is deprecated, using av_packet_unref instead
+//            av_free_packet(ptr)
+            av_packet_unref(ptr)
+            self.packet = nil
+        }
+    }
 }
 
 //MARK: - Sws Context
@@ -277,21 +301,17 @@ extension Codec.FFmpeg.Encoder.VideoSession {
 
     func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onScaled: @escaping Codec.FFmpeg.Encoder.ScaledCallback, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
         self.encodeQueue.async { [unowned self] in
-            do {
-                self.innerFill(bytes: bytes, size: size, onScaled: onScaled)
-//                print("encoding....\(String(describing: onScaled))")
-                try self.innerEncode(displayTime: displayTime, onEncoded: onEncoded)
-            } catch let err {
-                onEncoded(nil, err)
-            }
+            self.innerFill(bytes: bytes, size: size, onScaled: onScaled)
+            self.innerEncode(displayTime: displayTime, onEncoded: onEncoded)
         }
     }
     
     private
-    func innerEncode(displayTime: Double, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) throws {
+    func innerEncode(displayTime: Double, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
        
         guard let codecCtx = self.codecCtx else {
-            throw NSError.error(ErrorDomain, reason: "Audio Codec not initilized yet.")!
+            onEncoded(nil, NSError.error(ErrorDomain, reason: "Audio Codec not initilized yet."))
+            return
         }
         
         if self.displayTimeBase == 0 {
@@ -314,7 +334,8 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         print("[Video] encode for now...: \(elapseTime) - \(nb_samples_count) - \(pts)")
 
         guard let outFrame = self.outFrame else {
-            throw NSError.error(ErrorDomain, reason: "Encode Video Frame not initailized.")!
+            onEncoded(nil, NSError.error(ErrorDomain, reason: "Encode Video Frame not initailized."))
+            return
         }
     
         self.lastPts = pts
@@ -326,37 +347,38 @@ extension Codec.FFmpeg.Encoder.VideoSession {
     
     private
     func encode(_ frame: UnsafeMutablePointer<AVFrame>, in codecCtx: UnsafeMutablePointer<AVCodecContext>, onFinished: Codec.FFmpeg.Encoder.EncodedPacketCallback) {
-  
-        var packet = AVPacket.init()
         
-        withUnsafeMutablePointer(to: &packet) { (ptr) in
-            
-            av_init_packet(ptr)
-            
-            var ret = avcodec_send_frame(codecCtx, frame)
-            
-            if ret < 0 {
-                av_packet_unref(ptr)
-                onFinished(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when sending frame.")!)
-                return
+        guard let packet = self.packet else {
+            onFinished(nil, NSError.error(ErrorDomain, reason: "Encode Video Packet not initailized."))
+            return
+        }
+        //Reset to default values
+        av_packet_unref(packet)
+        
+        var ret = avcodec_send_frame(codecCtx, frame)
+        
+        if ret < 0 {
+            av_packet_unref(packet)
+            onFinished(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when sending frame.")!)
+            return
+        }
+        
+        ret = avcodec_receive_packet(codecCtx, packet)
+        
+        if ret == 0 {
+            print("Video: \(frame.pointee.pts) - \(packet.pointee.pts) - \(packet.pointee.dts)")
+            if packet.pointee.pts != Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE && packet.pointee.dts != Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE {
+                onFinished(packet, nil)
             }
-            
-            ret = avcodec_receive_packet(codecCtx, ptr)
-            
-            if ret == 0 {
-                //print("Video: \(frame.pointee.pts) - \(packet.pts) - \(packet.dts)")
-                onFinished(ptr, nil)
-            }else {
-                if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {
-                    print("avcodec_recieve_packet() encoder flushed...")
-                }else if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EAGAIN {
-                    print("avcodec_recieve_packet() need more input...")
-                }else if ret < 0 {
-                    onFinished(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when encoding video.")!)
-                    av_packet_unref(ptr)
-                }
+        }else {
+            if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {
+                print("avcodec_recieve_packet() encoder flushed...")
+            }else if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EAGAIN {
+                print("avcodec_recieve_packet() need more input...")
+            }else if ret < 0 {
+                onFinished(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when encoding video.")!)
+                av_packet_unref(packet)
             }
-       
         }
     }
 }

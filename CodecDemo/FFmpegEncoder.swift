@@ -39,10 +39,18 @@ class FFmpegEncoder: NSObject {
 
 extension FFmpegEncoder {
     
+    func audioSupported() -> Bool {
+        return self.muxer.flags?.contains(.Audio) ?? false
+    }
+    
+    func videoSupported() -> Bool {
+        return self.muxer.flags?.contains(.Video) ?? false
+    }
+    
     func open() throws {
         self.dataCacher.close()
         self.dataCacher.reset(fileName: "muxing.ts")
-        try self.muxer.open(mode: .RealTime, flags: [.Audio, .Video] ,onMuxed: { [unowned self] (muxedData, err) in
+        try self.muxer.open(mode: .RealTime, flags: [.Video] ,onMuxed: { [unowned self] (muxedData, err) in
             if err != nil {
                 print("Error occured when encoding: \(err!.localizedDescription)")
             }else if let (bytes, size) = muxedData {
@@ -51,8 +59,13 @@ extension FFmpegEncoder {
                 free(bytes)
             }
         })
-        try self.openAudio()
-        try self.openVideo()
+        if self.audioSupported() {
+            try self.openAudio()
+        }
+        if self.videoSupported() {
+            try self.openVideo()
+        }
+        
     }
     
     func close() {
@@ -61,13 +74,23 @@ extension FFmpegEncoder {
     }
     
     func start() {
-        self.startAudio()
-        self.startVideo()
+        if self.audioSupported() {
+            self.startAudio()
+        }
+        if self.videoSupported() {
+            self.startVideo()
+        }
+        
     }
     
     func stop() {
-        self.stopAudio()
-        self.stopVideo()
+        if self.audioSupported() {
+            self.stopAudio()
+        }
+        if self.videoSupported() {
+            self.stopVideo()
+        }
+        
     }
 }
 

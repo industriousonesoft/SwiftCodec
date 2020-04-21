@@ -34,10 +34,6 @@ extension Codec.FFmpeg.Muxer {
         
         private var displayTimeBase: Double = 0
         
-        private lazy var videoEncodeQueue: DispatchQueue = {
-            return DispatchQueue.init(label: "com.zdnet.ffmpeg.MuxerSession.video.encode.Queue")
-        }()
-        
         let flags: StreamFlags
         let mode: MuxingMode
         
@@ -95,11 +91,13 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
             throw NSError.error(ErrorDomain, reason: "Video stream is set.")!
         }
         
-        let session = try Codec.FFmpeg.Encoder.VideoSession.init(config: config)
+        let session = try Codec.FFmpeg.Encoder.VideoSession.init(config: config, queue: self.muxingQueue)
         self.videoSession = session
         self.videoStream = try self.addStream(codecCtx: session.codecCtx!)
         //Add ts header when all stream set
         if self.flags.contains(.Audio) && self.audioStream != nil {
+            self.addHeader()
+        }else if self.flags.videoOnly {
             self.addHeader()
         }
     }
@@ -119,6 +117,8 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
         //Add ts header when all stream set
         if self.flags.contains(.Video) && self.videoStream != nil {
             self.addHeader()
+        }else if self.flags.audioOnly {
+            self.addHeader()
         }
     }
 
@@ -128,46 +128,44 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
 extension Codec.FFmpeg.Muxer.MuxerSession {
     
     func muxingVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onScaled: @escaping Codec.FFmpeg.Encoder.ScaledCallback) {
-        self.videoEncodeQueue.async { [unowned self] in
-            //如果同时合成音视频，则确保先合成音频再合成视频
-            if self.flags.both && self.currAudioPts == ZeroPts {
-                return
-            }
-            self.videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime, onScaled: onScaled, onEncoded: { [unowned self] (packet, error) in
-                //此处如果不clone一次，会出现野指针错误。原因在于packet相关内存是由ffmepg内部函数管理，作用域就在当前{}，即便是muxingQueue捕获后也只是引用计数加1，packet中的数据内存还是会被释放
-                let newPacket = av_packet_clone(packet)
-                av_packet_unref(packet!)
-                self.muxingQueue.async { [unowned self] in
-                    if newPacket != nil {
-                        self.currVideoPts = newPacket!.pointee.pts
-                        if self.mode == .Dump {
-                            //为了保证延时，不能合成时则丢弃掉当前视频帧
-                            //如果不考虑延时，可以采用类似音频的处理方式，对视频帧进行缓存，即需即取
-                            if self.isToMuxingVideo == true {
-                                print("muxing video...")
-                                if let err = self.muxer(packet: newPacket!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
-                                    self.onMuxedData?(nil, err)
-                                }
-                                self.isToMuxingVideo = false
-                            }else {
-                                self.muxingAudio()
+        //如果同时合成音视频，则确保先合成音频再合成视频
+        if self.flags.both && self.currAudioPts == ZeroPts {
+            return
+        }
+        self.videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime, onScaled: onScaled, onEncoded: { [unowned self] (packet, error) in
+            //此处如果不clone一次，会出现野指针错误。原因在于packet相关内存是由ffmepg内部函数管理，作用域就在当前{}，即便是muxingQueue捕获后也只是引用计数加1，packet中的数据内存还是会被释放
+//                let newPacket = av_packet_clone(packet)
+//                av_packet_unref(packet!)
+//            self.muxingQueue.async { [unowned self] in
+                if packet != nil {
+                    self.currVideoPts = packet!.pointee.pts
+                    if self.mode == .Dump {
+                        //为了保证延时，不能合成时则丢弃掉当前视频帧
+                        //如果不考虑延时，可以采用类似音频的处理方式，对视频帧进行缓存，即需即取
+                        if self.isToMuxingVideo == true {
+                            print("muxing video...")
+                            if let err = self.muxer(packet: packet!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
+                                self.onMuxedData?(nil, err)
                             }
-                        }else if self.mode == .RealTime {
-                            //为了保证延时，不能合成时则丢弃掉当前视频帧
-                            if self.couldToMuxVideo() {
-                                print("muxing video...")
-                                if let err = self.muxer(packet: newPacket!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
-                                    self.onMuxedData?(nil, err)
-                                }
+                            self.isToMuxingVideo = false
+                        }else {
+                            self.muxingAudio()
+                        }
+                    }else if self.mode == .RealTime {
+                        //为了保证延时，不能合成时则丢弃掉当前视频帧
+                        if self.couldToMuxVideo() {
+                            print("muxing video...")
+                            if let err = self.muxer(packet: packet!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
+                                self.onMuxedData?(nil, err)
                             }
                         }
-                        av_packet_unref(newPacket!)
-                    }else {
-                        self.onMuxedData?(nil, error)
                     }
+                    av_packet_unref(packet!)
+                }else {
+                    self.onMuxedData?(nil, error)
                 }
-            })
-        }
+//            }
+        })
     }
     
     //由于人对声音的敏锐程度远高于视觉（eg: 视觉有视网膜影像停留机制）,所以如果需要合成音频流，则必须确保音频流优先合成，而视频流则根据相关计算插入。
@@ -191,7 +189,7 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
                 }
             })
         }else if self.mode == .RealTime {
-            //FIXME: 根据音视频编码速度进行合成，音频可能出现杂音，频率不高，具体原因不清楚
+            //FIXME: 根据音视频编码速度进行合成，音频可能出现杂音，频率不高但是3分钟左右的长度基本上可重现，具体原因不清楚
             self.audioSession?.encode(bytes: bytes, size: size, onEncoded: { [unowned self] (packet, error) in
                 if packet != nil {
                     self.currAudioPts = packet!.pointee.pts
@@ -218,7 +216,7 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
    
     func couldToMuxVideo() -> Bool {
        
-        if self.flags.videoOnly {
+        if self.flags.audioOnly {
             return false
         }else if self.flags.videoOnly {
             return true

@@ -21,7 +21,7 @@ public extension Codec {
         static let SWIFT_AV_PIX_FMT_RGB32 = AVPixelFormat(FFmepgWrapperOCBridge.avPixelFormatRGB32())
         static let SWIFT_AV_ERROR_EOF = FFmepgWrapperOCBridge.avErrorEOF()
         static let SWIFT_AV_ERROR_EAGAIN = FFmepgWrapperOCBridge.avErrorEagain()
-        static let SWIFT_AC_NOPTS_VALUE = FFmepgWrapperOCBridge.avNoPTSValue()
+        static let SWIFT_AV_NOPTS_VALUE = FFmepgWrapperOCBridge.avNoPTSValue()
     }
 }
 
