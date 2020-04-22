@@ -85,8 +85,12 @@ extension Codec.FFmpeg.Muxer {
         try self.muxerSession?.setVideoStream(config: config)
     }
     
-    func muxingVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onScaled: @escaping Codec.FFmpeg.Encoder.ScaledCallback) {
-        self.muxerSession?.muxingVideo(bytes: bytes, size: size, displayTime: displayTime, onScaled: onScaled)
+    func fillVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, onFinished: @escaping (Error?)->Void) {
+        self.muxerSession?.fillVideo(bytes: bytes, size: size, onScaled: onFinished)
+    }
+    
+    func muxingVideo(displayTime: Double) {
+        self.muxerSession?.muxingVideo(displayTime: displayTime)
     }
     
     func muxingAudio(bytes: UnsafeMutablePointer<UInt8>, size: Int32, displayTime: Double) {

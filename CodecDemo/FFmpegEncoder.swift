@@ -120,33 +120,20 @@ extension FFmpegEncoder {
         if let item = self.currDesktopItem {
             self.screenCapturer.start(item: item, onSucceed: { (error) in
                 if error != nil {
-                    print("Failed to capture screen.")
+                    print("Failed to capture screen: \(error!)")
                 }
             }) { [unowned self] (result, desktopFrame, displayTime) in
                 if result == .success, let frame = desktopFrame {
                     frame.lock()
                     if let bytes = frame.getBytes() {
-                        self.muxer.muxingVideo(
-                            bytes: bytes,
-                            size: frame.size,
-                            displayTime: Utilities.shared.machAbsoluteToSeconds(machAbsolute: displayTime),
-                            onScaled: { (avFrame, err) in
-                                frame.unlock()
-                            })
-                        /*
-                                self.encoder.video.encode(
-                                bytes: bytes,
-                                size: frame!.size,
-                                displayTime: Utilities.shared.machAbsoluteToSeconds(machAbsolute: displayTime),
-                                onEncoded: { (encodedFrame, error) in
-                                    if error != nil {
-                                        print("Error occured when encoding: \(error!.localizedDescription)")
-                                    }else if let (bytes, size) = encodedFrame {
-                                        let data = Data.init(bytes: bytes, count: Int(size))
-                                        self.dataCacher.write(data: data)
-                                    }
-                            })
-                            */
+                        self.muxer.fillVideo(bytes: bytes, size: frame.size) { [unowned self] (error) in
+                            frame.unlock()
+                            if error != nil {
+                                print("Failed to fill video: \(error!)")
+                            }else {
+                                self.muxer.muxingVideo(displayTime: Utilities.shared.machAbsoluteToSeconds(machAbsolute: displayTime))
+                            }
+                        }
                     }else {
                         frame.unlock()
                     }

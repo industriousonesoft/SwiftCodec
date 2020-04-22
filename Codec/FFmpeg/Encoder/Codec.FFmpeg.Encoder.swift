@@ -19,8 +19,9 @@ extension Codec.FFmpeg {
 }
 
 extension Codec.FFmpeg.Encoder {
-    public typealias EncodedDataCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int32)?, Error?) -> Void
-    public typealias ScaledCallback = (UnsafeMutablePointer<AVFrame>?, Error?) -> Void
-        
+    public
+    typealias EncodedDataCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int32)?, Error?) -> Void
+    
+    typealias ScaledCallback = (Error?) -> Void
     typealias EncodedPacketCallback = (UnsafeMutablePointer<AVPacket>?, Error?) -> Void
 }

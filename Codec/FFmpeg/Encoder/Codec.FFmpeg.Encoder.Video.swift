@@ -39,8 +39,8 @@ extension VideoCompatible where Base: Codec.FFmpeg.Encoder {
         self.base.closeVideoSession()
     }
     
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onScaled: @escaping Codec.FFmpeg.Encoder.ScaledCallback, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedDataCallback) {
-        self.base.encode(bytes: bytes, size: size, displayTime: displayTime, onScaled: onScaled, onEncoded: onEncoded)
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedDataCallback) {
+        self.base.encode(bytes: bytes, size: size, displayTime: displayTime, onEncoded: onEncoded)
     }
     
 }
@@ -56,19 +56,28 @@ extension Codec.FFmpeg.Encoder {
     func closeVideoSession() {
         self.videoSession = nil
     }
-    
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onScaled: @escaping Codec.FFmpeg.Encoder.ScaledCallback, onEncoded: @escaping EncodedDataCallback) {
-        videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime, onScaled: onScaled, onEncoded: { (packet, error) in
-            if packet != nil {
-                let size = Int(packet!.pointee.size)
-                let encodedBytes = unsafeBitCast(malloc(size), to: UnsafeMutablePointer<UInt8>.self)
-                memcpy(encodedBytes, packet!.pointee.data, size)
-                onEncoded((encodedBytes, Int32(size)), nil)
-                av_packet_unref(packet!)
-            }else {
+  
+    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onEncoded: @escaping EncodedDataCallback) {
+        
+        self.videoSession?.fill(bytes: bytes, size: size, onScaled: { (error) in
+            if error != nil {
                 onEncoded(nil, error)
+            }else {
+                self.videoSession?.encode(displayTime: displayTime, onEncoded: { (packet, error) in
+                    if packet != nil {
+                        let size = Int(packet!.pointee.size)
+                        let encodedBytes = unsafeBitCast(malloc(size), to: UnsafeMutablePointer<UInt8>.self)
+                        memcpy(encodedBytes, packet!.pointee.data, size)
+                        onEncoded((encodedBytes, Int32(size)), nil)
+                        av_packet_unref(packet!)
+                    }else {
+                        onEncoded(nil, error)
+                    }
+                })
             }
         })
+        
+        
         
     }
 

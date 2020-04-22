@@ -90,7 +90,7 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
             throw NSError.error(ErrorDomain, reason: "Video stream is set.")!
         }
         
-        let session = try Codec.FFmpeg.Encoder.VideoSession.init(config: config, queue: self.muxingQueue)
+        let session = try Codec.FFmpeg.Encoder.VideoSession.init(config: config)
         self.videoSession = session
         self.videoStream = try self.addStream(codecCtx: session.codecCtx!)
         //Add ts header when all stream set
@@ -126,16 +126,21 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
 //MARK: - Muxing
 extension Codec.FFmpeg.Muxer.MuxerSession {
     
-    func muxingVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onScaled: @escaping Codec.FFmpeg.Encoder.ScaledCallback) {
+    func fillVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, onScaled: @escaping Codec.FFmpeg.Encoder.ScaledCallback) {
         //如果同时合成音视频，则确保先合成音频再合成视频
         if self.flags.both && self.currAudioPts == ZeroPts {
             return
         }
-        self.videoSession?.encode(bytes: bytes, size: size, displayTime: displayTime, onScaled: onScaled, onEncoded: { [unowned self] (packet, error) in
+        self.videoSession?.fill(bytes: bytes, size: size, onScaled: onScaled)
+    }
+    
+    func muxingVideo(displayTime: Double) {
+        
+        self.videoSession?.encode(displayTime: displayTime, onEncoded: { [unowned self] (packet, error) in
             //此处如果不clone一次，会出现野指针错误。原因在于packet相关内存是由ffmepg内部函数管理，作用域就在当前{}，即便是muxingQueue捕获后也只是引用计数加1，packet中的数据内存还是会被释放
 //                let newPacket = av_packet_clone(packet)
 //                av_packet_unref(packet!)
-//            self.muxingQueue.async { [unowned self] in
+            self.muxingQueue.async { [unowned self] in
                 if packet != nil {
                     self.currVideoPts = packet!.pointee.pts
                     if self.mode == .Dump {
@@ -163,7 +168,7 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
                 }else {
                     self.onMuxedData?(nil, error)
                 }
-//            }
+            }
         })
     }
     
