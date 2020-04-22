@@ -142,7 +142,7 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
                         //为了保证延时，不能合成时则丢弃掉当前视频帧
                         //如果不考虑延时，可以采用类似音频的处理方式，对视频帧进行缓存，即需即取
                         if self.isToMuxingVideo == true {
-                            print("muxing video...")
+//                            print("muxing video...")
                             if let err = self.muxer(packet: packet!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
                                 self.onMuxedData?(nil, err)
                             }
@@ -153,7 +153,7 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
                     }else if self.mode == .RealTime {
                         //为了保证延时，不能合成时则丢弃掉当前视频帧
                         if self.couldToMuxVideo() {
-                            print("muxing video...")
+//                            print("muxing video...")
                             if let err = self.muxer(packet: packet!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
                                 self.onMuxedData?(nil, err)
                             }

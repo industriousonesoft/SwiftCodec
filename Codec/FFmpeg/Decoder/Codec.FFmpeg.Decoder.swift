@@ -7,3 +7,9 @@
 //
 
 import Foundation
+
+extension Codec.FFmpeg {
+    public class Decoder {
+        var videoSession: VideoSession? = nil
+    }
+}

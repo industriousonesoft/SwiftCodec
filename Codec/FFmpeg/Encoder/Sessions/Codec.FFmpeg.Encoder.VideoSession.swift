@@ -327,7 +327,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
             return
         }
         
-        print("[Video] encode for now...: \(elapseTime) - \(nb_samples_count) - \(pts)")
+//        print("[Video] encode for now...: \(elapseTime) - \(nb_samples_count) - \(pts)")
 
         guard let outFrame = self.outFrame else {
             onEncoded(nil, NSError.error(ErrorDomain, reason: "Encode Video Frame not initailized."))

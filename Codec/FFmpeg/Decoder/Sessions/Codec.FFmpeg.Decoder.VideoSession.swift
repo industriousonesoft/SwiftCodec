@@ -7,3 +7,9 @@
 //
 
 import Foundation
+
+extension Codec.FFmpeg.Decoder {
+    class VideoSession {
+        
+    }
+}
