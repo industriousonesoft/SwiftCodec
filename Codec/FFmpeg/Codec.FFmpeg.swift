@@ -9,19 +9,34 @@
 import Foundation
 import CoreAudio
 @_exported import CFFmpeg
-@_exported import FFmepgWrapperOCBridge
+@_exported import FFmepgOCBridge
 
 public extension Codec {
-    struct FFmpeg {
+    class FFmpeg {
         public static let SWIFT_AV_SAMPLE_FMT_S16: Int32 = AV_SAMPLE_FMT_S16.rawValue
         public static let SWIFT_AV_SAMPLE_FMT_S16P: Int32 = AV_SAMPLE_FMT_S16P.rawValue
         public static let SWIFT_AV_SAMPLE_FMT_FLT: Int32 = AV_SAMPLE_FMT_FLT.rawValue
         public static let SWIFT_AV_SAMPLE_FMT_FLTP: Int32 = AV_SAMPLE_FMT_FLTP.rawValue
         
-        static let SWIFT_AV_PIX_FMT_RGB32 = AVPixelFormat(FFmepgWrapperOCBridge.avPixelFormatRGB32())
-        static let SWIFT_AV_ERROR_EOF = FFmepgWrapperOCBridge.avErrorEOF()
-        static let SWIFT_AV_ERROR_EAGAIN = FFmepgWrapperOCBridge.avErrorEagain()
-        static let SWIFT_AV_NOPTS_VALUE = FFmepgWrapperOCBridge.avNoPTSValue()
+        static let SWIFT_AV_PIX_FMT_RGB32 = AVPixelFormat(FFmepgOCBridge.avPixelFormatRGB32())
+        static let SWIFT_AV_ERROR_EOF = FFmepgOCBridge.avErrorEOF()
+        static let SWIFT_AV_ERROR_EAGAIN = FFmepgOCBridge.avErrorEagain()
+        static let SWIFT_AV_NOPTS_VALUE = FFmepgOCBridge.avNoPTSValue()
+   
+    }
+}
+
+ //MARK: - AVLog
+public extension Codec.FFmpeg {
+    
+    typealias AVLogCallback = (String) -> Void
+    
+    static func setAVLog(callback: @escaping AVLogCallback) {
+        FFmepgOCBridge.setAVLog { (log) in
+            if log != nil {
+                callback(log!)
+            }
+        }
     }
 }
 

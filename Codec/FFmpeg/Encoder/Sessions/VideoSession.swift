@@ -61,7 +61,7 @@ extension AVFrame {
 //MARK: - VideoSession
 extension Codec.FFmpeg.Encoder {
     
-    class VideoSession: NSObject {
+    class VideoSession {
         private(set) var codecCtx: UnsafeMutablePointer<AVCodecContext>?
           
         private var inFrame: UnsafeMutablePointer<AVFrame>?
@@ -82,7 +82,6 @@ extension Codec.FFmpeg.Encoder {
         
         init(config: Codec.FFmpeg.Video.Config, queue: DispatchQueue? = nil) throws {
             self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.encode.queue")
-            super.init()
             self.outSize = config.outSize
             try self.createCodec(config: config)
             try self.createOutFrame(size: self.outSize)
@@ -362,7 +361,6 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         ret = avcodec_receive_packet(codecCtx, packet)
         
         if ret == 0 {
-            
             //Filter: Only muxing packet with available pts and dts, otherwise do nothing!
             if packet.pointee.pts != Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE
                 && packet.pointee.dts != Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE {

@@ -12,7 +12,7 @@ private let ErrorDomain = "FFmpeg:Audio:Encoder"
 
 extension Codec.FFmpeg.Encoder {
     //MARK: - FFmpegAudioSession
-    class AudioSession: NSObject {
+    class AudioSession {
         
         private var inDesc: Codec.FFmpeg.Audio.Description?
      
@@ -34,7 +34,6 @@ extension Codec.FFmpeg.Encoder {
         init(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config, queue: DispatchQueue? = nil) throws {
             self.inDesc = desc
             self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.AudioSession.encode.queue")
-            super.init()
             //查看jsmpeg中mp2解码器代码，mp2格式对应的frame_size（nb_samples）似乎是定值：1152
             try self.createCodec(config: config)
             //使用fifo管道可以确保音频的读写的连续性，每次达到音频格式对应的缓存值时才读取

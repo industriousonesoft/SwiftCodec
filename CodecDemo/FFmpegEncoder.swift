@@ -12,7 +12,7 @@ import SwiftyCodec
 
 private let DEFAULT_AUDIO_DEVICE_UID: String = "ZDAudioPlayThroughDevice_UID"
 
-class FFmpegEncoder: NSObject {
+class FFmpegEncoder {
     
     lazy var audioCapturer: AudioCapturer? = {
         return AudioCapturer.init(deviceUID: DEFAULT_AUDIO_DEVICE_UID)
@@ -48,6 +48,9 @@ extension FFmpegEncoder {
     }
     
     func open() throws {
+        Codec.FFmpeg.setAVLog { (log) in
+            print(log)
+        }
         self.dataCacher.close()
         self.dataCacher.reset(fileName: "muxing.ts")
         try self.muxer.open(mode: .RealTime, flags: [.Video] ,onMuxed: { [unowned self] (muxedData, err) in

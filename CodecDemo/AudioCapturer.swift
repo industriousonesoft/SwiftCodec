@@ -11,7 +11,7 @@ import AudioManager
 
 typealias OnAudioCaptured = (_ pcmBytes: UnsafeMutablePointer<UInt8>?, _ len: Int32, _ displayTime: UInt64) -> Void
 
-class AudioCapturer: NSObject {
+class AudioCapturer {
     
     var recorder: ZDAudioDeviceAVRecorder!
     var device: ZDAudioDevice!
@@ -68,7 +68,6 @@ class AudioCapturer: NSObject {
             return nil
         }
         
-        super.init()
     }
     
 }

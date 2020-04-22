@@ -8,7 +8,7 @@
 
 import Foundation
 
-class DataCacher: NSObject {
+class DataCacher {
     
     private var fileHandle: FileHandle?
  

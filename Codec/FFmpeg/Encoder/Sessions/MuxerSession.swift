@@ -19,7 +19,7 @@ fileprivate extension MuxFormat {
 
 extension Codec.FFmpeg.Muxer {
     
-    class MuxerSession: NSObject {
+    class MuxerSession {
         
         private var fmtCtx: UnsafeMutablePointer<AVFormatContext>
         
@@ -54,7 +54,6 @@ extension Codec.FFmpeg.Muxer {
             self.flags = flags
             self.onMuxedData = onMuxed
             self.muxingQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.MuxerSession.muxing.Queue")
-            super.init()
             let ioBufferSize: Int = 512*1024 //32768
             let buff = UnsafeMutablePointer<UInt8>.allocate(capacity: ioBufferSize)
             let writable: Int = 1

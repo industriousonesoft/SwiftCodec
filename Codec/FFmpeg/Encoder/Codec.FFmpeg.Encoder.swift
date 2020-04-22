@@ -9,9 +9,11 @@
 import Foundation
 
 extension Codec.FFmpeg {
-    public class Encoder: NSObject {
+    public class Encoder {
         var audioSession: AudioSession? = nil
         var videoSession: VideoSession? = nil
+        
+        public init() {}
     }
     
 }
@@ -19,6 +21,6 @@ extension Codec.FFmpeg {
 extension Codec.FFmpeg.Encoder {
     public typealias EncodedDataCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int32)?, Error?) -> Void
     public typealias ScaledCallback = (UnsafeMutablePointer<AVFrame>?, Error?) -> Void
-    
+        
     typealias EncodedPacketCallback = (UnsafeMutablePointer<AVPacket>?, Error?) -> Void
 }

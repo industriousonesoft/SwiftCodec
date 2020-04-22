@@ -8,7 +8,9 @@
 
 #import <Foundation/Foundation.h>
 
-@interface FFmepgWrapperOCBridge : NSObject
+typedef void(^FFmpegAVLogCallback)(NSString *log);
+
+@interface FFmepgOCBridge: NSObject
 
 + (int)avPixelFormatRGB32;
 + (int)avErrorEOF;
@@ -16,5 +18,6 @@
 + (char *)avErr2str:(int)errCode;
 + (int64_t)avNoPTSValue;
 + (int64_t)avTimebase;
++ (void)setAVLog:(FFmpegAVLogCallback)callback;
 
 @end
