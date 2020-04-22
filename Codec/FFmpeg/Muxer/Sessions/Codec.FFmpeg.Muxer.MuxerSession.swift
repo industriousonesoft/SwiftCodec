@@ -177,7 +177,7 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
      
         if self.mode == .Dump {
             //音频优先合成，确保音频的连续性，但是视频可能会出现比较严重的掉帧情况
-            self.audioSession?.write(bytes: bytes, size: size, onFinished: { [unowned self] (error) in
+            self.audioSession?.fill(bytes: bytes, size: size, onFinished: { [unowned self] (error) in
                 if error != nil {
                     self.onMuxedData?(nil, error)
                 }else {

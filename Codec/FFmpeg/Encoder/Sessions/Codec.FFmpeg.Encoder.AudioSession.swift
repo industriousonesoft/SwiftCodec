@@ -351,7 +351,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 
 extension Codec.FFmpeg.Encoder.AudioSession {
     
-    func write(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onFinished: @escaping (Error?) -> Void) {
+    func fill(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onFinished: @escaping (Error?) -> Void) {
         self.encodeQueue.async { [unowned self] in
             if let fifo = self.fifo {
                 self.write(bytes: bytes, size: size, to: fifo, onFinished: onFinished)
