@@ -144,6 +144,7 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
             self.muxingQueue.async { [unowned self] in
                 if packet != nil {
                     self.currVideoPts = packet!.pointee.pts
+                    print("pts: \(packet!.pointee.pts) - dts: \(packet!.pointee.dts)")
                     if self.mode == .Dump {
                         //为了保证延时，不能合成时则丢弃掉当前视频帧
                         //如果不考虑延时，可以采用类似音频的处理方式，对视频帧进行缓存，即需即取

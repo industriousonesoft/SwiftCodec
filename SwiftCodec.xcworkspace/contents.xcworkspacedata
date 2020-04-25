@@ -5,7 +5,7 @@
       location = "group:../DesktopCapturer/DesktopCapturerSDK/DesktopCapturer.xcodeproj">
    </FileRef>
    <FileRef
-      location = "container:SwiftCodec.xcodeproj">
+      location = "group:SwiftCodec/SwiftCodec.xcodeproj">
    </FileRef>
    <FileRef
       location = "group:SwiftCodecDemo/SwiftCodecDemo.xcodeproj">
