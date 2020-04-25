@@ -9,28 +9,20 @@
 import Foundation
 import CFFmpeg
 
-//MARK: - AudioCompatible
-public struct AudioCompatible<Base> {
-    let base: Base
-    init(_ base: Base) {
-        self.base = base
-    }
-}
-
 public
 extension Codec.FFmpeg.Encoder {
     
-    var audio: AudioCompatible<Codec.FFmpeg.Encoder> {
-        return AudioCompatible<Codec.FFmpeg.Encoder>.init(self)
+    var audio: Codec.FFmpeg.AudioCompatible<Codec.FFmpeg.Encoder> {
+        return Codec.FFmpeg.AudioCompatible<Codec.FFmpeg.Encoder>.init(self)
     }
     
-    static var audio: AudioCompatible<Codec.FFmpeg.Encoder>.Type {
-        return AudioCompatible<Codec.FFmpeg.Encoder>.self
+    static var audio: Codec.FFmpeg.AudioCompatible<Codec.FFmpeg.Encoder>.Type {
+        return Codec.FFmpeg.AudioCompatible<Codec.FFmpeg.Encoder>.self
     }
 }
 
 public
-extension AudioCompatible where Base: Codec.FFmpeg.Encoder {
+extension Codec.FFmpeg.AudioCompatible where Base: Codec.FFmpeg.Encoder {
     
     func open(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config, queue: DispatchQueue? = nil) throws {
         try self.base.open(in: desc, config: config, queue: queue)

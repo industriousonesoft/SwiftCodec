@@ -9,28 +9,20 @@
 import Foundation
 import CFFmpeg
 
-//MARK: - VideoCompatible
-public struct VideoCompatible<Base> {
-    let base: Base
-    init(_ base: Base) {
-        self.base = base
-    }
-}
-
 public
 extension Codec.FFmpeg.Encoder {
     
-    var video: VideoCompatible<Codec.FFmpeg.Encoder> {
-        return VideoCompatible<Codec.FFmpeg.Encoder>.init(self)
+    var video: Codec.FFmpeg.VideoCompatible<Codec.FFmpeg.Encoder> {
+        return Codec.FFmpeg.VideoCompatible<Codec.FFmpeg.Encoder>.init(self)
     }
     
-    static var video: VideoCompatible<Codec.FFmpeg.Encoder>.Type {
-        return VideoCompatible<Codec.FFmpeg.Encoder>.self
+    static var video: Codec.FFmpeg.VideoCompatible<Codec.FFmpeg.Encoder>.Type {
+        return Codec.FFmpeg.VideoCompatible<Codec.FFmpeg.Encoder>.self
     }
 }
 
 public
-extension VideoCompatible where Base: Codec.FFmpeg.Encoder {
+extension Codec.FFmpeg.VideoCompatible where Base: Codec.FFmpeg.Encoder {
     
     func open(config: Codec.FFmpeg.Video.Config, queue: DispatchQueue? = nil) throws {
         try self.base.open(config: config, queue: queue)

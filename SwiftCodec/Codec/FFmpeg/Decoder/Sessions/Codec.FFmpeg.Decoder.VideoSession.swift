@@ -32,6 +32,7 @@ extension Codec.FFmpeg.Decoder {
             try self.createDecodedFrame(size: config.outSize)
             try self.createScaledFrame(size: config.outSize)
             try self.createPakcet()
+            try self.createSwsCtx(inSize: config.outSize, outSize: config.outSize)
         }
         
         deinit {
@@ -191,14 +192,18 @@ extension Codec.FFmpeg.Decoder.VideoSession {
         var ret = avcodec_send_packet(codecCtx, packet)
         
         if ret < 0 {
-            onDecoded(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when encoding video.")!)
+            onDecoded(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when decodeing video.")!)
             return
         }
         
         ret = avcodec_receive_frame(codecCtx, decodedFrame)
         
         if ret == 0 {
+            
+            print("\(#function) decoded frame: \(decodedFrame.pointee.pts)")
+            
             let dstSliceH = sws_scale(swsCtx, decodedFrame.pointee.sliceArray, decodedFrame.pointee.strideArray, 0, Int32(codecCtx.pointee.height), scaledFrame.pointee.mutablleSliceArray, scaledFrame.pointee.strideArray)
+            
             if dstSliceH > 0 {
                 //RGB格式其数据格式是存储在单个数组中：
                 if let bytes = scaledFrame.pointee.data.0 {
@@ -217,7 +222,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
             }else if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EAGAIN {
                 print("avcodec_send_packet() need more input...")
             }else if ret < 0 {
-                onDecoded(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when encoding video.")!)
+                onDecoded(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when decoding video.")!)
             }
         }
         av_frame_unref(decodedFrame)

@@ -12,7 +12,10 @@ import CFFmpeg
 extension Codec.FFmpeg {
     public class Decoder {
         var videoSession: VideoSession? = nil
+        
+        public init() {}
     }
+    
 }
 
 extension Codec.FFmpeg.Decoder {

@@ -27,8 +27,28 @@ public extension Codec {
     }
 }
 
+public extension Codec.FFmpeg {
+    //MARK: - VideoCompatible
+    struct VideoCompatible<Base> {
+        let base: Base
+        init(_ base: Base) {
+            self.base = base
+        }
+    }
+
+      //MARK: - AudioCompatible
+    struct AudioCompatible<Base> {
+        let base: Base
+        init(_ base: Base) {
+            self.base = base
+        }
+    }
+}
+
 //MARK: - AVLog
 public extension Codec.FFmpeg {
+    
+  
     
     typealias AVLogCallback = (String) -> Void
     
