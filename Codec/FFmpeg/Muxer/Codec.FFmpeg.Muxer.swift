@@ -86,7 +86,7 @@ extension Codec.FFmpeg.Muxer {
     }
     
     func fillVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, onFinished: @escaping (Error?)->Void) {
-        self.muxerSession?.fillVideo(bytes: bytes, size: size, onScaled: onFinished)
+        self.muxerSession?.fillVideo(bytes: bytes, size: size, onFinished: onFinished)
     }
     
     func muxingVideo(displayTime: Double) {

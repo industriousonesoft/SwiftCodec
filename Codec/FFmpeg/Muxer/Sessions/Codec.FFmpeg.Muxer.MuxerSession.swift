@@ -126,12 +126,12 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
 //MARK: - Muxing
 extension Codec.FFmpeg.Muxer.MuxerSession {
     
-    func fillVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, onScaled: @escaping Codec.FFmpeg.Encoder.ScaledCallback) {
+    func fillVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, onFinished: @escaping (Error?)->Void) {
         //如果同时合成音视频，则确保先合成音频再合成视频
         if self.flags.both && self.currAudioPts == ZeroPts {
             return
         }
-        self.videoSession?.fill(bytes: bytes, size: size, onScaled: onScaled)
+        self.videoSession?.fill(bytes: bytes, size: size, onFinished: onFinished)
     }
     
     func muxingVideo(displayTime: Double) {

@@ -254,14 +254,14 @@ extension Codec.FFmpeg.Encoder.VideoSession {
 //MARK: - Encode
 extension Codec.FFmpeg.Encoder.VideoSession {
     
-    func fill(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, onScaled: @escaping Codec.FFmpeg.Encoder.ScaledCallback) {
+    func fill(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, onFinished: @escaping (Error?)-> Void) {
         self.encodeQueue.async { [unowned self] in
-            self.innerFill(bytes: bytes, size: size, onScaled: onScaled)
+            self.innerFill(bytes: bytes, size: size, onFinished: onFinished)
         }
     }
     
     private
-    func innerFill(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, onScaled: Codec.FFmpeg.Encoder.ScaledCallback) {
+    func innerFill(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, onFinished: (Error?)-> Void) {
         
          //输入数据尺寸出现变化时更新格式转换器
         if __CGSizeEqualToSize(self.inSize, size) == false {
@@ -271,13 +271,13 @@ extension Codec.FFmpeg.Encoder.VideoSession {
                 try self.createInFrame(size: size)
                 try self.createSwsCtx(inSize: size, outSize: self.outSize)
             } catch let err {
-                onScaled(err)
+                onFinished(err)
             }
             self.inSize = size
         }
           
         guard let outFrame = self.outFrame, let inFrame = self.inFrame else {
-            onScaled(NSError.error(ErrorDomain, reason: "Video Frame not initailized."))
+            onFinished(NSError.error(ErrorDomain, reason: "Video Frame not initailized."))
             return
         }
         
@@ -285,7 +285,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
 //            //输入使用的是AV_PIX_FMT_RGB32: width x 4(RGBA有4个颜色通道个数) = bytesPerRow = stride
 //            inFrame.pointee.linesize.0 = Int32(size.width) * 4
         guard self.fillInFrame(bytes: bytes, size: size) else {
-            onScaled(NSError.error(ErrorDomain, reason: "Failed to fill in frame buffer."))
+            onFinished(NSError.error(ErrorDomain, reason: "Failed to fill in frame buffer."))
             return
         }
         //TODO: Using libyuv to convert RGB32 to YUV420 is faster then sws_scale
@@ -294,18 +294,11 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         let destSliceH = sws_scale(self.swsCtx, inFrame.pointee.sliceArray, inFrame.pointee.strideArray, 0, Int32(size.height), outFrame.pointee.mutablleSliceArray, outFrame.pointee.strideArray)
           
         if destSliceH > 0 {
-            onScaled(nil)
+            onFinished(nil)
         }else {
-            onScaled(NSError.error(ErrorDomain, reason: "Failed to convert frame format."))
+            onFinished(NSError.error(ErrorDomain, reason: "Failed to convert frame format."))
         }
 
-    }
-
-    func encode(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, displayTime: Double, onScaled: @escaping Codec.FFmpeg.Encoder.ScaledCallback, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
-        self.encodeQueue.async { [unowned self] in
-            self.innerFill(bytes: bytes, size: size, onScaled: onScaled)
-            self.innerEncode(displayTime: displayTime, onEncoded: onEncoded)
-        }
     }
     
     func encode(displayTime: Double, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
