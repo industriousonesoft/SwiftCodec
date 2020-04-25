@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import CFFmpeg
 
 extension Codec.FFmpeg {
     public class Encoder {

@@ -8,10 +8,11 @@
 
 import Foundation
 import CoreAudio
-@_exported import CFFmpeg
+import CFFmpeg
 @_exported import FFmepgOCBridge
 
 public extension Codec {
+    
     class FFmpeg {
         public static let SWIFT_AV_SAMPLE_FMT_S16: Int32 = AV_SAMPLE_FMT_S16.rawValue
         public static let SWIFT_AV_SAMPLE_FMT_S16P: Int32 = AV_SAMPLE_FMT_S16P.rawValue
@@ -26,7 +27,7 @@ public extension Codec {
     }
 }
 
- //MARK: - AVLog
+//MARK: - AVLog
 public extension Codec.FFmpeg {
     
     typealias AVLogCallback = (String) -> Void
@@ -40,7 +41,7 @@ public extension Codec.FFmpeg {
     }
 }
 
- //MARK: - Audio
+//MARK: - Audio
 public extension Codec.FFmpeg {
 
     struct Audio {
@@ -142,12 +143,21 @@ public extension Codec.FFmpeg {
             public enum CodecType {
                 case MPEG1
                 case H264
-                public func toAVCodecID() -> AVCodecID {
+                public func codecID() -> AVCodecID {
                     switch self {
                     case .MPEG1:
                         return AV_CODEC_ID_MPEG1VIDEO
                     case .H264:
                         return AV_CODEC_ID_H264
+                    }
+                }
+                
+                public func pixelFormat() -> AVPixelFormat {
+                    switch self {
+                    case .MPEG1:
+                        return AV_PIX_FMT_YUV420P
+                    case .H264:
+                        return AV_PIX_FMT_YUV420P
                     }
                 }
             }

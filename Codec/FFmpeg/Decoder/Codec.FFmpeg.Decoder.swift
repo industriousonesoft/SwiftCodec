@@ -7,9 +7,17 @@
 //
 
 import Foundation
+import CFFmpeg
 
 extension Codec.FFmpeg {
     public class Decoder {
         var videoSession: VideoSession? = nil
     }
+}
+
+extension Codec.FFmpeg.Decoder {
+    public
+    typealias DecodedDataCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int32)?, Error?) -> Void
+  
+    typealias DecodedFrameCallback = (UnsafeMutablePointer<AVFrame>?, Error?) -> Void
 }

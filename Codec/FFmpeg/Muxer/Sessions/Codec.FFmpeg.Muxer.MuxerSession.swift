@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import CFFmpeg
 
 private let ErrorDomain = "FFmpeg:Muxer"
 private let ZeroPts: Int64 = 0

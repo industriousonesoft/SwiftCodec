@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import CFFmpeg
 
 //MARK: - AudioCompatible
 public struct AudioCompatible<Base> {

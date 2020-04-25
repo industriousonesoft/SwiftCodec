@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import CFFmpeg
 
 private let ErrorDomain = "FFmpeg:Audio:Encoder"
 

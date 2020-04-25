@@ -28,6 +28,7 @@
 		EE744433244B0F4000499733 /* SwiftyCodec.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D35BAB24138BD400A507BC /* SwiftyCodec.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		EE75C2342445930500711CA1 /* Codec.FFmpeg.Muxer.MuxerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE75C2332445930500711CA1 /* Codec.FFmpeg.Muxer.MuxerSession.swift */; };
 		EE75C2362445B10600711CA1 /* Codec.FFmpeg.Muxer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE75C2352445B10600711CA1 /* Codec.FFmpeg.Muxer.swift */; };
+		EE7BCC6B2453DE5E00672009 /* Codec.FFmpeg.Extend.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE7BCC6A2453DE5E00672009 /* Codec.FFmpeg.Extend.swift */; };
 		EE7E4F0B244FE59D002279D9 /* Codec.FFmpeg.Decoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE7E4F0A244FE59D002279D9 /* Codec.FFmpeg.Decoder.swift */; };
 		EE7E4F10244FE6E2002279D9 /* Codec.FFmpeg.Decoder.VideoSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE7E4F0F244FE6E2002279D9 /* Codec.FFmpeg.Decoder.VideoSession.swift */; };
 		EE8438302446B33300266C6F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EE84382F2446B33300266C6F /* Assets.xcassets */; };
@@ -248,6 +249,7 @@
 		EE74442F244B07B200499733 /* SwiftyDesktopCapturer.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftyDesktopCapturer.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE75C2332445930500711CA1 /* Codec.FFmpeg.Muxer.MuxerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Muxer.MuxerSession.swift; sourceTree = "<group>"; };
 		EE75C2352445B10600711CA1 /* Codec.FFmpeg.Muxer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Muxer.swift; sourceTree = "<group>"; };
+		EE7BCC6A2453DE5E00672009 /* Codec.FFmpeg.Extend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Extend.swift; sourceTree = "<group>"; };
 		EE7E4F0A244FE59D002279D9 /* Codec.FFmpeg.Decoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Decoder.swift; sourceTree = "<group>"; };
 		EE7E4F0F244FE6E2002279D9 /* Codec.FFmpeg.Decoder.VideoSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Decoder.VideoSession.swift; sourceTree = "<group>"; };
 		EE84382B2446B33000266C6F /* CodecDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodecDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -504,11 +506,12 @@
 		90D05578238FB51600DB766C /* FFmpeg */ = {
 			isa = PBXGroup;
 			children = (
-				EE7E4F0C244FE5BD002279D9 /* Muxer */,
 				90D0557A238FB51600DB766C /* Modules */,
+				EE7E4F0C244FE5BD002279D9 /* Muxer */,
 				EE7E4F09244FE51C002279D9 /* Decoder */,
 				EE912B5124444785003907FC /* Encoder */,
 				EE912B53244456EA003907FC /* Codec.FFmpeg.swift */,
+				EE7BCC6A2453DE5E00672009 /* Codec.FFmpeg.Extend.swift */,
 			);
 			path = FFmpeg;
 			sourceTree = "<group>";
@@ -802,6 +805,7 @@
 				90D35BC324138E5C00A507BC /* NSError+Extend.swift in Sources */,
 				EE91CD6F244475EF000E6D71 /* Codec.FFmpeg.Encoder.Video.swift in Sources */,
 				EE75C2342445930500711CA1 /* Codec.FFmpeg.Muxer.MuxerSession.swift in Sources */,
+				EE7BCC6B2453DE5E00672009 /* Codec.FFmpeg.Extend.swift in Sources */,
 				EE75C2362445B10600711CA1 /* Codec.FFmpeg.Muxer.swift in Sources */,
 				90D35BC424138E5C00A507BC /* Codec.FFmpeg.Encoder.AudioSession.swift in Sources */,
 			);
