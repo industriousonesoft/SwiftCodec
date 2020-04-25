@@ -136,21 +136,20 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
     }
     
     func muxingVideo(displayTime: Double) {
-        
         self.videoSession?.encode(displayTime: displayTime, onEncoded: { [unowned self] (packet, error) in
             //此处如果不clone一次，会出现野指针错误。原因在于packet相关内存是由ffmepg内部函数管理，作用域就在当前{}，即便是muxingQueue捕获后也只是引用计数加1，packet中的数据内存还是会被释放
-//                let newPacket = av_packet_clone(packet)
-//                av_packet_unref(packet!)
+            let newPacket = av_packet_clone(packet)
+            av_packet_unref(packet!)
             self.muxingQueue.async { [unowned self] in
-                if packet != nil {
-                    self.currVideoPts = packet!.pointee.pts
-                    print("pts: \(packet!.pointee.pts) - dts: \(packet!.pointee.dts)")
+                if newPacket != nil {
+                    self.currVideoPts = newPacket!.pointee.pts
+                    print("pts: \(newPacket!.pointee.pts) - dts: \(newPacket!.pointee.dts)")
                     if self.mode == .Dump {
                         //为了保证延时，不能合成时则丢弃掉当前视频帧
                         //如果不考虑延时，可以采用类似音频的处理方式，对视频帧进行缓存，即需即取
                         if self.isToMuxingVideo == true {
 //                            print("muxing video...")
-                            if let err = self.muxer(packet: packet!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
+                            if let err = self.muxer(packet: newPacket!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
                                 self.onMuxedData?(nil, err)
                             }
                             self.isToMuxingVideo = false
@@ -161,12 +160,12 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
                         //为了保证延时，不能合成时则丢弃掉当前视频帧
                         if self.couldToMuxVideo() {
 //                            print("muxing video...")
-                            if let err = self.muxer(packet: packet!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
+                            if let err = self.muxer(packet: newPacket!, stream: self.videoStream!, timebase: self.videoSession!.codecCtx!.pointee.time_base) {
                                 self.onMuxedData?(nil, err)
                             }
                         }
                     }
-                    av_packet_unref(packet!)
+                    av_packet_unref(newPacket!)
                 }else {
                     self.onMuxedData?(nil, error)
                 }

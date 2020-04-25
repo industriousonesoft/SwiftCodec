@@ -74,6 +74,7 @@ extension Codec.FFmpeg.Muxer {
     }
     
     func close() {
+        print(#function)
         self.muxerSession = nil
     }
     

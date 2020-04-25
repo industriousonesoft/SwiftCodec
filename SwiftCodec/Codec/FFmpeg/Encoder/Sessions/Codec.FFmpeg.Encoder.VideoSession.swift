@@ -334,7 +334,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
                 if frame.pointee.key_frame == 1 {
                     packet.pointee.flags |= AV_PKT_FLAG_KEY
                 }
-//                print("Muxing Video Packet: \(frame.pointee.pts) - \(packet.pointee.pts) - \(packet.pointee.dts)")
+                print("Encoded Video Packet: \(frame.pointee.pts) - \(packet.pointee.pts) - \(packet.pointee.dts)")
                 onFinished(packet, nil)
             }else {
 //                print("Drop Video Packet: \(frame.pointee.pts) - \(packet.pointee.pts) - \(packet.pointee.dts)")

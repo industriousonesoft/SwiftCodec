@@ -39,7 +39,7 @@ extension AppDelegate {
     }
     
     @IBAction func stop(_ sender: AnyObject) {
-        self.ffmpegEncoder.close()
+        self.ffmpegEncoder.stop()
     }
 }
 
