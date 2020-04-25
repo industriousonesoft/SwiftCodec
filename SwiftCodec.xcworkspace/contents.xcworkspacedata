@@ -7,4 +7,7 @@
    <FileRef
       location = "container:SwiftCodec.xcodeproj">
    </FileRef>
+   <FileRef
+      location = "group:SwiftCodecDemo/SwiftCodecDemo.xcodeproj">
+   </FileRef>
 </Workspace>

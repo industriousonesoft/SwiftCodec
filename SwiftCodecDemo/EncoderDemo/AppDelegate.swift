@@ -1,9 +1,9 @@
 //
 //  AppDelegate.swift
-//  CodecDemo
+//  EncoderDemo
 //
-//  Created by Mark Cao on 2020/4/15.
-//  Copyright © 2020 zenet. All rights reserved.
+//  Created by Mark Cao on 2020/4/25.
+//  Copyright © 2020 ZDNet. All rights reserved.
 //
 
 import Cocoa
@@ -13,7 +13,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @IBOutlet weak var window: NSWindow!
 
-    lazy var ffmpegEncoder: FFmpegEncoder = {
+    private lazy var ffmpegEncoder: FFmpegEncoder = {
         return FFmpegEncoder.init()
     }()
 
@@ -29,15 +29,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         self.ffmpegEncoder.close()
     }
 
+
 }
 
 extension AppDelegate {
     
-    @IBAction func start(_ sender: Any) {
+    @IBAction func start(_ sender: AnyObject) {
         self.ffmpegEncoder.start()
     }
     
-    @IBAction func stop(_ sender: Any) {
+    @IBAction func stop(_ sender: AnyObject) {
         self.ffmpegEncoder.close()
     }
 }

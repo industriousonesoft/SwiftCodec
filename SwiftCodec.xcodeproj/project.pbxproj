@@ -22,42 +22,11 @@
 		90D35BC824138F3400A507BC /* libavutil.56.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90CC7A2C238E114F005FCD2D /* libavutil.56.dylib */; };
 		90D35BC924138F3400A507BC /* libavcodec.58.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90CC7A2D238E114F005FCD2D /* libavcodec.58.dylib */; };
 		90D35BCA24138F3400A507BC /* libswresample.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05639238FC6CA00DB766C /* libswresample.3.dylib */; };
-		EE744430244B07B200499733 /* SwiftyDesktopCapturer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EE74442F244B07B200499733 /* SwiftyDesktopCapturer.framework */; };
-		EE744431244B07B200499733 /* SwiftyDesktopCapturer.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = EE74442F244B07B200499733 /* SwiftyDesktopCapturer.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		EE744432244B0F4000499733 /* SwiftyCodec.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 90D35BAB24138BD400A507BC /* SwiftyCodec.framework */; };
-		EE744433244B0F4000499733 /* SwiftyCodec.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D35BAB24138BD400A507BC /* SwiftyCodec.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		EE75C2342445930500711CA1 /* Codec.FFmpeg.Muxer.MuxerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE75C2332445930500711CA1 /* Codec.FFmpeg.Muxer.MuxerSession.swift */; };
 		EE75C2362445B10600711CA1 /* Codec.FFmpeg.Muxer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE75C2352445B10600711CA1 /* Codec.FFmpeg.Muxer.swift */; };
 		EE7BCC6B2453DE5E00672009 /* Codec.FFmpeg.Extend.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE7BCC6A2453DE5E00672009 /* Codec.FFmpeg.Extend.swift */; };
 		EE7E4F0B244FE59D002279D9 /* Codec.FFmpeg.Decoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE7E4F0A244FE59D002279D9 /* Codec.FFmpeg.Decoder.swift */; };
 		EE7E4F10244FE6E2002279D9 /* Codec.FFmpeg.Decoder.VideoSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE7E4F0F244FE6E2002279D9 /* Codec.FFmpeg.Decoder.VideoSession.swift */; };
-		EE8438302446B33300266C6F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EE84382F2446B33300266C6F /* Assets.xcassets */; };
-		EE8438332446B33300266C6F /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = EE8438312446B33300266C6F /* MainMenu.xib */; };
-		EE84383A2446B37900266C6F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8438392446B37800266C6F /* AppDelegate.swift */; };
-		EE8438452446B50300266C6F /* FFmpegEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8438442446B50300266C6F /* FFmpegEncoder.swift */; };
-		EE8438472446BDF900266C6F /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8438462446BDF900266C6F /* Utilities.swift */; };
-		EE8438492446BEC200266C6F /* DataCacher.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8438482446BEC200266C6F /* DataCacher.swift */; };
-		EE84384A2446C0B900266C6F /* libavformat.58.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D3E0AD2398E083009C2195 /* libavformat.58.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE84384B2446C0B900266C6F /* libswscale.5.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90CC7A2B238E114F005FCD2D /* libswscale.5.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE84384C2446C0B900266C6F /* libavutil.56.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90CC7A2C238E114F005FCD2D /* libavutil.56.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE84384D2446C0B900266C6F /* libavcodec.58.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90CC7A2D238E114F005FCD2D /* libavcodec.58.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE84384E2446C0B900266C6F /* libfdk-aac.1.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05633238FC6CA00DB766C /* libfdk-aac.1.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE84384F2446C0B900266C6F /* libgsm.1.0.13.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D0563A238FC6CA00DB766C /* libgsm.1.0.13.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE8438502446C0B900266C6F /* libogg.0.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05637238FC6CA00DB766C /* libogg.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE8438512446C0B900266C6F /* libopencore-amrnb.0.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05634238FC6CA00DB766C /* libopencore-amrnb.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE8438522446C0B900266C6F /* libopencore-amrwb.0.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D0562F238FC6CA00DB766C /* libopencore-amrwb.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE8438532446C0B900266C6F /* libspeex.1.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05630238FC6CA00DB766C /* libspeex.1.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE8438542446C0B900266C6F /* libswresample.3.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05639238FC6CA00DB766C /* libswresample.3.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE8438552446C0B900266C6F /* libtheoradec.1.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05636238FC6CA00DB766C /* libtheoradec.1.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE8438562446C0B900266C6F /* libtheoraenc.1.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05638238FC6CA00DB766C /* libtheoraenc.1.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE8438572446C0B900266C6F /* libvorbis.0.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05632238FC6CA00DB766C /* libvorbis.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE8438582446C0B900266C6F /* libvorbisenc.2.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05631238FC6CA00DB766C /* libvorbisenc.2.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE8438592446C0B900266C6F /* libx264.152.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D05635238FC6CA00DB766C /* libx264.152.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE84385A2446C0B900266C6F /* libx265.169.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 90D0563B238FC6CB00DB766C /* libx265.169.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE84385C2446C12D00266C6F /* libmp3lame.0.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = EE84385B2446C12500266C6F /* libmp3lame.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		EE84385E2447090400266C6F /* AudioCapturer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE84385D2447090400266C6F /* AudioCapturer.swift */; };
-		EE84387A244709EA00266C6F /* libZDAudioManager.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = EE843877244709EA00266C6F /* libZDAudioManager.dylib */; };
-		EE84387C24470A0500266C6F /* libZDAudioManager.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = EE843877244709EA00266C6F /* libZDAudioManager.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		EE912B5024444779003907FC /* Codec.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE912B4F24444779003907FC /* Codec.swift */; };
 		EE912B54244456EA003907FC /* Codec.FFmpeg.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE912B53244456EA003907FC /* Codec.FFmpeg.swift */; };
 		EE912B5A24446958003907FC /* Codec.FFmpeg.Encoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE912B5924446958003907FC /* Codec.FFmpeg.Encoder.swift */; };
@@ -65,50 +34,6 @@
 		EE91CD6D244475E8000E6D71 /* Codec.FFmpeg.Encoder.Audio.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE91CD6C244475E8000E6D71 /* Codec.FFmpeg.Encoder.Audio.swift */; };
 		EE91CD6F244475EF000E6D71 /* Codec.FFmpeg.Encoder.Video.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE91CD6E244475EF000E6D71 /* Codec.FFmpeg.Encoder.Video.swift */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		EE744434244B0F4000499733 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 90CC79AA238E0E8F005FCD2D /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 90D35BAA24138BD400A507BC;
-			remoteInfo = SwiftCodec;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		EE84383F2446B4A200266C6F /* Embed Frameworks */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-				EE84387C24470A0500266C6F /* libZDAudioManager.dylib in Embed Frameworks */,
-				EE84384A2446C0B900266C6F /* libavformat.58.dylib in Embed Frameworks */,
-				EE84384B2446C0B900266C6F /* libswscale.5.dylib in Embed Frameworks */,
-				EE84384C2446C0B900266C6F /* libavutil.56.dylib in Embed Frameworks */,
-				EE84384D2446C0B900266C6F /* libavcodec.58.dylib in Embed Frameworks */,
-				EE84384E2446C0B900266C6F /* libfdk-aac.1.dylib in Embed Frameworks */,
-				EE84384F2446C0B900266C6F /* libgsm.1.0.13.dylib in Embed Frameworks */,
-				EE8438502446C0B900266C6F /* libogg.0.dylib in Embed Frameworks */,
-				EE8438512446C0B900266C6F /* libopencore-amrnb.0.dylib in Embed Frameworks */,
-				EE8438522446C0B900266C6F /* libopencore-amrwb.0.dylib in Embed Frameworks */,
-				EE8438532446C0B900266C6F /* libspeex.1.dylib in Embed Frameworks */,
-				EE8438542446C0B900266C6F /* libswresample.3.dylib in Embed Frameworks */,
-				EE8438552446C0B900266C6F /* libtheoradec.1.dylib in Embed Frameworks */,
-				EE8438562446C0B900266C6F /* libtheoraenc.1.dylib in Embed Frameworks */,
-				EE84385C2446C12D00266C6F /* libmp3lame.0.dylib in Embed Frameworks */,
-				EE8438572446C0B900266C6F /* libvorbis.0.dylib in Embed Frameworks */,
-				EE744431244B07B200499733 /* SwiftyDesktopCapturer.framework in Embed Frameworks */,
-				EE744433244B0F4000499733 /* SwiftyCodec.framework in Embed Frameworks */,
-				EE8438582446C0B900266C6F /* libvorbisenc.2.dylib in Embed Frameworks */,
-				EE8438592446C0B900266C6F /* libx264.152.dylib in Embed Frameworks */,
-				EE84385A2446C0B900266C6F /* libx265.169.dylib in Embed Frameworks */,
-			);
-			name = "Embed Frameworks";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		90BF91C423A7789D006CF64F /* swresample_shim.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = swresample_shim.h; sourceTree = "<group>"; };
@@ -246,26 +171,12 @@
 		90D3E0B32398E0E3009C2195 /* avformat_shim.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = avformat_shim.h; sourceTree = "<group>"; };
 		90D4263E23CDA06B0077CF1A /* Codec.FFmpeg.Encoder.AudioSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Encoder.AudioSession.swift; sourceTree = "<group>"; };
 		90D4264023CDB1690077CF1A /* NSError+Extend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSError+Extend.swift"; sourceTree = "<group>"; };
-		EE74442F244B07B200499733 /* SwiftyDesktopCapturer.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftyDesktopCapturer.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE75C2332445930500711CA1 /* Codec.FFmpeg.Muxer.MuxerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Muxer.MuxerSession.swift; sourceTree = "<group>"; };
 		EE75C2352445B10600711CA1 /* Codec.FFmpeg.Muxer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Muxer.swift; sourceTree = "<group>"; };
 		EE7BCC6A2453DE5E00672009 /* Codec.FFmpeg.Extend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Extend.swift; sourceTree = "<group>"; };
 		EE7E4F0A244FE59D002279D9 /* Codec.FFmpeg.Decoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Decoder.swift; sourceTree = "<group>"; };
 		EE7E4F0F244FE6E2002279D9 /* Codec.FFmpeg.Decoder.VideoSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Decoder.VideoSession.swift; sourceTree = "<group>"; };
-		EE84382B2446B33000266C6F /* CodecDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodecDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		EE84382F2446B33300266C6F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		EE8438322446B33300266C6F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
-		EE8438342446B33300266C6F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		EE8438352446B33300266C6F /* CodecDemo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CodecDemo.entitlements; sourceTree = "<group>"; };
-		EE8438392446B37800266C6F /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		EE8438442446B50300266C6F /* FFmpegEncoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FFmpegEncoder.swift; sourceTree = "<group>"; };
-		EE8438462446BDF900266C6F /* Utilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
-		EE8438482446BEC200266C6F /* DataCacher.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DataCacher.swift; sourceTree = "<group>"; };
 		EE84385B2446C12500266C6F /* libmp3lame.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libmp3lame.0.dylib; sourceTree = "<group>"; };
-		EE84385D2447090400266C6F /* AudioCapturer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AudioCapturer.swift; sourceTree = "<group>"; };
-		EE843877244709EA00266C6F /* libZDAudioManager.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libZDAudioManager.dylib; sourceTree = "<group>"; };
-		EE84387E24470B4400266C6F /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
-		EE84387F24470B8200266C6F /* ZDAudioManager_shim.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ZDAudioManager_shim.h; sourceTree = "<group>"; };
 		EE912B4F24444779003907FC /* Codec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.swift; sourceTree = "<group>"; };
 		EE912B53244456EA003907FC /* Codec.FFmpeg.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.swift; sourceTree = "<group>"; };
 		EE912B5924446958003907FC /* Codec.FFmpeg.Encoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Encoder.swift; sourceTree = "<group>"; };
@@ -287,16 +198,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		EE8438282446B33000266C6F /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				EE84387A244709EA00266C6F /* libZDAudioManager.dylib in Frameworks */,
-				EE744430244B07B200499733 /* SwiftyDesktopCapturer.framework in Frameworks */,
-				EE744432244B0F4000499733 /* SwiftyCodec.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -313,8 +214,6 @@
 			isa = PBXGroup;
 			children = (
 				EE912B522444478D003907FC /* Codec */,
-				EE84382C2446B33000266C6F /* CodecDemo */,
-				EE84383B2446B4A200266C6F /* Frameworks */,
 				90CC79B3238E0E8F005FCD2D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -323,7 +222,6 @@
 			isa = PBXGroup;
 			children = (
 				90D35BAB24138BD400A507BC /* SwiftyCodec.framework */,
-				EE84382B2446B33000266C6F /* CodecDemo.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -593,57 +491,6 @@
 			path = Sessions;
 			sourceTree = "<group>";
 		};
-		EE84382C2446B33000266C6F /* CodecDemo */ = {
-			isa = PBXGroup;
-			children = (
-				EE84387D24470B2400266C6F /* Modules */,
-				EE843864244709EA00266C6F /* AudioIODevice */,
-				EE8438462446BDF900266C6F /* Utilities.swift */,
-				EE8438482446BEC200266C6F /* DataCacher.swift */,
-				EE84385D2447090400266C6F /* AudioCapturer.swift */,
-				EE8438442446B50300266C6F /* FFmpegEncoder.swift */,
-				EE8438392446B37800266C6F /* AppDelegate.swift */,
-				EE84382F2446B33300266C6F /* Assets.xcassets */,
-				EE8438312446B33300266C6F /* MainMenu.xib */,
-				EE8438342446B33300266C6F /* Info.plist */,
-				EE8438352446B33300266C6F /* CodecDemo.entitlements */,
-			);
-			path = CodecDemo;
-			sourceTree = "<group>";
-		};
-		EE84383B2446B4A200266C6F /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				EE74442F244B07B200499733 /* SwiftyDesktopCapturer.framework */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		EE843864244709EA00266C6F /* AudioIODevice */ = {
-			isa = PBXGroup;
-			children = (
-				EE843876244709EA00266C6F /* lib */,
-			);
-			path = AudioIODevice;
-			sourceTree = "<group>";
-		};
-		EE843876244709EA00266C6F /* lib */ = {
-			isa = PBXGroup;
-			children = (
-				EE843877244709EA00266C6F /* libZDAudioManager.dylib */,
-			);
-			path = lib;
-			sourceTree = "<group>";
-		};
-		EE84387D24470B2400266C6F /* Modules */ = {
-			isa = PBXGroup;
-			children = (
-				EE84387E24470B4400266C6F /* module.modulemap */,
-				EE84387F24470B8200266C6F /* ZDAudioManager_shim.h */,
-			);
-			path = Modules;
-			sourceTree = "<group>";
-		};
 		EE912B4E24444715003907FC /* Common */ = {
 			isa = PBXGroup;
 			children = (
@@ -713,25 +560,6 @@
 			productReference = 90D35BAB24138BD400A507BC /* SwiftyCodec.framework */;
 			productType = "com.apple.product-type.framework";
 		};
-		EE84382A2446B33000266C6F /* CodecDemo */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = EE8438362446B33300266C6F /* Build configuration list for PBXNativeTarget "CodecDemo" */;
-			buildPhases = (
-				EE8438272446B33000266C6F /* Sources */,
-				EE8438282446B33000266C6F /* Frameworks */,
-				EE8438292446B33000266C6F /* Resources */,
-				EE84383F2446B4A200266C6F /* Embed Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				EE744435244B0F4000499733 /* PBXTargetDependency */,
-			);
-			name = CodecDemo;
-			productName = CodecDemo;
-			productReference = EE84382B2446B33000266C6F /* CodecDemo.app */;
-			productType = "com.apple.product-type.application";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -744,10 +572,6 @@
 				TargetAttributes = {
 					90D35BAA24138BD400A507BC = {
 						CreatedOnToolsVersion = 11.1;
-					};
-					EE84382A2446B33000266C6F = {
-						CreatedOnToolsVersion = 11.4;
-						LastSwiftMigration = 1140;
 					};
 				};
 			};
@@ -765,7 +589,6 @@
 			projectRoot = "";
 			targets = (
 				90D35BAA24138BD400A507BC /* SwiftCodec */,
-				EE84382A2446B33000266C6F /* CodecDemo */,
 			);
 		};
 /* End PBXProject section */
@@ -775,15 +598,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		EE8438292446B33000266C6F /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				EE8438302446B33300266C6F /* Assets.xcassets in Resources */,
-				EE8438332446B33300266C6F /* MainMenu.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -811,38 +625,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		EE8438272446B33000266C6F /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				EE8438472446BDF900266C6F /* Utilities.swift in Sources */,
-				EE84383A2446B37900266C6F /* AppDelegate.swift in Sources */,
-				EE8438452446B50300266C6F /* FFmpegEncoder.swift in Sources */,
-				EE8438492446BEC200266C6F /* DataCacher.swift in Sources */,
-				EE84385E2447090400266C6F /* AudioCapturer.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		EE744435244B0F4000499733 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 90D35BAA24138BD400A507BC /* SwiftCodec */;
-			targetProxy = EE744434244B0F4000499733 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
-
-/* Begin PBXVariantGroup section */
-		EE8438312446B33300266C6F /* MainMenu.xib */ = {
-			isa = PBXVariantGroup;
-			children = (
-				EE8438322446B33300266C6F /* Base */,
-			);
-			name = MainMenu.xib;
-			sourceTree = "<group>";
-		};
-/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		90CC79B9238E0E8F005FCD2D /* Debug */ = {
@@ -1034,60 +817,6 @@
 			};
 			name = Release;
 		};
-		EE8438372446B33300266C6F /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = CodecDemo/CodecDemo.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/CodecDemo/AudioIODevice/include\"";
-				INFOPLIST_FILE = CodecDemo/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/CodecDemo/AudioIODevice/lib\"",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.zdnet.CodecDemo;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
-				SWIFT_INCLUDE_PATHS = "\"$(SRCROOT)/CodecDemo/Modules\"";
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		EE8438382446B33300266C6F /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = CodecDemo/CodecDemo.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/CodecDemo/AudioIODevice/include\"";
-				INFOPLIST_FILE = CodecDemo/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/CodecDemo/AudioIODevice/lib\"",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.zdnet.CodecDemo;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_INCLUDE_PATHS = "\"$(SRCROOT)/CodecDemo/Modules\"";
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_VERSION = 5.0;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1105,15 +834,6 @@
 			buildConfigurations = (
 				90D35BB124138BD400A507BC /* Debug */,
 				90D35BB224138BD400A507BC /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		EE8438362446B33300266C6F /* Build configuration list for PBXNativeTarget "CodecDemo" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				EE8438372446B33300266C6F /* Debug */,
-				EE8438382446B33300266C6F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

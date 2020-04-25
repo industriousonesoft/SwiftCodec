@@ -276,14 +276,14 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         let elapseTime = displayTime - self.displayTimeBase
         //累计采样数
         //两种计算pts的方法，本质上是一样的。第一种更精确一些。
-        /* 计算pts方法1：
+        //计算pts方法1：
         //这一步很关键！在未知输入视频的帧率或者帧率是一个动态值时，使用视频采样率（一般都是90K）作为视频量增幅的参考标准
         let nb_samples_count = Int64(elapseTime * Double(SampleTimebase.den))
         //然后，将基于采样频率的增量计数方式转换为基于当前编码帧率的增量计数方式
         let pts = av_rescale_q(nb_samples_count, SampleTimebase, codecCtx.pointee.time_base)
-        */
-        //计算pts方法2：
-        let pts = Int64(Double(codecCtx.pointee.time_base.den) * elapseTime)
+        
+        //计算pts方法2：不够精确
+//        let pts = Int64(Double(codecCtx.pointee.time_base.den) * elapseTime)
         
 //        print("[Video] pts: \(elapseTime) - \(pts) - \(Int32(pts2))")
         
