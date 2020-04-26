@@ -200,22 +200,27 @@ extension Codec.FFmpeg.Decoder.VideoSession {
         
         if ret == 0 {
             
-            print("\(#function) decoded frame: \(decodedFrame.pointee.pts)")
+//            print("\(#function) decoded frame: \(decodedFrame.pointee.pts)")
             
+            if let data = self.dumpYUV420Data(from: decodedFrame, codecCtx: codecCtx) {
+                onDecoded(data, nil)
+            }else {
+                onDecoded(nil, NSError.error(ErrorDomain, reason: "Failed to dump yuv raw data from avframe."))
+            }
+            
+            /*
             let dstSliceH = sws_scale(swsCtx, decodedFrame.pointee.sliceArray, decodedFrame.pointee.strideArray, 0, Int32(codecCtx.pointee.height), scaledFrame.pointee.mutablleSliceArray, scaledFrame.pointee.strideArray)
             
             if dstSliceH > 0 {
-                //RGB格式其数据格式是存储在单个数组中：
-                if let bytes = scaledFrame.pointee.data.0 {
-                    onDecoded((bytes: bytes, size: scaledFrame.pointee.linesize.0), nil)
+                if let bytesTuple = self.dumpRGBBytes(from: decodedFrame, codecCtx: codecCtx) {
+                    onDecoded(bytesTuple, nil)
+                }else {
+                    onDecoded(nil, NSError.error(ErrorDomain, reason: "Failed to dump rgb raw data from avframe."))
                 }
-                /*YUV420格式，则：
-                    yuvSize = codecCtx.pointee.width * codecCtx.pointee.height
-                    Y: scaledFrame.pointee.data.0 - yuvSize
-                    U: scaledFrame.pointee.data.1 - yuvSize / 4
-                    V: scaledFrame.pointee.data.2 - yuvSize / 4
-                    */
+            }else {
+                onDecoded(nil, NSError.error(ErrorDomain, reason: "Failed to scale yuv to rgb."))
             }
+             */
         }else {
             if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {
                 print("avcodec_send_packet() encoder flushed...")
@@ -226,6 +231,73 @@ extension Codec.FFmpeg.Decoder.VideoSession {
             }
         }
         av_frame_unref(decodedFrame)
+        
+    }
+    
+}
+
+//MARK: - Decode
+extension Codec.FFmpeg.Decoder.VideoSession {
+    
+    func dumpYUV420Data(from frame: UnsafePointer<AVFrame>, codecCtx: UnsafePointer<AVCodecContext>) -> Data? {
+        
+        if let bytesY = frame.pointee.data.0,
+         let bytesU = frame.pointee.data.1,
+         let bytesV = frame.pointee.data.2 {
+            
+            let sizeY = Int(codecCtx.pointee.width * codecCtx.pointee.height)
+         
+            var yuvData = Data.init(bytes: bytesY, count: sizeY)
+            yuvData.append(bytesU, count: sizeY / 4)
+            yuvData.append(bytesV, count: sizeY / 4)
+            
+            return yuvData
+        }
+        return nil
+    }
+    
+    func dumpYUV420Bytes(from frame: UnsafePointer<AVFrame>, codecCtx: UnsafePointer<AVCodecContext>) -> (bytes: UnsafeMutablePointer<UInt8>, size: Int)? {
+        
+        if let bytesY = frame.pointee.data.0,
+            let bytesU = frame.pointee.data.1,
+            let bytesV = frame.pointee.data.2 {
+            
+            let width = Int(codecCtx.pointee.width)
+            let height = Int(codecCtx.pointee.height)
+            let sizeY = width * height
+             
+            let yuvBytes = UnsafeMutablePointer<UInt8>.allocate(capacity: sizeY + sizeY / 2)
+            
+            for i in 0..<height {
+                memcpy(yuvBytes + width * i, bytesY + Int(frame.pointee.linesize.0) * i, width)
+            }
+            
+            for i in 0..<height/2 {
+                memcpy(yuvBytes + sizeY + width / 2 * i, bytesU + Int(frame.pointee.linesize.1) * i, width / 2)
+            }
+            
+            for i in 0..<height/2 {
+                memcpy(yuvBytes + sizeY + sizeY / 4 + width / 2 * i, bytesV + Int(frame.pointee.linesize.2) * i, width / 2)
+            }
+            
+            return (bytes: yuvBytes, size: sizeY + sizeY / 2)
+        }else {
+            return nil
+        }
+    }
+    
+    func dumpRGBBytes(from frame: UnsafePointer<AVFrame>, codecCtx: UnsafePointer<AVCodecContext>) -> (bytes: UnsafeMutablePointer<UInt8>, size: Int)? {
+        
+        if let bytes = frame.pointee.data.0 {
+            
+            let size = Int(frame.pointee.linesize.0)
+            let rgbBytes = UnsafeMutablePointer<UInt8>.allocate(capacity: size)
+            memcpy(rgbBytes, bytes, size)
+            
+            return (bytes: rgbBytes, size: size)
+        }else {
+            return nil
+        }
         
     }
     
