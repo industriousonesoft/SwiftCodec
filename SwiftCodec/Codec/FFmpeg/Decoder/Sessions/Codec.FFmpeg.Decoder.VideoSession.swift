@@ -14,6 +14,8 @@ private let ErrorDomain = "FFmpeg:Video:Decoder"
 extension Codec.FFmpeg.Decoder {
     
     class VideoSession {
+        
+        private var config: VideoConfig
     
         private var decodeQueue: DispatchQueue
     
@@ -26,7 +28,9 @@ extension Codec.FFmpeg.Decoder {
         
         private var swsCtx: OpaquePointer?
         
-        init(config: Codec.FFmpeg.Video.Config, decodeIn queue: DispatchQueue? = nil) throws {
+        init(config: VideoConfig, decodeIn queue: DispatchQueue? = nil) throws {
+            self.config = config
+            
             self.decodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.decode.queue")
             try self.createCodec(config: config)
             try self.createDecodedFrame(size: config.outSize)
@@ -48,9 +52,9 @@ extension Codec.FFmpeg.Decoder {
 private
 extension Codec.FFmpeg.Decoder.VideoSession {
     
-    func createCodec(config: Codec.FFmpeg.Video.Config) throws {
+    func createCodec(config: Codec.FFmpeg.Decoder.VideoConfig) throws {
         
-        let codecId: AVCodecID = config.codec.codecID()
+        let codecId: AVCodecID = config.codec.avCodecID
         let codec = avcodec_find_decoder(codecId)
         
         guard let codecCtx = avcodec_alloc_context3(codec) else {
@@ -63,7 +67,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
         codecCtx.pointee.width = Int32(config.outSize.width)
         codecCtx.pointee.height = Int32(config.outSize.height)
         codecCtx.pointee.time_base = AVRational.init(num: 1, den: config.fps)
-        codecCtx.pointee.pix_fmt = config.codec.pixelFormat()
+        codecCtx.pointee.pix_fmt = config.codec.pixelFmt.avPixelFormat
         
         guard avcodec_open2(codecCtx, codec, nil) == 0 else {
             throw NSError.error(ErrorDomain, reason: "Failed to open video deconder.")!
@@ -98,7 +102,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
     }
     
     func createScaledFrame(size: CGSize) throws {
-        self.scaledFrame = try self.createFrame(pixFmt: Codec.FFmpeg.SWIFT_AV_PIX_FMT_RGB32, size: size, fillIfNecessary: true)
+        self.scaledFrame = try self.createFrame(pixFmt: self.config.pixelFmt.avPixelFormat, size: size, fillIfNecessary: true)
     }
     
     func destroyScaledFrame() {
@@ -157,7 +161,7 @@ private
 extension Codec.FFmpeg.Decoder.VideoSession {
 
     func createSwsCtx(inSize: CGSize, outSize: CGSize) throws {
-        if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), AV_PIX_FMT_YUV420P, Int32(outSize.width), Int32(outSize.height), Codec.FFmpeg.SWIFT_AV_PIX_FMT_RGB32, SWS_FAST_BILINEAR, nil, nil, nil) {
+        if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), self.config.codec.pixelFmt.avPixelFormat, Int32(outSize.width), Int32(outSize.height), self.config.pixelFmt.avPixelFormat, SWS_FAST_BILINEAR, nil, nil, nil) {
             self.swsCtx = sws
         }else {
             throw NSError.error(ErrorDomain, reason: "Can not create sws context.")!

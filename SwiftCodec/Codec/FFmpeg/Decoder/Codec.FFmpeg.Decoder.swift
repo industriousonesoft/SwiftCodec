@@ -18,6 +18,27 @@ extension Codec.FFmpeg {
     
 }
 
+public
+extension Codec.FFmpeg.Decoder {
+    //MARK: - Video Config
+    struct VideoConfig {
+        
+        public var codec: Codec.FFmpeg.Video.CodecType
+        public var bitRate: Int64
+        public var fps: Int32
+        public var outSize: CGSize
+        public var pixelFmt: Codec.FFmpeg.Video.PixelFormat
+        
+        public init(outSize: CGSize, codec: Codec.FFmpeg.Video.CodecType, bitRate: Int64, fps: Int32, pixelFmt: Codec.FFmpeg.Video.PixelFormat) {
+            self.outSize = outSize
+            self.codec = codec
+            self.bitRate = bitRate
+            self.fps = fps
+            self.pixelFmt = pixelFmt
+        }
+    }
+}
+
 extension Codec.FFmpeg.Decoder {
 //    public typealias DecodedDataCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int)?, Error?) -> Void
     

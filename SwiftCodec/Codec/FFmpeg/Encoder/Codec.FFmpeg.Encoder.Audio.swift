@@ -24,8 +24,8 @@ extension Codec.FFmpeg.Encoder {
 public
 extension Codec.FFmpeg.AudioCompatible where Base: Codec.FFmpeg.Encoder {
     
-    func open(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config, queue: DispatchQueue? = nil) throws {
-        try self.base.open(in: desc, config: config, queue: queue)
+    func open(config: Codec.FFmpeg.Encoder.AudioConfig, queue: DispatchQueue? = nil) throws {
+        try self.base.open(config: config, queue: queue)
     }
     
     func close() {
@@ -42,8 +42,8 @@ extension Codec.FFmpeg.AudioCompatible where Base: Codec.FFmpeg.Encoder {
 private
 extension Codec.FFmpeg.Encoder {
     
-    func open(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config, queue: DispatchQueue? = nil) throws {
-        self.audioSession = try AudioSession.init(in: desc, config: config, queue: queue)
+    func open(config: AudioConfig, queue: DispatchQueue? = nil) throws {
+        self.audioSession = try AudioSession.init(config: config, queue: queue)
     }
     
     func closeAudioSession() {

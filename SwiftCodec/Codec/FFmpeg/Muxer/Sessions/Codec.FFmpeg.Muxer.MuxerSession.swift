@@ -81,7 +81,7 @@ extension Codec.FFmpeg.Muxer {
 //MARK: - Stream Manager
 extension Codec.FFmpeg.Muxer.MuxerSession {
     
-    func setVideoStream(config: Codec.FFmpeg.Video.Config) throws {
+    func setVideoStream(config: Codec.FFmpeg.Encoder.VideoConfig) throws {
         
         guard self.flags.contains(.Video) else {
             throw NSError.error(ErrorDomain, reason: "Muxer not support to mux video.")!
@@ -102,7 +102,7 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
         }
     }
     
-    func setAudioStream(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
+    func setAudioStream(config: Codec.FFmpeg.Encoder.AudioConfig) throws {
         guard self.flags.contains(.Audio) else {
             throw NSError.error(ErrorDomain, reason: "Muxer not support to mux audio.")!
         }
@@ -111,7 +111,7 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
             throw NSError.error(ErrorDomain, reason: "Video stream is set.")!
         }
         
-        let session = try Codec.FFmpeg.Encoder.AudioSession.init(in: desc, config: config)
+        let session = try Codec.FFmpeg.Encoder.AudioSession.init(config: config)
         self.audioSession = session
         self.audioStream = try self.addStream(codecCtx: session.codecCtx!)
         //Add ts header when all stream set

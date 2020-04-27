@@ -11,19 +11,19 @@ import Foundation
 public
 extension Codec.FFmpeg.Decoder {
     
-    var video: Codec.FFmpeg.AudioCompatible<Codec.FFmpeg.Decoder> {
-        return Codec.FFmpeg.AudioCompatible<Codec.FFmpeg.Decoder>.init(self)
+    var video: Codec.FFmpeg.VideoCompatible<Codec.FFmpeg.Decoder> {
+        return Codec.FFmpeg.VideoCompatible<Codec.FFmpeg.Decoder>.init(self)
     }
     
-    static var video: Codec.FFmpeg.AudioCompatible<Codec.FFmpeg.Decoder>.Type {
-        return Codec.FFmpeg.AudioCompatible<Codec.FFmpeg.Decoder>.self
+    static var video: Codec.FFmpeg.VideoCompatible<Codec.FFmpeg.Decoder>.Type {
+        return Codec.FFmpeg.VideoCompatible<Codec.FFmpeg.Decoder>.self
     }
 }
 
 public
-extension Codec.FFmpeg.AudioCompatible where Base: Codec.FFmpeg.Decoder {
+extension Codec.FFmpeg.VideoCompatible where Base: Codec.FFmpeg.Decoder {
 
-    func open(config: Codec.FFmpeg.Video.Config) throws {
+    func open(config: Codec.FFmpeg.Decoder.VideoConfig) throws {
         try self.base.open(config: config)
     }
     
@@ -38,7 +38,7 @@ extension Codec.FFmpeg.AudioCompatible where Base: Codec.FFmpeg.Decoder {
 
 extension Codec.FFmpeg.Decoder {
     
-    func open(config: Codec.FFmpeg.Video.Config) throws {
+    func open(config: VideoConfig) throws {
         self.videoSession = try VideoSession.init(config: config)
     }
     

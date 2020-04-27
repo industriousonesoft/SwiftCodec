@@ -78,11 +78,11 @@ extension Codec.FFmpeg.Muxer {
         self.muxerSession = nil
     }
     
-    func setAudioStream(in desc: Codec.FFmpeg.Audio.Description, config: Codec.FFmpeg.Audio.Config) throws {
-        try self.muxerSession?.setAudioStream(in: desc, config: config)
+    func setAudioStream(config: Codec.FFmpeg.Encoder.AudioConfig) throws {
+        try self.muxerSession?.setAudioStream(config: config)
     }
     
-    func setVideoStream(config: Codec.FFmpeg.Video.Config) throws {
+    func setVideoStream(config: Codec.FFmpeg.Encoder.VideoConfig) throws {
         try self.muxerSession?.setVideoStream(config: config)
     }
     
