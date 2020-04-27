@@ -31,8 +31,7 @@ extension Codec.FFmpeg.Encoder {
         private var displayTimeBase: Double = 0
         
         private(set) var inSize: CGSize = .zero
-        private(set) var outSize: CGSize = .zero
-        
+     
         private(set) var lastPts: Int64 = -1
         private var encodeQueue: DispatchQueue
         
@@ -132,7 +131,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
     
     func createOutFrame(size: CGSize) throws {
         //编码过程中，输出frame指向内存块是固定的，因此在初始化时创建（fill = true）
-        self.outFrame = try self.createFrame(pixFmt: AV_PIX_FMT_YUV420P, size: size, fillIfNecessary: true)
+        self.outFrame = try self.createFrame(pixFmt: self.config.codec.pixelFmt.avPixelFormat, size: size, fillIfNecessary: true)
     }
     
     func destroyOutFrame() {
@@ -191,8 +190,8 @@ extension Codec.FFmpeg.Encoder.VideoSession {
 private
 extension Codec.FFmpeg.Encoder.VideoSession {
 
-    func createSwsCtx(inSize: CGSize, outSize: CGSize) throws {
-        if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), self.config.pixelFmt.avPixelFormat, Int32(outSize.width), Int32(outSize.height), self.config.codec.pixelFmt.avPixelFormat, SWS_FAST_BILINEAR, nil, nil, nil) {
+    func createSwsCtx(inSize: CGSize) throws {
+        if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), self.config.pixelFmt.avPixelFormat, Int32(self.config.outSize.width), Int32(self.config.outSize.height), self.config.codec.pixelFmt.avPixelFormat, SWS_FAST_BILINEAR, nil, nil, nil) {
             self.swsCtx = sws
         }else {
             throw NSError.error(ErrorDomain, reason: "Can not create sws context.")!
@@ -225,7 +224,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
             self.destroySwsCtx()
             do {
                 try self.createInFrame(size: size)
-                try self.createSwsCtx(inSize: size, outSize: self.outSize)
+                try self.createSwsCtx(inSize: size)
             } catch let err {
                 onFinished(err)
             }

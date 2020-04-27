@@ -104,13 +104,14 @@ extension FFmpegEncoder {
         let displays = self.screenCapturer.getSourceList()
         if let item = displays.filter({ return $0.isMainDisplay == true }).first {
             self.currDesktopItem = item
-            let config = Codec.FFmpeg.Video.Config.init(
+            let config = Codec.FFmpeg.Encoder.VideoConfig.init(
                 outSize: .init(width: 1280, height: 720),
                 codec: .MPEG1,
                 bitRate: 1000000,
                 fps: 60,
                 gopSize: 120,
-                dropB: true
+                dropB: true,
+                pixelFmt: .RGB32
             )
             try self.muxer.setVideoStream(config: config)
         }
@@ -160,19 +161,19 @@ extension FFmpegEncoder {
             throw NSError.init(domain: #function, code: -1, userInfo: [NSLocalizedDescriptionKey : "No audio capturer found."])
         }
   
-        guard let fmt = Codec.FFmpeg.Audio.Description.SampleFMT.wraps(from: capturer.audioFormatFlags) else {
+        guard let sampleFmt = Codec.FFmpeg.Audio.PCMDescription.SampleFormat.wraps(from: capturer.audioFormatFlags) else {
             throw NSError.init(domain: #function, code: -1, userInfo: [NSLocalizedDescriptionKey : "Unsupported audio format flags: \(capturer.audioFormatFlags)"])
         }
         
-        let inDesc = Codec.FFmpeg.Audio.Description.init(
+        let pcmDesc = Codec.FFmpeg.Audio.PCMDescription.init(
             channels: capturer.channelCount,
             bitsPerChannel: capturer.bitsPerChannel,
             sampleRate: capturer.sampleRate,
-            sampleFormat: fmt)
+            sampleFmt: sampleFmt)
         
-        let config = Codec.FFmpeg.Audio.Config.init(codec: .MP2, bitRate: 64000)
+        let config = Codec.FFmpeg.Encoder.AudioConfig.init(pcmDesc: pcmDesc, codec: .MP2, bitRate: 64000)
         
-        try self.muxer.setAudioStream(in: inDesc, config: config)
+        try self.muxer.setAudioStream(config: config)
     }
     
     func startAudio() {

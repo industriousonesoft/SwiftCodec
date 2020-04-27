@@ -30,13 +30,12 @@ extension Codec.FFmpeg.Decoder {
         
         init(config: VideoConfig, decodeIn queue: DispatchQueue? = nil) throws {
             self.config = config
-            
             self.decodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.decode.queue")
             try self.createCodec(config: config)
             try self.createDecodedFrame(size: config.outSize)
             try self.createScaledFrame(size: config.outSize)
             try self.createPakcet()
-            try self.createSwsCtx(inSize: config.outSize, outSize: config.outSize)
+            try self.createSwsCtx(inSize: config.outSize)
         }
         
         deinit {
@@ -91,7 +90,7 @@ private
 extension Codec.FFmpeg.Decoder.VideoSession {
 
     func createDecodedFrame(size: CGSize) throws {
-        self.decodedFrame = try self.createFrame(pixFmt: AV_PIX_FMT_YUV420P, size: size, fillIfNecessary: false)
+        self.decodedFrame = try self.createFrame(pixFmt: self.config.codec.pixelFmt.avPixelFormat, size: size, fillIfNecessary: false)
     }
     
     func destroyDecodedFrame() {
@@ -160,8 +159,8 @@ extension Codec.FFmpeg.Decoder.VideoSession {
 private
 extension Codec.FFmpeg.Decoder.VideoSession {
 
-    func createSwsCtx(inSize: CGSize, outSize: CGSize) throws {
-        if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), self.config.codec.pixelFmt.avPixelFormat, Int32(outSize.width), Int32(outSize.height), self.config.pixelFmt.avPixelFormat, SWS_FAST_BILINEAR, nil, nil, nil) {
+    func createSwsCtx(inSize: CGSize) throws {
+        if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), self.config.codec.pixelFmt.avPixelFormat, Int32(self.config.outSize.width), Int32(self.config.outSize.height), self.config.pixelFmt.avPixelFormat, SWS_FAST_BILINEAR, nil, nil, nil) {
             self.swsCtx = sws
         }else {
             throw NSError.error(ErrorDomain, reason: "Can not create sws context.")!
