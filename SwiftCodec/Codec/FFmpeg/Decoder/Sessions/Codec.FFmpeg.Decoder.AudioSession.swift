@@ -290,14 +290,19 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         let inDesc = self.config.srcPCMDesc
         let outDesc = self.config.dstPCMDesc
         
+        
         let src_nb_samples = frame.pointee.nb_samples
         
         let dst_nb_samples = Int32(av_rescale_rnd(swr_get_delay(swr, Int64(inDesc.sampleRate)) + Int64(src_nb_samples), Int64(outDesc.sampleRate), Int64(inDesc.sampleRate), AV_ROUND_UP))
         
-        if self.resampleDstFrameSize != dst_nb_samples {
+        if dst_nb_samples > self.resampleDstFrameSize {
             try self.updateResampleOutBuffer(with: outDesc, nb_samples: dst_nb_samples)
             self.resampleDstFrameSize = dst_nb_samples
         }
+        
+        //TODO: 此处暂时只考虑channel=2的情况，channel>2的情况待优化
+        inBuffer[0] = UnsafePointer<UInt8>(frame.pointee.data.0)
+        inBuffer[1] = UnsafePointer<UInt8>(frame.pointee.data.1)
         
         let nb_samples = swr_convert(swr, outBuffer, dst_nb_samples, inBuffer, src_nb_samples)
         
