@@ -234,9 +234,10 @@ extension Codec.FFmpeg.Decoder.AudioSession {
     }
 }
 
+//MARK: - Decode
 extension Codec.FFmpeg.Decoder.AudioSession {
     
-    func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedDataCallback) {
+    func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedAudioCallback) {
         
         guard let codecCtx = self.codecCtx,
             let packet = self.packet,
@@ -261,9 +262,13 @@ extension Codec.FFmpeg.Decoder.AudioSession {
             
             //To resample if necessary
             if self.config.srcPCMDesc != self.config.dstPCMDesc {
-                
-                
-                
+                do {
+                    let tuple = try self.resample(frame: decodedFrame)
+                    let dataList = try dump(from: tuple.buffer, nb_samples: tuple.nb_samples)
+                    onDecoded(dataList, nil)
+                } catch let err {
+                    onDecoded(nil, err)
+                }
             }
             
         }else {
@@ -279,7 +284,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         av_frame_unref(decodedFrame)
     }
     
-    func resample(frame: UnsafeMutablePointer<AVFrame>) throws {
+    func resample(frame: UnsafeMutablePointer<AVFrame>) throws -> (buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, nb_samples: Int32) {
         
         guard let swr = self.swrCtx,
             let outBuffer = self.resampleOutBuffer,
@@ -307,9 +312,28 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         let nb_samples = swr_convert(swr, outBuffer, dst_nb_samples, inBuffer, src_nb_samples)
         
         if nb_samples > 0 {
-//            return (outBuffer, nb_samples)
+            return (buffer: outBuffer, nb_samples: nb_samples)
         }else {
             throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) => Failed to convert sample buffer.")!
         }
+    }
+}
+
+
+
+//MARK: - Dump
+extension Codec.FFmpeg.Decoder.AudioSession {
+
+    func dump(from buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, nb_samples: Int32) throws -> [Data] {
+        var dataList = Array<Data>.init()
+        if buffer[0] != nil {
+            let data = Data.init(bytes: buffer[0]!, count: Int(nb_samples))
+            dataList.append(data)
+        }
+        if buffer[1] != nil {
+            let data = Data.init(bytes: buffer[1]!, count: Int(nb_samples))
+            dataList.append(data)
+        }
+        return dataList
     }
 }

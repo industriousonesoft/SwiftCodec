@@ -297,7 +297,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 //MARK: - Resample
 extension Codec.FFmpeg.Encoder.AudioSession {
         
-    func resample(bytes: UnsafeMutablePointer<UInt8>, size: Int32) throws -> (UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, Int32) {
+    func resample(bytes: UnsafeMutablePointer<UInt8>, size: Int32) throws -> (buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, nb_samples: Int32) {
         
          guard let swr = self.swrCtx,
             let outBuffer = self.resampleOutBuffer,
@@ -330,7 +330,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         let nb_samples = swr_convert(swr, outBuffer, dst_nb_samples, inBuffer, src_nb_samples)
         
         if nb_samples > 0 {
-            return (outBuffer, nb_samples)
+            return (buffer: outBuffer, nb_samples: nb_samples)
         }else {
             throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) => Failed to convert sample buffer.")!
         }
@@ -394,12 +394,12 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         
         do {
             //To write to FIFO after resampled
-            let (outSampleBuffer, nb_samples) = try self.resample(bytes: bytes, size: size)
+            let tuple = try self.resample(bytes: bytes, size: size)
             
-            if nb_samples > 0 {
+            if tuple.nb_samples > 0 {
 
-                if let error = outSampleBuffer.withMemoryRebound(to: UnsafeMutableRawPointer?.self, capacity: 1, { (buffer)-> Error? in
-                    return self.write(buffer: buffer, frameSize: nb_samples, to: fifo)
+                if let error = tuple.buffer.withMemoryRebound(to: UnsafeMutableRawPointer?.self, capacity: 1, { (buffer)-> Error? in
+                    return self.write(buffer: buffer, frameSize: tuple.nb_samples, to: fifo)
                 }) {
                     onFinished(error)
                     return
