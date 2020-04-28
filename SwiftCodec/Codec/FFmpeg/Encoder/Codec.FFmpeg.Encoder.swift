@@ -48,12 +48,14 @@ extension Codec.FFmpeg.Encoder {
         
         public var codec: Codec.FFmpeg.Audio.CodecType
         public var bitRate: Int64
-        public var pcmDesc: Codec.FFmpeg.Audio.PCMDescription
+        public var dstPCMDesc: Codec.FFmpeg.Audio.PCMDescription
+        public var srcPCMDesc: Codec.FFmpeg.Audio.PCMDescription
         
-        public init(pcmDesc: Codec.FFmpeg.Audio.PCMDescription, codec: Codec.FFmpeg.Audio.CodecType, bitRate: Int64) {
+        public init(codec: Codec.FFmpeg.Audio.CodecType, bitRate: Int64, srcPCMDesc: Codec.FFmpeg.Audio.PCMDescription, dstPCMDesc: Codec.FFmpeg.Audio.PCMDescription ) {
             self.codec = codec
             self.bitRate = bitRate
-            self.pcmDesc = pcmDesc
+            self.srcPCMDesc = srcPCMDesc
+            self.dstPCMDesc = dstPCMDesc
         }
         
     }

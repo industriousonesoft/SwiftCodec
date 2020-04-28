@@ -59,44 +59,44 @@ public extension Codec.FFmpeg {
 
     struct Audio {
         
-        //MARK: - Description
-        public struct PCMDescription: Equatable {
+        public enum SampleFormat {
+            case S16
+            case S16P
+            case FLT
+            case FLTP
             
-            public enum SampleFormat {
-                case S16
-                case S16P
-                case FLT
-                case FLTP
-                
-                var avSampleFmt: AVSampleFormat {
-                    switch self {
-                    case .S16:
-                        return AVSampleFormat(AV_SAMPLE_FMT_S16.rawValue)
-                    case .S16P:
-                        return AVSampleFormat(AV_SAMPLE_FMT_S16P.rawValue)
-                    case .FLT:
-                        return AVSampleFormat(AV_SAMPLE_FMT_FLT.rawValue)
-                    case .FLTP:
-                        return AVSampleFormat(AV_SAMPLE_FMT_FLTP.rawValue)
-                    }
+            var avSampleFmt: AVSampleFormat {
+                switch self {
+                case .S16:
+                    return AVSampleFormat(AV_SAMPLE_FMT_S16.rawValue)
+                case .S16P:
+                    return AVSampleFormat(AV_SAMPLE_FMT_S16P.rawValue)
+                case .FLT:
+                    return AVSampleFormat(AV_SAMPLE_FMT_FLT.rawValue)
+                case .FLTP:
+                    return AVSampleFormat(AV_SAMPLE_FMT_FLTP.rawValue)
                 }
-                
-                public static func wraps(from flags: AudioFormatFlags) -> SampleFormat? {
-                    if (flags & kAudioFormatFlagIsFloat) != 0 && (flags & kAudioFormatFlagIsNonInterleaved) != 0 {
-                        return .FLTP
-                    }else if (flags & kAudioFormatFlagIsFloat) != 0 && (flags & kAudioFormatFlagIsPacked) != 0 {
-                        return .FLT
-                    }else if (flags & kAudioFormatFlagIsSignedInteger) != 0 && (flags & kAudioFormatFlagIsPacked) != 0 {
-                        return .S16
-                    }else if (flags & kAudioFormatFlagIsSignedInteger) != 0 && (flags & kAudioFormatFlagIsNonInterleaved) != 0 {
-                        return .S16P
-                    }else {
-                        return nil
-                    }
-                }
-                
             }
             
+            public static func wraps(from flags: AudioFormatFlags) -> SampleFormat? {
+                if (flags & kAudioFormatFlagIsFloat) != 0 && (flags & kAudioFormatFlagIsNonInterleaved) != 0 {
+                    return .FLTP
+                }else if (flags & kAudioFormatFlagIsFloat) != 0 && (flags & kAudioFormatFlagIsPacked) != 0 {
+                    return .FLT
+                }else if (flags & kAudioFormatFlagIsSignedInteger) != 0 && (flags & kAudioFormatFlagIsPacked) != 0 {
+                    return .S16
+                }else if (flags & kAudioFormatFlagIsSignedInteger) != 0 && (flags & kAudioFormatFlagIsNonInterleaved) != 0 {
+                    return .S16P
+                }else {
+                    return nil
+                }
+            }
+            
+        }
+        
+        //MARK: - Description
+        public struct PCMDescription: Equatable {
+        
             public var sampleRate: Int32
             public var channels: Int32
             public var bitsPerChannel: Int32
@@ -130,18 +130,6 @@ public extension Codec.FFmpeg {
                     return AV_CODEC_ID_AAC
                 }
             }
-            
-            static let DefaultPCMDesc = Audio.PCMDescription.init(channels: Int32(2), bitsPerChannel: Int32(16), sampleRate: Int32(44100), sampleFmt: .S16)
-            
-            var pcmDesc: PCMDescription {
-                switch self {
-                case .MP2:
-                    return CodecType.DefaultPCMDesc
-                case .AAC:
-                    return CodecType.DefaultPCMDesc
-                }
-            }
-            
         }
         
     }

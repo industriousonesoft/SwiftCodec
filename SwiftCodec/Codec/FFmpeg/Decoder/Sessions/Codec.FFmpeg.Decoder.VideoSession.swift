@@ -31,7 +31,7 @@ extension Codec.FFmpeg.Decoder {
         init(config: VideoConfig, decodeIn queue: DispatchQueue? = nil) throws {
             self.config = config
             self.decodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.decode.queue")
-            try self.createCodec(config: config)
+            try self.createCodecCtx(config: config)
             try self.createDecodedFrame(size: config.outSize)
             try self.createScaledFrame(size: config.outSize)
             try self.createPakcet()
@@ -51,7 +51,7 @@ extension Codec.FFmpeg.Decoder {
 private
 extension Codec.FFmpeg.Decoder.VideoSession {
     
-    func createCodec(config: Codec.FFmpeg.Decoder.VideoConfig) throws {
+    func createCodecCtx(config: Codec.FFmpeg.Decoder.VideoConfig) throws {
         
         let codecId: AVCodecID = config.codec.avCodecID
         let codec = avcodec_find_decoder(codecId)
@@ -216,7 +216,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
                 
                 if dstSliceH > 0 {
                     if let bytesTuple = self.dumpRGBBytes(from: decodedFrame, codecCtx: codecCtx) {
-//                        onDecoded(bytesTuple, nil)
+                        //onDecoded(bytesTuple, nil)
                     }else {
                         onDecoded(nil, NSError.error(ErrorDomain, reason: "Failed to dump rgb raw data from avframe."))
                     }

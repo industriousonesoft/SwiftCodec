@@ -35,7 +35,7 @@ extension Codec.FFmpeg.Encoder {
             self.config = config
             self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.AudioSession.encode.queue")
             //查看jsmpeg中mp2解码器代码，mp2格式对应的frame_size（nb_samples）似乎是定值：1152
-            try self.createCodec(config: config)
+            try self.createCodecCtx(config: config)
             //使用fifo管道可以确保音频的读写的连续性，每次达到音频格式对应的缓存值时才读取
             try self.createFIFO(codecCtx: self.codecCtx!)
             try self.createInFrame(codecCtx: self.codecCtx!)
@@ -47,7 +47,7 @@ extension Codec.FFmpeg.Encoder {
             self.destroyInFrame()
             self.destroyFIFO()
             self.destroySwrCtx()
-            self.destroyCodec()
+            self.destroyCodecCtx()
         }
         
     }
@@ -56,7 +56,7 @@ extension Codec.FFmpeg.Encoder {
 
 extension Codec.FFmpeg.Encoder.AudioSession {
     
-    func createCodec(config: Codec.FFmpeg.Encoder.AudioConfig) throws {
+    func createCodecCtx(config: Codec.FFmpeg.Encoder.AudioConfig) throws {
         
         //Codec
         let codecId: AVCodecID = config.codec.avCodecID
@@ -66,28 +66,28 @@ extension Codec.FFmpeg.Encoder.AudioSession {
       
         //Codec Context
         guard let codecCtx = avcodec_alloc_context3(codec) else {
-            throw NSError.error(ErrorDomain, reason: "Can not create audio codec context...")!
+            throw NSError.error(ErrorDomain, reason: "Can not create audio encode context...")!
         }
         codecCtx.pointee.codec_id = codecId
         codecCtx.pointee.codec_type = AVMEDIA_TYPE_AUDIO
-        codecCtx.pointee.sample_fmt = self.config.codec.pcmDesc.sampleFmt.avSampleFmt
-        codecCtx.pointee.channel_layout = self.selectChannelLayout(codec: codec) ?? UInt64(av_get_default_channel_layout(self.config.codec.pcmDesc.channels))//UInt64(AV_CH_LAYOUT_STEREO)
-        codecCtx.pointee.sample_rate = self.selectSampleRate(codec: codec) ?? self.config.codec.pcmDesc.sampleRate //44100
-        codecCtx.pointee.channels = self.config.codec.pcmDesc.channels //2
+        codecCtx.pointee.sample_fmt = self.config.dstPCMDesc.sampleFmt.avSampleFmt
+        codecCtx.pointee.channel_layout = codec.pointee.channelLayout ?? UInt64(av_get_default_channel_layout(self.config.dstPCMDesc.channels))//UInt64(AV_CH_LAYOUT_STEREO)
+        codecCtx.pointee.sample_rate = codec.pointee.sampleRate ?? self.config.dstPCMDesc.sampleRate //44100
+        codecCtx.pointee.channels = self.config.dstPCMDesc.channels //2
         codecCtx.pointee.bit_rate = config.bitRate//64000: 128kbps
         codecCtx.pointee.time_base.num = 1
-        codecCtx.pointee.time_base.den = self.config.codec.pcmDesc.sampleRate
-       
+        codecCtx.pointee.time_base.den = self.config.dstPCMDesc.sampleRate
+     
         //看jsmpeg中mp2解码器代码，mp2格式对应的frame_size（nb_samples）似乎是定值：1152
         guard avcodec_open2(codecCtx, codec, nil) == 0 else {
-            throw NSError.error(ErrorDomain, reason: "Can not open audio avcodec...")!
+            throw NSError.error(ErrorDomain, reason: "Can not open audio encode avcodec...")!
         }
         
         self.codecCtx = codecCtx
         
     }
     
-    func destroyCodec() {
+    func destroyCodecCtx() {
         if let ctx = self.codecCtx {
             avcodec_close(ctx)
             avcodec_free_context(&self.codecCtx)
@@ -131,44 +131,6 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 //MARK: - Initialize Helper
 private
 extension Codec.FFmpeg.Encoder.AudioSession {
-    
-    func selectSampleRate(codec: UnsafeMutablePointer<AVCodec>) -> Int32? {
-        //supported_samplerates is a Int32 array contains all the supported samplerate
-        guard let ptr: UnsafePointer<Int32> = codec.pointee.supported_samplerates else {
-            return nil
-        }
-        var bestSamplerate: Int32 = 0
-        var index: Int = 0
-        var cur = ptr.advanced(by: index).pointee
-        while cur != 0 {
-            if (bestSamplerate == 0 || abs(44100 - cur) < abs(44100 - bestSamplerate)) {
-                bestSamplerate = cur
-            }
-            index += 1
-            cur = ptr.advanced(by: index).pointee
-        }
-        return bestSamplerate
-    }
-    
-    func selectChannelLayout(codec: UnsafeMutablePointer<AVCodec>) -> UInt64? {
-        guard let ptr: UnsafePointer<UInt64> = codec.pointee.channel_layouts else {
-            return nil
-        }
-        var bestChannelLayout: UInt64 = 0
-        var bestChannels: Int32 = 0
-        var index: Int = 0
-        var cur = ptr.advanced(by: index).pointee
-        while cur != 0 {
-            let curChannels = av_get_channel_layout_nb_channels(cur)
-            if curChannels > bestChannels {
-                bestChannelLayout = cur
-                bestChannels = curChannels
-            }
-            index += 1
-            cur = ptr.advanced(by: index).pointee
-        }
-        return bestChannelLayout
-    }
     
     //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
     //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
@@ -219,8 +181,8 @@ private
 extension Codec.FFmpeg.Encoder.AudioSession {
     
     func createSwrCtx() throws {
-        let inDesc = self.config.pcmDesc
-        let outDesc = self.config.codec.pcmDesc
+        let inDesc = self.config.srcPCMDesc
+        let outDesc = self.config.dstPCMDesc
         //Create swrCtx if neccessary
         if inDesc != outDesc {
             self.swrCtx = try self.createSwrCtx(inDesc: inDesc, outDesc: outDesc)
@@ -306,8 +268,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
     
     func resample(bytes: UnsafeMutablePointer<UInt8>, size: Int32) throws -> (UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, Int32) {
         
-        let inDesc = self.config.pcmDesc
-        
+        let inDesc = self.config.srcPCMDesc
         
         //FIXME: 此处需要根据in buffer的格式进行内存格式转换，当前因为输入输出恰好是Packed类型（LRLRLR），只有data[0]有数据，所以直接指针转换即可
         //如果是Planar格式，则需要对多维数组，维度等于channel数量，然后进行内存重映射，参考函数createSampleBuffer
@@ -320,7 +281,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
             
             if let swr = self.swrCtx {
                 
-                let outDesc = self.config.codec.pcmDesc
+                let outDesc = self.config.dstPCMDesc
                 
                 let dst_nb_samples = Int32(av_rescale_rnd(swr_get_delay(swr, Int64(inDesc.sampleRate)) + Int64(src_nb_samples), Int64(outDesc.sampleRate), Int64(inDesc.sampleRate), AV_ROUND_UP))
             

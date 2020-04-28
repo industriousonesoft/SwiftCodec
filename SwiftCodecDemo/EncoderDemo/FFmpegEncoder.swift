@@ -161,17 +161,25 @@ extension FFmpegEncoder {
             throw NSError.init(domain: #function, code: -1, userInfo: [NSLocalizedDescriptionKey : "No audio capturer found."])
         }
   
-        guard let sampleFmt = Codec.FFmpeg.Audio.PCMDescription.SampleFormat.wraps(from: capturer.audioFormatFlags) else {
+        guard let sampleFmt = Codec.FFmpeg.Audio.SampleFormat.wraps(from: capturer.audioFormatFlags) else {
             throw NSError.init(domain: #function, code: -1, userInfo: [NSLocalizedDescriptionKey : "Unsupported audio format flags: \(capturer.audioFormatFlags)"])
         }
         
-        let pcmDesc = Codec.FFmpeg.Audio.PCMDescription.init(
+        let srcPCMDesc = Codec.FFmpeg.Audio.PCMDescription.init(
             channels: capturer.channelCount,
             bitsPerChannel: capturer.bitsPerChannel,
             sampleRate: capturer.sampleRate,
-            sampleFmt: sampleFmt)
+            sampleFmt: sampleFmt
+        )
         
-        let config = Codec.FFmpeg.Encoder.AudioConfig.init(pcmDesc: pcmDesc, codec: .MP2, bitRate: 64000)
+        let dstPCMDesc = Codec.FFmpeg.Audio.PCMDescription.init(
+            channels: 2,
+            bitsPerChannel: 16,
+            sampleRate: 44100,
+            sampleFmt: .S16
+        )
+        
+        let config = Codec.FFmpeg.Encoder.AudioConfig.init(codec: .MP2, bitRate: 64000, srcPCMDesc: srcPCMDesc, dstPCMDesc: dstPCMDesc)
         
         try self.muxer.setAudioStream(config: config)
     }

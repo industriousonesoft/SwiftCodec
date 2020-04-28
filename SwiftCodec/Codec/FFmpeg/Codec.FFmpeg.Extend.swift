@@ -56,3 +56,47 @@ extension AVFrame {
         }
     }
 }
+
+//MARK: - AVCodec Extend
+extension AVCodec {
+    
+    var sampleRate: Int32? {
+        //supported_samplerates is a Int32 array contains all the supported samplerate
+        guard let ptr: UnsafePointer<Int32> = self.supported_samplerates else {
+            return nil
+        }
+        var bestSamplerate: Int32 = 0
+        var index: Int = 0
+        var cur = ptr.advanced(by: index).pointee
+        while cur != 0 {
+            if (bestSamplerate == 0 || abs(44100 - cur) < abs(44100 - bestSamplerate)) {
+                bestSamplerate = cur
+            }
+            index += 1
+            cur = ptr.advanced(by: index).pointee
+        }
+        return bestSamplerate
+    }
+    
+    var channelLayout: UInt64? {
+        
+        guard let ptr: UnsafePointer<UInt64> = self.channel_layouts else {
+            return nil
+        }
+        var bestChannelLayout: UInt64 = 0
+        var bestChannels: Int32 = 0
+        var index: Int = 0
+        var cur = ptr.advanced(by: index).pointee
+        while cur != 0 {
+            let curChannels = av_get_channel_layout_nb_channels(cur)
+            if curChannels > bestChannels {
+                bestChannelLayout = cur
+                bestChannels = curChannels
+            }
+            index += 1
+            cur = ptr.advanced(by: index).pointee
+        }
+        return bestChannelLayout
+    }
+    
+}

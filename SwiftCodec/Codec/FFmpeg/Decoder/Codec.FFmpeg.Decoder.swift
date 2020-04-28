@@ -37,6 +37,24 @@ extension Codec.FFmpeg.Decoder {
             self.pixelFmt = pixelFmt
         }
     }
+    
+    //MARK: - Audio Config
+    struct AudioConfig {
+        
+        public var codec: Codec.FFmpeg.Audio.CodecType
+        public var bitRate: Int64
+        public var srcPCMDesc: Codec.FFmpeg.Audio.PCMDescription
+        
+        public init(codec: Codec.FFmpeg.Audio.CodecType,
+                    bitRate: Int64,
+                    srcPCMDesc: Codec.FFmpeg.Audio.PCMDescription
+        ) {
+            self.codec = codec
+            self.bitRate = bitRate
+            self.srcPCMDesc = srcPCMDesc
+        }
+        
+    }
 }
 
 extension Codec.FFmpeg.Decoder {

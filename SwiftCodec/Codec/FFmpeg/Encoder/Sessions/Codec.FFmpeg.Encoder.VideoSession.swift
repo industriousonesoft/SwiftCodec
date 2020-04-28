@@ -38,7 +38,7 @@ extension Codec.FFmpeg.Encoder {
         init(config: VideoConfig, encodeIn queue: DispatchQueue? = nil) throws {
             self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.encode.queue")
             self.config = config
-            try self.createCodec(config: config)
+            try self.createCodecCtx(config: config)
             try self.createOutFrame(size: config.outSize)
             try self.createOutPakcet()
         }
@@ -49,7 +49,7 @@ extension Codec.FFmpeg.Encoder {
             self.destroyOutFrame()
             self.destroyOutPacket()
             self.destroySwsCtx()
-            self.destroyCodec()
+            self.destroyCodecCtx()
         }
         
     }
@@ -57,7 +57,7 @@ extension Codec.FFmpeg.Encoder {
 
 extension Codec.FFmpeg.Encoder.VideoSession {
     
-    func createCodec(config: Codec.FFmpeg.Encoder.VideoConfig) throws {
+    func createCodecCtx(config: Codec.FFmpeg.Encoder.VideoConfig) throws {
         
         #warning("Deprecated, No neccessary any more!")
         //avcodec_register_all()
@@ -97,7 +97,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         
     }
     
-    func destroyCodec() {
+    func destroyCodecCtx() {
         if let ctx = self.codecCtx {
             avcodec_close(ctx)
             avcodec_free_context(&self.codecCtx)

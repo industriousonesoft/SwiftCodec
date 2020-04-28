@@ -36,6 +36,7 @@ extension Codec.FFmpeg.VideoCompatible where Base: Codec.FFmpeg.Decoder {
     }
 }
 
+//MARK: - Decode Audio
 extension Codec.FFmpeg.Decoder {
     
     func open(config: VideoConfig) throws {
