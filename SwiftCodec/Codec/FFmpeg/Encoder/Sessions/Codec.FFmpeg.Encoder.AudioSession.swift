@@ -21,7 +21,7 @@ extension Codec.FFmpeg.Encoder {
         
         private var fifo: OpaquePointer?
         
-        private var inFrame: UnsafeMutablePointer<AVFrame>?
+        private var encodeFrame: UnsafeMutablePointer<AVFrame>?
         private var outSampleBuffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?
         
         private var swrCtx: OpaquePointer?
@@ -38,13 +38,13 @@ extension Codec.FFmpeg.Encoder {
             try self.createCodecCtx(config: config)
             //使用fifo管道可以确保音频的读写的连续性，每次达到音频格式对应的缓存值时才读取
             try self.createFIFO(codecCtx: self.codecCtx!)
-            try self.createInFrame(codecCtx: self.codecCtx!)
+            try self.createEncodeFrame(codecCtx: self.codecCtx!)
             try self.createSwrCtx()
         }
         
         deinit {
             self.freeSampleBuffer()
-            self.destroyInFrame()
+            self.destroyEncodeFrame()
             self.destroyFIFO()
             self.destroySwrCtx()
             self.destroyCodecCtx()
@@ -102,8 +102,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 private
 extension Codec.FFmpeg.Encoder.AudioSession {
     
-    func createInFrame(codecCtx: UnsafeMutablePointer<AVCodecContext>) throws {
-    
+    func createEncodeFrame(codecCtx: UnsafeMutablePointer<AVCodecContext>) throws {
         guard let frame = av_frame_alloc() else {
             throw NSError.error(ErrorDomain, reason: "Can not create audio codec in frame...")!
         }
@@ -115,13 +114,13 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         guard av_frame_get_buffer(frame, 0) == 0 else {
             throw NSError.error(ErrorDomain, reason: "Failed to Allocate new buffer(s) for audio data:")!
         }
-        self.inFrame = frame
+        self.encodeFrame = frame
     }
     
-    func destroyInFrame() {
-        if let frame = self.inFrame {
+    func destroyEncodeFrame() {
+        if let frame = self.encodeFrame {
             av_free(frame)
-            self.inFrame = nil
+            self.encodeFrame = nil
         }
     }
 }
@@ -273,7 +272,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
     func resample(bytes: UnsafeMutablePointer<UInt8>, size: Int32) throws -> (UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, Int32) {
         
         let inDesc = self.config.srcPCMDesc
-        
+                
         //FIXME: 此处需要根据in buffer的格式进行内存格式转换，当前因为输入输出恰好是Packed类型（LRLRLR），只有data[0]有数据，所以直接指针转换即可
         //如果是Planar格式，则需要对多维数组，维度等于channel数量，然后进行内存重映射，参考函数createSampleBuffer
         var srcBuff = unsafeBitCast(bytes, to: UnsafePointer<UInt8>?.self)
@@ -291,7 +290,6 @@ extension Codec.FFmpeg.Encoder.AudioSession {
             
                 if self.resampleDstFrameSize != dst_nb_samples {
                     self.freeSampleBuffer()
-        
                     try self.createSampleBuffer(desc: outDesc, frameSize: Int32(dst_nb_samples))
                     self.resampleDstFrameSize = dst_nb_samples
                 }
@@ -369,6 +367,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
     func write(bytes: UnsafeMutablePointer<UInt8>, size: Int32, to fifo: OpaquePointer, onFinished: (Error?) -> Void) {
         
         do {
+            //To write to FIFO after resampled
             let (outSampleBuffer, nb_samples) = try self.resample(bytes: bytes, size: size)
             
             if nb_samples > 0 {
@@ -392,12 +391,12 @@ extension Codec.FFmpeg.Encoder.AudioSession {
     private
     func readAndEncode(from fifo: OpaquePointer, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
         
-        guard let codecCtx = self.codecCtx, let inFrame = self.inFrame else {
+        guard let codecCtx = self.codecCtx, let encodeFrame = self.encodeFrame else {
             onEncoded(nil, NSError.error(ErrorDomain, reason: "Not for ready to encode yet.")!)
             return
         }
         
-        let readFrameSize = self.read(from: fifo, frameSize: codecCtx.pointee.frame_size, to: inFrame)
+        let readFrameSize = self.read(from: fifo, frameSize: codecCtx.pointee.frame_size, to: encodeFrame)
           //当前编码对应的缓存区未填充满
           if readFrameSize < 0 {
               return
@@ -405,13 +404,13 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         
           //pts(presentation timestamp): Calculate the time of the sum of sample count for now as the timestmap
           //计算目前为止的采用数所使用的时间作为显示时间戳
-          self.sampleCount += Int64(inFrame.pointee.nb_samples)
+          self.sampleCount += Int64(encodeFrame.pointee.nb_samples)
           let pts = av_rescale_q(self.sampleCount, AVRational.init(num: 1, den: codecCtx.pointee.sample_rate), codecCtx.pointee.time_base)
-          inFrame.pointee.pts = pts
+          encodeFrame.pointee.pts = pts
           
           print("[Audio] encode for now...: \(self.sampleCount) - \(pts)")
           
-          self.encode(inFrame, with: codecCtx, onFinished: onEncoded)
+          self.encode(encodeFrame, with: codecCtx, onFinished: onEncoded)
     }
   
     private

@@ -83,12 +83,10 @@
 		EE7BCC7A2453E64100672009 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		EE7BCC7D2453E64100672009 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		EE7BCC7F2453E64100672009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		EE7BCC802453E64100672009 /* SwiftCodecDemo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SwiftCodecDemo.entitlements; sourceTree = "<group>"; };
 		EE7BCCBE2453E7BC00672009 /* EncoderDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EncoderDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE7BCCC22453E7C400672009 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		EE7BCCC52453E7C400672009 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		EE7BCCCC2453E81100672009 /* AudioCapturer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AudioCapturer.swift; sourceTree = "<group>"; };
-		EE7BCCCD2453E81100672009 /* CodecDemo.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = CodecDemo.entitlements; sourceTree = "<group>"; };
 		EE7BCCCE2453E81100672009 /* Utilities.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
 		EE7BCCCF2453E81100672009 /* FFmpegEncoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FFmpegEncoder.swift; sourceTree = "<group>"; };
 		EE7BCCD12453E81200672009 /* ZDAudioManager_shim.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ZDAudioManager_shim.h; sourceTree = "<group>"; };
@@ -222,6 +220,8 @@
 		EE7BCEA92453EDDF00672009 /* libx265.169.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libx265.169.dylib; sourceTree = "<group>"; };
 		EE7BCEAA2453EDDF00672009 /* libavcodec.58.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libavcodec.58.dylib; sourceTree = "<group>"; };
 		EE7BCEAB2453EDDF00672009 /* libogg.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libogg.0.dylib; sourceTree = "<group>"; };
+		EE8A92EE245815C5004AD084 /* EncoderDemo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EncoderDemo.entitlements; sourceTree = "<group>"; };
+		EE8A92EF24581607004AD084 /* DecoderDemo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DecoderDemo.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -267,11 +267,11 @@
 		EE7BCC772453E63800672009 /* DecoderDemo */ = {
 			isa = PBXGroup;
 			children = (
+				EE8A92EF24581607004AD084 /* DecoderDemo.entitlements */,
 				EE7BCC782453E63800672009 /* AppDelegate.swift */,
 				EE7BCC7A2453E64100672009 /* Assets.xcassets */,
 				EE7BCC7C2453E64100672009 /* MainMenu.xib */,
 				EE7BCC7F2453E64100672009 /* Info.plist */,
-				EE7BCC802453E64100672009 /* SwiftCodecDemo.entitlements */,
 			);
 			path = DecoderDemo;
 			sourceTree = "<group>";
@@ -322,7 +322,7 @@
 			isa = PBXGroup;
 			children = (
 				EE7BCCC22453E7C400672009 /* Assets.xcassets */,
-				EE7BCCCD2453E81100672009 /* CodecDemo.entitlements */,
+				EE8A92EE245815C5004AD084 /* EncoderDemo.entitlements */,
 				EE7BCCC42453E7C400672009 /* MainMenu.xib */,
 				EE7BCCEA2453EA0E00672009 /* Info.plist */,
 			);
@@ -773,7 +773,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = SwiftCodecDemo/SwiftCodecDemo.entitlements;
+				CODE_SIGN_ENTITLEMENTS = DecoderDemo/DecoderDemo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				INFOPLIST_FILE = DecoderDemo/Info.plist;
@@ -795,7 +795,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = SwiftCodecDemo/SwiftCodecDemo.entitlements;
+				CODE_SIGN_ENTITLEMENTS = DecoderDemo/DecoderDemo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				INFOPLIST_FILE = DecoderDemo/Info.plist;

@@ -187,7 +187,8 @@ extension Codec.FFmpeg.Decoder.VideoSession {
             let decodedFrame = self.decodedFrame,
             let scaledFrame = self.scaledFrame,
             let swsCtx = self.swsCtx else {
-            return
+                onDecoded(nil, NSError.error(ErrorDomain, reason: "Video decoder not initialized yet.")!)
+                return
         }
         
         av_init_packet(packet)
@@ -197,7 +198,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
         var ret = avcodec_send_packet(codecCtx, packet)
         
         if ret < 0 {
-            onDecoded(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when decodeing video.")!)
+            onDecoded(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when sending video packet for decoding.")!)
             return
         }
         
@@ -234,13 +235,14 @@ extension Codec.FFmpeg.Decoder.VideoSession {
             
         }else {
             if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {
-                print("avcodec_send_packet() encoder flushed...")
+                print("[Video] avcodec_receive_frame() encoder flushed...")
             }else if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EAGAIN {
-                print("avcodec_send_packet() need more input...")
+                print("[Video] avcodec_receive_frame() need more input...")
             }else if ret < 0 {
-                onDecoded(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when decoding video.")!)
+                onDecoded(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when receiving video frame.")!)
             }
         }
+        
         av_frame_unref(decodedFrame)
         
     }

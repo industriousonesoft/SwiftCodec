@@ -111,7 +111,8 @@ extension FFmpegEncoder {
                 fps: 60,
                 gopSize: 120,
                 dropB: true,
-                pixelFmt: .RGB32
+                srcPixelFmt: .RGB32,
+                dstPixelFmt: .YUV420P
             )
             try self.muxer.setVideoStream(config: config)
         }

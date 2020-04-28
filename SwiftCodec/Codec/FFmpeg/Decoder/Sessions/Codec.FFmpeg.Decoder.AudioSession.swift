@@ -95,6 +95,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         frame.pointee.format = codecCtx.pointee.sample_fmt.rawValue
         frame.pointee.sample_rate = codecCtx.pointee.sample_rate
         
+        //不需要手动分配内存，解码过程中会自动分配
 //        guard av_frame_get_buffer(frame, 0) == 0 else {
 //            throw NSError.error(ErrorDomain, reason: "Failed to Allocate new buffer(s) for audio data:")!
 //        }
@@ -203,5 +204,46 @@ extension Codec.FFmpeg.Decoder.AudioSession {
             throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) Can not create and alloc audio swr...")!
         }
         
+    }
+}
+
+extension Codec.FFmpeg.Decoder.AudioSession {
+    
+    func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedDataCallback) {
+        
+        guard let codecCtx = self.codecCtx,
+            let packet = self.packet,
+            let decodedFrame = self.decodedFrame else {
+                onDecoded(nil, NSError.error(ErrorDomain, reason: "Audio decoder not initialized yet.")!)
+                return
+        }
+        av_init_packet(packet)
+        packet.pointee.data = bytes
+        packet.pointee.size = size
+        
+        var ret = avcodec_send_packet(codecCtx, packet)
+        
+        if ret < 0 {
+            onDecoded(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when sending audio packet for decoding.")!)
+            return
+        }
+        
+        ret = avcodec_receive_frame(codecCtx, decodedFrame)
+        
+        if ret == 0 {
+            
+           
+            
+        }else {
+            if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {
+                print("[Audio] avcodec_receive_frame() encoder flushed...")
+            }else if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EAGAIN {
+                print("[Audio] avcodec_receive_frame() need more input...")
+            }else if ret < 0 {
+                onDecoded(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when recriving audio frame.")!)
+            }
+        }
+        
+        av_frame_unref(decodedFrame)
     }
 }
