@@ -20,11 +20,15 @@ extension Codec.FFmpeg.Decoder {
         private var codecCtx: UnsafeMutablePointer<AVCodecContext>?
 
         private var decodedFrame: UnsafeMutablePointer<AVFrame>?
-        private var outSampleBuffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?
+        
+        private var resampleInBuffer: UnsafeMutablePointer<UnsafePointer<UInt8>?>?
+        private var resampleOutBuffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?
      
         private var packet: UnsafeMutablePointer<AVPacket>?
         
         private var swrCtx: OpaquePointer?
+        
+        private var resampleDstFrameSize: Int32 = 0
         
         init(config: AudioConfig, decodeIn queue: DispatchQueue? = nil) throws {
             self.config = config
@@ -32,11 +36,15 @@ extension Codec.FFmpeg.Decoder {
             try self.createCodecContext(config: config)
             try self.createPakcet()
             try self.createDecodedFrame(codecCtx: self.codecCtx!)
+            try self.createResampleInBuffer(desc: self.config.srcPCMDesc)
+            try self.createResampleOutBuffer(desc: self.config.dstPCMDesc)
             try self.createSwrCtx()
         }
         
         deinit {
             self.destroySwrCtx()
+            self.destroyResampleOutBuffer()
+            self.destroyResampleInBuffer()
             self.destroyDecodedFrame()
             self.destroyPacket()
             self.destroyCodecCtx()
@@ -95,10 +103,6 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         frame.pointee.format = codecCtx.pointee.sample_fmt.rawValue
         frame.pointee.sample_rate = codecCtx.pointee.sample_rate
         
-        //不需要手动分配内存，解码过程中会自动分配
-//        guard av_frame_get_buffer(frame, 0) == 0 else {
-//            throw NSError.error(ErrorDomain, reason: "Failed to Allocate new buffer(s) for audio data:")!
-//        }
         self.decodedFrame = frame
     }
     
@@ -110,33 +114,56 @@ extension Codec.FFmpeg.Decoder.AudioSession {
     }
 }
 
-//MARK: - SampleBuffer
+//MARK: - In SampleBuffer
 private
 extension Codec.FFmpeg.Decoder.AudioSession {
     
     //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
     //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
-    func createSampleBuffer(desc: Codec.FFmpeg.Audio.PCMDescription, frameSize: Int32) throws {
-        
-        //申请一个多维数组，维度等于音频的channel数
-        let buffer = calloc(Int(desc.channels), MemoryLayout<UnsafeMutablePointer<UnsafeMutablePointer<UInt8>>>.stride).assumingMemoryBound(to: UnsafeMutablePointer<UInt8>?.self)
-        
-        //分别给每一个channle对于的缓存分配空间: nb_samples * channles * bitsPreChannel / 8， 其中nb_samples等价于frameSize， bitsPreChannel可由sample_fmt推断得出
-        let ret = av_samples_alloc(buffer, nil, desc.channels, frameSize, desc.sampleFmt.avSampleFmt, 0)
-        if ret < 0 {
-            av_freep(buffer)
-            free(buffer)
-            throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) Could not allocate converted input samples...\(ret)")!
-        }
-        
-        self.outSampleBuffer = buffer
+    func createResampleInBuffer(desc: Codec.FFmpeg.Audio.PCMDescription) throws {
+        self.resampleInBuffer = UnsafeMutablePointer<UnsafePointer<UInt8>?>.allocate(capacity: Int(desc.channels))
     }
     
-    func freeSampleBuffer() {
-        if self.outSampleBuffer != nil {
-            av_freep(self.outSampleBuffer)
-            free(self.outSampleBuffer)
-            self.outSampleBuffer = nil
+    func destroyResampleInBuffer() {
+        if self.resampleInBuffer != nil {
+            self.resampleInBuffer!.deallocate()
+            self.resampleInBuffer = nil
+        }
+    }
+    
+}
+
+//MARK: - Out SampleBuffer
+private
+extension Codec.FFmpeg.Decoder.AudioSession {
+    
+    //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
+    //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
+    func createResampleOutBuffer(desc: Codec.FFmpeg.Audio.PCMDescription) throws {
+        //申请一个多维数组，维度等于音频的channel数
+//        let buffer = calloc(Int(desc.channels), MemoryLayout<UnsafeMutablePointer<UnsafeMutablePointer<UInt8>>>.stride).assumingMemoryBound(to: UnsafeMutablePointer<UInt8>?.self)
+        self.resampleOutBuffer = UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>.allocate(capacity: Int(desc.channels))
+    }
+    
+    func destroyResampleOutBuffer() {
+        if self.resampleOutBuffer != nil {
+            av_freep(self.resampleOutBuffer)
+            self.resampleOutBuffer!.deallocate()
+            self.resampleOutBuffer = nil
+        }
+    }
+    
+    func updateResampleOutBuffer(with desc: Codec.FFmpeg.Audio.PCMDescription, nb_samples: Int32) throws {
+        
+        guard let buffer = self.resampleOutBuffer else {
+            throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) Resample out buffer not created yet.")!
+        }
+        //Free last allocated memory
+        av_freep(buffer)
+        //分别给每一个channle对于的缓存分配空间: nb_samples * channles * bitsPreChannel / 8， 其中nb_samples等价于frameSize， bitsPreChannel可由sample_fmt推断得出
+        let ret = av_samples_alloc(buffer, nil, desc.channels, nb_samples, desc.sampleFmt.avSampleFmt, 0)
+        if ret < 0 {
+            throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) Could not allocate converted input samples...\(ret)")!
         }
     }
     
@@ -232,7 +259,12 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         
         if ret == 0 {
             
-           
+            //To resample if necessary
+            if self.config.srcPCMDesc != self.config.dstPCMDesc {
+                
+                
+                
+            }
             
         }else {
             if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {
@@ -245,5 +277,34 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         }
         
         av_frame_unref(decodedFrame)
+    }
+    
+    func resample(frame: UnsafeMutablePointer<AVFrame>) throws {
+        
+        guard let swr = self.swrCtx,
+            let outBuffer = self.resampleOutBuffer,
+            let inBuffer = self.resampleInBuffer else {
+            throw NSError.error(ErrorDomain, reason: "Swr context not created yet.")!
+        }
+        
+        let inDesc = self.config.srcPCMDesc
+        let outDesc = self.config.dstPCMDesc
+        
+        let src_nb_samples = frame.pointee.nb_samples
+        
+        let dst_nb_samples = Int32(av_rescale_rnd(swr_get_delay(swr, Int64(inDesc.sampleRate)) + Int64(src_nb_samples), Int64(outDesc.sampleRate), Int64(inDesc.sampleRate), AV_ROUND_UP))
+        
+        if self.resampleDstFrameSize != dst_nb_samples {
+            try self.updateResampleOutBuffer(with: outDesc, nb_samples: dst_nb_samples)
+            self.resampleDstFrameSize = dst_nb_samples
+        }
+        
+        let nb_samples = swr_convert(swr, outBuffer, dst_nb_samples, inBuffer, src_nb_samples)
+        
+        if nb_samples > 0 {
+//            return (outBuffer, nb_samples)
+        }else {
+            throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) => Failed to convert sample buffer.")!
+        }
     }
 }

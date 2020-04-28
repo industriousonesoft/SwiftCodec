@@ -22,7 +22,9 @@ extension Codec.FFmpeg.Encoder {
         private var fifo: OpaquePointer?
         
         private var encodeFrame: UnsafeMutablePointer<AVFrame>?
-        private var outSampleBuffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?
+        
+        private var resampleInBuffer: UnsafeMutablePointer<UnsafePointer<UInt8>?>?
+        private var resampleOutBuffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?
         
         private var swrCtx: OpaquePointer?
         
@@ -36,6 +38,8 @@ extension Codec.FFmpeg.Encoder {
             self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.AudioSession.encode.queue")
             //查看jsmpeg中mp2解码器代码，mp2格式对应的frame_size（nb_samples）似乎是定值：1152
             try self.createCodecCtx(config: config)
+            try self.createResampleInBuffer(desc: self.config.srcPCMDesc)
+            try self.createResampleOutBuffer(desc: self.config.dstPCMDesc)
             try self.createSwrCtx()
             //使用fifo管道可以确保音频的读写的连续性，每次达到音频格式对应的缓存值时才读取
             try self.createFIFO(codecCtx: self.codecCtx!)
@@ -43,10 +47,11 @@ extension Codec.FFmpeg.Encoder {
         }
         
         deinit {
-            self.freeSampleBuffer()
             self.destroyEncodeFrame()
             self.destroyFIFO()
             self.destroySwrCtx()
+            self.destroyResampleOutBuffer()
+            self.destroyResampleInBuffer()
             self.destroyCodecCtx()
         }
         
@@ -124,36 +129,60 @@ extension Codec.FFmpeg.Encoder.AudioSession {
     }
 }
 
-//MARK: - SampleBuffer
+//MARK: - In SampleBuffer
 private
 extension Codec.FFmpeg.Encoder.AudioSession {
     
     //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
     //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
-    func createSampleBuffer(desc: Codec.FFmpeg.Audio.PCMDescription, frameSize: Int32) throws {
-        
+    func createResampleInBuffer(desc: Codec.FFmpeg.Audio.PCMDescription) throws {
+        self.resampleInBuffer = UnsafeMutablePointer<UnsafePointer<UInt8>?>.allocate(capacity: Int(desc.channels))
+    }
+    
+    func destroyResampleInBuffer() {
+        if self.resampleInBuffer != nil {
+            self.resampleInBuffer!.deallocate()
+            self.resampleInBuffer = nil
+        }
+    }
+    
+}
+
+//MARK: - Out SampleBuffer
+private
+extension Codec.FFmpeg.Encoder.AudioSession {
+    
+    //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
+    //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
+    func createResampleOutBuffer(desc: Codec.FFmpeg.Audio.PCMDescription) throws {
         //申请一个多维数组，维度等于音频的channel数
-        let buffer = calloc(Int(desc.channels), MemoryLayout<UnsafeMutablePointer<UnsafeMutablePointer<UInt8>>>.stride).assumingMemoryBound(to: UnsafeMutablePointer<UInt8>?.self)
-        
+//        let buffer = calloc(Int(desc.channels), MemoryLayout<UnsafeMutablePointer<UnsafeMutablePointer<UInt8>>>.stride).assumingMemoryBound(to: UnsafeMutablePointer<UInt8>?.self)
+        self.resampleOutBuffer = UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>.allocate(capacity: Int(desc.channels))
+    }
+    
+    func destroyResampleOutBuffer() {
+        if self.resampleOutBuffer != nil {
+            av_freep(self.resampleOutBuffer)
+            self.resampleOutBuffer!.deallocate()
+            self.resampleOutBuffer = nil
+        }
+    }
+    
+}
+
+//MARK: - Resample Helper
+private
+extension Codec.FFmpeg.Encoder.AudioSession {
+    
+    func updateSample(buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, with desc: Codec.FFmpeg.Audio.PCMDescription, nb_samples: Int32) throws {
+        //Free last allocated memory
+        av_freep(buffer)
         //分别给每一个channle对于的缓存分配空间: nb_samples * channles * bitsPreChannel / 8， 其中nb_samples等价于frameSize， bitsPreChannel可由sample_fmt推断得出
-        let ret = av_samples_alloc(buffer, nil, desc.channels, frameSize, desc.sampleFmt.avSampleFmt, 0)
+        let ret = av_samples_alloc(buffer, nil, desc.channels, nb_samples, desc.sampleFmt.avSampleFmt, 0)
         if ret < 0 {
-            av_freep(buffer)
-            free(buffer)
             throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) Could not allocate converted input samples...\(ret)")!
         }
-        
-        self.outSampleBuffer = buffer
     }
-    
-    func freeSampleBuffer() {
-        if self.outSampleBuffer != nil {
-            av_freep(self.outSampleBuffer)
-            free(self.outSampleBuffer)
-            self.outSampleBuffer = nil
-        }
-    }
-    
 }
 
 //MARK: - FIFO
@@ -270,38 +299,40 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         
     func resample(bytes: UnsafeMutablePointer<UInt8>, size: Int32) throws -> (UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, Int32) {
         
-        guard let swr = self.swrCtx else {
-            throw NSError.error(ErrorDomain, reason: "Swr context not initialized yet.")!
+         guard let swr = self.swrCtx,
+            let outBuffer = self.resampleOutBuffer,
+            let inBuffer = self.resampleInBuffer else {
+                throw NSError.error(ErrorDomain, reason: "Swr context not created yet.")!
         }
         
         let inDesc = self.config.srcPCMDesc
-                
+        //nb_samples: bytes per channel
+        //nb_bytes（单位：字节） = (nb_samples * nb_channel * nb_bitsPerChannel) / 8 /*bits per bytes*/
+        let src_nb_samples = size / (inDesc.channels * inDesc.bitsPerChannel / 8)
+        
+        let outDesc = self.config.dstPCMDesc
+            
+        let dst_nb_samples = Int32(av_rescale_rnd(swr_get_delay(swr, Int64(inDesc.sampleRate)) + Int64(src_nb_samples), Int64(outDesc.sampleRate), Int64(inDesc.sampleRate), AV_ROUND_UP))
+    
+        //在写入fifo时可以指定写入的nb_samples，因此此处保留最大的内存分配，避免频繁申请和释放内存
+        if dst_nb_samples > self.resampleDstFrameSize {
+//            print("resample: \(self.resampleDstFrameSize) - \(dst_nb_samples)")
+            try self.updateSample(buffer: outBuffer, with: outDesc, nb_samples: dst_nb_samples)
+            self.resampleDstFrameSize = dst_nb_samples
+        }
+        
         //FIXME: 此处需要根据in buffer的格式进行内存格式转换，当前因为输入输出恰好是Packed类型（LRLRLR），只有data[0]有数据，所以直接指针转换即可
         //如果是Planar格式，则需要对多维数组，维度等于channel数量，然后进行内存重映射，参考函数createSampleBuffer
-        var srcBuff = unsafeBitCast(bytes, to: UnsafePointer<UInt8>?.self)
+        //UnsafePointers can be initialized with an UnsafeMutablePointer
+        inBuffer[0] = UnsafePointer<UInt8>(bytes)
+        inBuffer[1] = nil
+    
+        let nb_samples = swr_convert(swr, outBuffer, dst_nb_samples, inBuffer, src_nb_samples)
         
-        return try withUnsafeMutablePointer(to: &srcBuff) { [unowned self] (ptr) -> (UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, Int32) in
-            //nb_samples: 时间 * 采本率
-            //nb_bytes（单位：字节） = (nb_samples * nb_channel * nb_bitsPerChannel) / 8 /*bits per bytes*/
-            let src_nb_samples = size / (inDesc.channels * inDesc.bitsPerChannel / 8)
-            
-            let outDesc = self.config.dstPCMDesc
-                
-            let dst_nb_samples = Int32(av_rescale_rnd(swr_get_delay(swr, Int64(inDesc.sampleRate)) + Int64(src_nb_samples), Int64(outDesc.sampleRate), Int64(inDesc.sampleRate), AV_ROUND_UP))
-        
-            if self.resampleDstFrameSize != dst_nb_samples {
-                self.freeSampleBuffer()
-                try self.createSampleBuffer(desc: outDesc, frameSize: Int32(dst_nb_samples))
-                self.resampleDstFrameSize = dst_nb_samples
-            }
-           
-            let nb_samples = swr_convert(swr, self.outSampleBuffer, dst_nb_samples, ptr, src_nb_samples)
-            
-            if nb_samples > 0 {
-                return (self.outSampleBuffer!, nb_samples)
-            }else {
-                throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) => Failed to convert sample buffer.")!
-            }
+        if nb_samples > 0 {
+            return (outBuffer, nb_samples)
+        }else {
+            throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) => Failed to convert sample buffer.")!
         }
         
     }
