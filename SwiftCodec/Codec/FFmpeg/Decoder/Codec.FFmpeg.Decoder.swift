@@ -12,7 +12,7 @@ import CFFmpeg
 extension Codec.FFmpeg {
     public class Decoder {
         var videoSession: VideoSession? = nil
-        
+        var audioSession: AudioSession? = nil
         public init() {}
     }
     

@@ -23,9 +23,31 @@ extension Codec.FFmpeg.Decoder {
 public
 extension Codec.FFmpeg.AudioCompatible where Base: Codec.FFmpeg.Decoder {
     
+    func open(config: Codec.FFmpeg.Decoder.AudioConfig) throws {
+        try self.base.open(config: config)
+    }
+    
+    func close() {
+        self.base.closeAudioSession()
+    }
+    
+    func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedAudioCallback) {
+        self.base.decode(bytes: bytes, size: size, timestamp: timestamp, onDecoded: onDecoded)
+    }
 }
 
 //MARK: - Decode Audio
 extension Codec.FFmpeg.Decoder {
     
+    func open(config: AudioConfig) throws {
+        self.audioSession = try AudioSession.init(config: config)
+    }
+    
+    func closeAudioSession() {
+        self.audioSession = nil
+    }
+    
+    func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedAudioCallback) {
+        self.audioSession?.decode(bytes: bytes, size: size, timestamp: timestamp, onDecoded: onDecoded)
+    }
 }
