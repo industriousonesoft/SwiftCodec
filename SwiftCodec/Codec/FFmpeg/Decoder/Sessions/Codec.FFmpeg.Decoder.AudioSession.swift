@@ -18,14 +18,28 @@ extension Codec.FFmpeg.Decoder {
         private var decodeQueue: DispatchQueue
         
         private var codecCtx: UnsafeMutablePointer<AVCodecContext>?
-        
+
         private var decodedFrame: UnsafeMutablePointer<AVFrame>?
+        private var outSampleBuffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?
      
         private var packet: UnsafeMutablePointer<AVPacket>?
         
-        init(config: AudioConfig, decodeIn queue: DispatchQueue? = nil) {
+        private var swrCtx: OpaquePointer?
+        
+        init(config: AudioConfig, decodeIn queue: DispatchQueue? = nil) throws {
             self.config = config
             self.decodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.decode.queue")
+            try self.createCodecContext(config: config)
+            try self.createPakcet()
+            try self.createDecodedFrame(codecCtx: self.codecCtx!)
+            try self.createSwrCtx()
+        }
+        
+        deinit {
+            self.destroySwrCtx()
+            self.destroyDecodedFrame()
+            self.destroyPacket()
+            self.destroyCodecCtx()
         }
     }
 }
@@ -65,4 +79,129 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         }
     }
     
+}
+
+//MARK: - AVFrame
+private
+extension Codec.FFmpeg.Decoder.AudioSession {
+    
+    func createDecodedFrame(codecCtx: UnsafeMutablePointer<AVCodecContext>) throws {
+    
+        guard let frame = av_frame_alloc() else {
+            throw NSError.error(ErrorDomain, reason: "Can not create audio codec in frame...")!
+        }
+        frame.pointee.nb_samples = codecCtx.pointee.frame_size
+        frame.pointee.channel_layout = codecCtx.pointee.channel_layout
+        frame.pointee.format = codecCtx.pointee.sample_fmt.rawValue
+        frame.pointee.sample_rate = codecCtx.pointee.sample_rate
+        
+//        guard av_frame_get_buffer(frame, 0) == 0 else {
+//            throw NSError.error(ErrorDomain, reason: "Failed to Allocate new buffer(s) for audio data:")!
+//        }
+        self.decodedFrame = frame
+    }
+    
+    func destroyDecodedFrame() {
+        if let frame = self.decodedFrame {
+            av_free(frame)
+            self.decodedFrame = nil
+        }
+    }
+}
+
+//MARK: - SampleBuffer
+private
+extension Codec.FFmpeg.Decoder.AudioSession {
+    
+    //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
+    //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
+    func createSampleBuffer(desc: Codec.FFmpeg.Audio.PCMDescription, frameSize: Int32) throws {
+        
+        //申请一个多维数组，维度等于音频的channel数
+        let buffer = calloc(Int(desc.channels), MemoryLayout<UnsafeMutablePointer<UnsafeMutablePointer<UInt8>>>.stride).assumingMemoryBound(to: UnsafeMutablePointer<UInt8>?.self)
+        
+        //分别给每一个channle对于的缓存分配空间: nb_samples * channles * bitsPreChannel / 8， 其中nb_samples等价于frameSize， bitsPreChannel可由sample_fmt推断得出
+        let ret = av_samples_alloc(buffer, nil, desc.channels, frameSize, desc.sampleFmt.avSampleFmt, 0)
+        if ret < 0 {
+            av_freep(buffer)
+            free(buffer)
+            throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) Could not allocate converted input samples...\(ret)")!
+        }
+        
+        self.outSampleBuffer = buffer
+    }
+    
+    func freeSampleBuffer() {
+        if self.outSampleBuffer != nil {
+            av_freep(self.outSampleBuffer)
+            free(self.outSampleBuffer)
+            self.outSampleBuffer = nil
+        }
+    }
+    
+}
+
+//MARK: - AVPacket
+private
+extension Codec.FFmpeg.Decoder.AudioSession {
+    
+    func createPakcet() throws {
+        guard let packet = av_packet_alloc() else {
+            throw NSError.error(ErrorDomain, reason: "Failed to alloc packet.")!
+        }
+        self.packet = packet
+    }
+    
+    func destroyPacket() {
+        if self.packet != nil {
+            av_packet_free(&self.packet)
+            self.packet = nil
+        }
+    }
+}
+
+//MARK: - Swr Context
+private
+extension Codec.FFmpeg.Decoder.AudioSession {
+    
+    func createSwrCtx() throws {
+        let inDesc = self.config.srcPCMDesc
+        let outDesc = self.config.dstPCMDesc
+        //Create swrCtx if neccessary
+        if inDesc != outDesc {
+            self.swrCtx = try self.createSwrCtx(inDesc: inDesc, outDesc: outDesc)
+        }
+    }
+    
+    func destroySwrCtx() {
+        if let swr = self.swrCtx {
+            swr_close(swr)
+            swr_free(&self.swrCtx)
+            self.swrCtx = nil
+        }
+    }
+    
+    func createSwrCtx(inDesc: Codec.FFmpeg.Audio.PCMDescription, outDesc: Codec.FFmpeg.Audio.PCMDescription) throws -> OpaquePointer? {
+        //swr
+        if let swrCtx = swr_alloc_set_opts(nil,
+                                    av_get_default_channel_layout(outDesc.channels),
+                                    outDesc.sampleFmt.avSampleFmt,
+                                    outDesc.sampleRate,
+                                    av_get_default_channel_layout(inDesc.channels),
+                                    inDesc.sampleFmt.avSampleFmt,
+                                    inDesc.sampleRate,
+                                    0,
+                                    nil
+            ) {
+            let ret = swr_init(swrCtx)
+            if ret == 0 {
+                return swrCtx
+            }else {
+                throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) Can not init audio swr with returns: \(ret)")!
+            }
+        }else {
+            throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) Can not create and alloc audio swr...")!
+        }
+        
+    }
 }

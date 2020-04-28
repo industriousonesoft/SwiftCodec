@@ -44,16 +44,16 @@ extension Codec.FFmpeg.Decoder {
     struct AudioConfig {
         
         public var codec: Codec.FFmpeg.Audio.CodecType
-        public var bitRate: Int64
         public var srcPCMDesc: Codec.FFmpeg.Audio.PCMDescription
+        public var dstPCMDesc: Codec.FFmpeg.Audio.PCMDescription
         
         public init(codec: Codec.FFmpeg.Audio.CodecType,
-                    bitRate: Int64,
-                    srcPCMDesc: Codec.FFmpeg.Audio.PCMDescription
+                    srcPCMDesc: Codec.FFmpeg.Audio.PCMDescription,
+                    dstPCMDesc: Codec.FFmpeg.Audio.PCMDescription
         ) {
             self.codec = codec
-            self.bitRate = bitRate
             self.srcPCMDesc = srcPCMDesc
+            self.dstPCMDesc = dstPCMDesc
         }
         
     }

@@ -98,7 +98,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 }
 
 
-//MARK: - Frame
+//MARK: - AVFrame
 private
 extension Codec.FFmpeg.Encoder.AudioSession {
     
@@ -124,17 +124,15 @@ extension Codec.FFmpeg.Encoder.AudioSession {
             self.inFrame = nil
         }
     }
-    
 }
 
-
-//MARK: - Initialize Helper
+//MARK: - SampleBuffer
 private
 extension Codec.FFmpeg.Encoder.AudioSession {
     
     //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
     //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
-    func createSampleBuffer(desc: Codec.FFmpeg.Audio.PCMDescription, frameSize: Int32) throws -> UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?> {
+    func createSampleBuffer(desc: Codec.FFmpeg.Audio.PCMDescription, frameSize: Int32) throws {
         
         //申请一个多维数组，维度等于音频的channel数
         let buffer = calloc(Int(desc.channels), MemoryLayout<UnsafeMutablePointer<UnsafeMutablePointer<UInt8>>>.stride).assumingMemoryBound(to: UnsafeMutablePointer<UInt8>?.self)
@@ -145,9 +143,9 @@ extension Codec.FFmpeg.Encoder.AudioSession {
             av_freep(buffer)
             free(buffer)
             throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) Could not allocate converted input samples...\(ret)")!
-        }else {
-            return buffer
         }
+        
+        self.outSampleBuffer = buffer
     }
     
     func freeSampleBuffer() {
@@ -157,6 +155,12 @@ extension Codec.FFmpeg.Encoder.AudioSession {
             self.outSampleBuffer = nil
         }
     }
+    
+}
+
+//MARK: - FIFO
+private
+extension Codec.FFmpeg.Encoder.AudioSession {
     
     func createFIFO(codecCtx: UnsafeMutablePointer<AVCodecContext>) throws {
    
@@ -288,9 +292,8 @@ extension Codec.FFmpeg.Encoder.AudioSession {
                 if self.resampleDstFrameSize != dst_nb_samples {
                     self.freeSampleBuffer()
         
-                    let buffer = try self.createSampleBuffer(desc: outDesc, frameSize: Int32(dst_nb_samples))
+                    try self.createSampleBuffer(desc: outDesc, frameSize: Int32(dst_nb_samples))
                     self.resampleDstFrameSize = dst_nb_samples
-                    self.outSampleBuffer = buffer
                 }
                
                 let nb_samples = swr_convert(swr, self.outSampleBuffer, dst_nb_samples, ptr, src_nb_samples)

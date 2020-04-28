@@ -42,6 +42,7 @@ extension Codec.FFmpeg.Decoder {
             self.destroySwsCtx()
             self.destroyScaledFrame()
             self.destroyDecodedFrame()
+            self.destroyPacket()
             self.destroyCodecCtx()
         }
     }
@@ -86,6 +87,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
     
 }
 
+//MARK: - AVFrame
 private
 extension Codec.FFmpeg.Decoder.VideoSession {
 
