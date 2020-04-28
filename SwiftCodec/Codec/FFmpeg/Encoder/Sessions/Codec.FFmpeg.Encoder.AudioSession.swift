@@ -36,10 +36,10 @@ extension Codec.FFmpeg.Encoder {
             self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.AudioSession.encode.queue")
             //查看jsmpeg中mp2解码器代码，mp2格式对应的frame_size（nb_samples）似乎是定值：1152
             try self.createCodecCtx(config: config)
+            try self.createSwrCtx()
             //使用fifo管道可以确保音频的读写的连续性，每次达到音频格式对应的缓存值时才读取
             try self.createFIFO(codecCtx: self.codecCtx!)
             try self.createEncodeFrame(codecCtx: self.codecCtx!)
-            try self.createSwrCtx()
         }
         
         deinit {
@@ -97,8 +97,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
     
 }
 
-
-//MARK: - AVFrame
+//MARK: - Encode AVFrame
 private
 extension Codec.FFmpeg.Encoder.AudioSession {
     
@@ -268,8 +267,12 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 
 //MARK: - Resample
 extension Codec.FFmpeg.Encoder.AudioSession {
-    
+        
     func resample(bytes: UnsafeMutablePointer<UInt8>, size: Int32) throws -> (UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, Int32) {
+        
+        guard let swr = self.swrCtx else {
+            throw NSError.error(ErrorDomain, reason: "Swr context not initialized yet.")!
+        }
         
         let inDesc = self.config.srcPCMDesc
                 
@@ -282,30 +285,22 @@ extension Codec.FFmpeg.Encoder.AudioSession {
             //nb_bytes（单位：字节） = (nb_samples * nb_channel * nb_bitsPerChannel) / 8 /*bits per bytes*/
             let src_nb_samples = size / (inDesc.channels * inDesc.bitsPerChannel / 8)
             
-            if let swr = self.swrCtx {
+            let outDesc = self.config.dstPCMDesc
                 
-                let outDesc = self.config.dstPCMDesc
-                
-                let dst_nb_samples = Int32(av_rescale_rnd(swr_get_delay(swr, Int64(inDesc.sampleRate)) + Int64(src_nb_samples), Int64(outDesc.sampleRate), Int64(inDesc.sampleRate), AV_ROUND_UP))
+            let dst_nb_samples = Int32(av_rescale_rnd(swr_get_delay(swr, Int64(inDesc.sampleRate)) + Int64(src_nb_samples), Int64(outDesc.sampleRate), Int64(inDesc.sampleRate), AV_ROUND_UP))
+        
+            if self.resampleDstFrameSize != dst_nb_samples {
+                self.freeSampleBuffer()
+                try self.createSampleBuffer(desc: outDesc, frameSize: Int32(dst_nb_samples))
+                self.resampleDstFrameSize = dst_nb_samples
+            }
+           
+            let nb_samples = swr_convert(swr, self.outSampleBuffer, dst_nb_samples, ptr, src_nb_samples)
             
-                if self.resampleDstFrameSize != dst_nb_samples {
-                    self.freeSampleBuffer()
-                    try self.createSampleBuffer(desc: outDesc, frameSize: Int32(dst_nb_samples))
-                    self.resampleDstFrameSize = dst_nb_samples
-                }
-               
-                let nb_samples = swr_convert(swr, self.outSampleBuffer, dst_nb_samples, ptr, src_nb_samples)
-                
-                if nb_samples > 0 {
-                    return (self.outSampleBuffer!, nb_samples)
-                }else {
-                    throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) => Failed to convert sample buffer.")!
-                }
+            if nb_samples > 0 {
+                return (self.outSampleBuffer!, nb_samples)
             }else {
-                let outSampleBuffer = ptr.withMemoryRebound(to: UnsafeMutablePointer<UInt8>?.self, capacity: 1) { (ptr) -> UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?> in
-                    return ptr
-                }
-                return (outSampleBuffer, src_nb_samples)
+                throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) => Failed to convert sample buffer.")!
             }
         }
         

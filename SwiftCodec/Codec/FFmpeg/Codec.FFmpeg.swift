@@ -65,6 +65,15 @@ public extension Codec.FFmpeg {
             case FLT
             case FLTP
             
+            var isPacked: Bool {
+                switch self {
+                case .S16, .FLT:
+                    return true
+                case .S16P, .FLTP:
+                    return false
+                }
+            }
+            
             var avSampleFmt: AVSampleFormat {
                 switch self {
                 case .S16:
