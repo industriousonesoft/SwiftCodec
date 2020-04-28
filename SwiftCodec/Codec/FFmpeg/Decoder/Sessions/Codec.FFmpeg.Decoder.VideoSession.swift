@@ -205,25 +205,27 @@ extension Codec.FFmpeg.Decoder.VideoSession {
             
 //            print("\(#function) decoded frame: \(decodedFrame.pointee.pts)")
             
-            if let data = self.dumpYUV420Data(from: decodedFrame, codecCtx: codecCtx) {
-                onDecoded(data, nil)
-            }else {
-                onDecoded(nil, NSError.error(ErrorDomain, reason: "Failed to dump yuv raw data from avframe."))
-            }
-            
-            /*
-            let dstSliceH = sws_scale(swsCtx, decodedFrame.pointee.sliceArray, decodedFrame.pointee.strideArray, 0, Int32(codecCtx.pointee.height), scaledFrame.pointee.mutablleSliceArray, scaledFrame.pointee.strideArray)
-            
-            if dstSliceH > 0 {
-                if let bytesTuple = self.dumpRGBBytes(from: decodedFrame, codecCtx: codecCtx) {
-                    onDecoded(bytesTuple, nil)
+            if self.config.pixelFmt == .YUV420P {
+                if let data = self.dumpYUV420Data(from: decodedFrame, codecCtx: codecCtx) {
+                    onDecoded(data, nil)
                 }else {
-                    onDecoded(nil, NSError.error(ErrorDomain, reason: "Failed to dump rgb raw data from avframe."))
+                    onDecoded(nil, NSError.error(ErrorDomain, reason: "Failed to dump yuv raw data from avframe."))
                 }
-            }else {
-                onDecoded(nil, NSError.error(ErrorDomain, reason: "Failed to scale yuv to rgb."))
+            }else if self.config.pixelFmt == .RGB32 {
+                let dstSliceH = sws_scale(swsCtx, decodedFrame.pointee.sliceArray, decodedFrame.pointee.strideArray, 0, Int32(codecCtx.pointee.height), scaledFrame.pointee.mutablleSliceArray, scaledFrame.pointee.strideArray)
+                
+                if dstSliceH > 0 {
+                    if let bytesTuple = self.dumpRGBBytes(from: decodedFrame, codecCtx: codecCtx) {
+//                        onDecoded(bytesTuple, nil)
+                    }else {
+                        onDecoded(nil, NSError.error(ErrorDomain, reason: "Failed to dump rgb raw data from avframe."))
+                    }
+                }else {
+                    onDecoded(nil, NSError.error(ErrorDomain, reason: "Failed to scale yuv to rgb."))
+                }
             }
-             */
+            
+            
         }else {
             if ret == Codec.FFmpeg.SWIFT_AV_ERROR_EOF {
                 print("avcodec_send_packet() encoder flushed...")
