@@ -57,4 +57,12 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         self.codecCtx = codecCtx
     }
     
+    func destroyCodecCtx() {
+        if let ctx = self.codecCtx {
+            avcodec_close(ctx)
+            avcodec_free_context(&self.codecCtx)
+            self.codecCtx = nil
+        }
+    }
+    
 }

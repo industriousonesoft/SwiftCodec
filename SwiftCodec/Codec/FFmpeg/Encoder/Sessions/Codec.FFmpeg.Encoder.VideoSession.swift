@@ -82,7 +82,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         if config.dropB == true {
             codecCtx.pointee.max_b_frames = 0
         }
-        codecCtx.pointee.pix_fmt = config.codec.pixelFmt.avPixelFormat
+        codecCtx.pointee.pix_fmt = config.dstPixelFmt.avPixelFormat
         codecCtx.pointee.mb_cmp = FF_MB_DECISION_RD
         //CBR is default setting, VBR Setting blow:
         //context.pointee.flags |= AV_CODEC_FLAG_QSCALE
@@ -112,14 +112,14 @@ extension Codec.FFmpeg.Encoder.VideoSession {
     
     func createInFrame(size: CGSize) throws {
         //编码过程中，输出frame指向内存块是动态的，因此不必在初始化时创建（fill = false）
-        self.inFrame = try self.createFrame(pixFmt: self.config.pixelFmt.avPixelFormat, size: size, fillIfNecessary: false)
+        self.inFrame = try self.createFrame(pixFmt: self.config.srcPixelFmt.avPixelFormat, size: size, fillIfNecessary: false)
     }
     
     func fillInFrame(bytes: UnsafeMutablePointer<UInt8>, size: CGSize) -> Bool {
         guard let frame = self.inFrame else {
             return false
         }
-        return av_image_fill_arrays(&(frame.pointee.data.0), &(frame.pointee.linesize.0), bytes, self.config.pixelFmt.avPixelFormat, Int32(size.width), Int32(size.height), 1) > 0
+        return av_image_fill_arrays(&(frame.pointee.data.0), &(frame.pointee.linesize.0), bytes, self.config.srcPixelFmt.avPixelFormat, Int32(size.width), Int32(size.height), 1) > 0
     }
     
     func destroyInFrame() {
@@ -131,7 +131,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
     
     func createOutFrame(size: CGSize) throws {
         //编码过程中，输出frame指向内存块是固定的，因此在初始化时创建（fill = true）
-        self.outFrame = try self.createFrame(pixFmt: self.config.codec.pixelFmt.avPixelFormat, size: size, fillIfNecessary: true)
+        self.outFrame = try self.createFrame(pixFmt: self.config.dstPixelFmt.avPixelFormat, size: size, fillIfNecessary: true)
     }
     
     func destroyOutFrame() {
@@ -191,7 +191,7 @@ private
 extension Codec.FFmpeg.Encoder.VideoSession {
 
     func createSwsCtx(inSize: CGSize) throws {
-        if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), self.config.pixelFmt.avPixelFormat, Int32(self.config.outSize.width), Int32(self.config.outSize.height), self.config.codec.pixelFmt.avPixelFormat, SWS_FAST_BILINEAR, nil, nil, nil) {
+        if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), self.config.srcPixelFmt.avPixelFormat, Int32(self.config.outSize.width), Int32(self.config.outSize.height), self.config.dstPixelFmt.avPixelFormat, SWS_FAST_BILINEAR, nil, nil, nil) {
             self.swsCtx = sws
         }else {
             throw NSError.error(ErrorDomain, reason: "Can not create sws context.")!

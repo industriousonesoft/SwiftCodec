@@ -30,16 +30,18 @@ extension Codec.FFmpeg.Encoder {
         public var gopSize: Int32
         public var dropB: Bool
         public var outSize: CGSize
-        public var pixelFmt: Codec.FFmpeg.Video.PixelFormat
+        public var srcPixelFmt: Codec.FFmpeg.Video.PixelFormat
+        public var dstPixelFmt: Codec.FFmpeg.Video.PixelFormat
         
-        public init(outSize: CGSize, codec: Codec.FFmpeg.Video.CodecType, bitRate: Int64, fps: Int32, gopSize: Int32, dropB: Bool, pixelFmt: Codec.FFmpeg.Video.PixelFormat) {
+        public init(outSize: CGSize, codec: Codec.FFmpeg.Video.CodecType, bitRate: Int64, fps: Int32, gopSize: Int32, dropB: Bool, srcPixelFmt: Codec.FFmpeg.Video.PixelFormat, dstPixelFmt: Codec.FFmpeg.Video.PixelFormat) {
             self.outSize = outSize
             self.codec = codec
             self.bitRate = bitRate
             self.fps = fps
             self.gopSize = gopSize
             self.dropB = dropB
-            self.pixelFmt = pixelFmt
+            self.srcPixelFmt = srcPixelFmt
+            self.dstPixelFmt = dstPixelFmt
         }
     }
     

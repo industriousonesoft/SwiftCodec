@@ -168,14 +168,6 @@ public extension Codec.FFmpeg {
                 }
             }
             
-            var pixelFmt: PixelFormat {
-                switch self {
-                case .MPEG1:
-                    return .YUV420P
-                case .H264:
-                    return .YUV420P
-                }
-            }
         }
         
     }
