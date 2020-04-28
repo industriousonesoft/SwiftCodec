@@ -260,15 +260,12 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         
         if ret == 0 {
             
-            //To resample if necessary
-            if self.config.srcPCMDesc != self.config.dstPCMDesc {
-                do {
-                    let tuple = try self.resample(frame: decodedFrame)
-                    let dataList = try dump(from: tuple.buffer, nb_samples: tuple.nb_samples)
-                    onDecoded(dataList, nil)
-                } catch let err {
-                    onDecoded(nil, err)
-                }
+            do {
+                let tuple = try self.resample(frame: decodedFrame)
+                let dataList = try dump(from: tuple.buffer, nb_samples: tuple.nb_samples)
+                onDecoded(dataList, nil)
+            } catch let err {
+                onDecoded(nil, err)
             }
             
         }else {
@@ -295,11 +292,10 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         let inDesc = self.config.srcPCMDesc
         let outDesc = self.config.dstPCMDesc
         
-        
         let src_nb_samples = frame.pointee.nb_samples
         
         let dst_nb_samples = Int32(av_rescale_rnd(swr_get_delay(swr, Int64(inDesc.sampleRate)) + Int64(src_nb_samples), Int64(outDesc.sampleRate), Int64(inDesc.sampleRate), AV_ROUND_UP))
-        
+    
         if dst_nb_samples > self.resampleDstFrameSize {
             try self.updateResampleOutBuffer(with: outDesc, nb_samples: dst_nb_samples)
             self.resampleDstFrameSize = dst_nb_samples
