@@ -9,7 +9,6 @@
 import Foundation
 
 extension NSError {
-    
     static func error(_ domain: String, code: Int, reason: String) -> NSError? {
         return NSError.init(domain: domain, code: code, userInfo: [NSLocalizedDescriptionKey : reason])
     }

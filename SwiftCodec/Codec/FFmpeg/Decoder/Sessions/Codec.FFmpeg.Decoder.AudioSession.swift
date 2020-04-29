@@ -121,7 +121,9 @@ extension Codec.FFmpeg.Decoder.AudioSession {
     //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
     //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
     func createResampleInBuffer(desc: Codec.FFmpeg.Audio.PCMDescription) throws {
-        self.resampleInBuffer = UnsafeMutablePointer<UnsafePointer<UInt8>?>.allocate(capacity: Int(desc.channels))
+        let count = Int(desc.channels)
+        self.resampleInBuffer = UnsafeMutablePointer<UnsafePointer<UInt8>?>.allocate(capacity: count)
+        self.resampleInBuffer?.initialize(repeating: nil, count: count)
     }
     
     func destroyResampleInBuffer() {
@@ -142,7 +144,9 @@ extension Codec.FFmpeg.Decoder.AudioSession {
     func createResampleOutBuffer(desc: Codec.FFmpeg.Audio.PCMDescription) throws {
         //申请一个多维数组，维度等于音频的channel数
 //        let buffer = calloc(Int(desc.channels), MemoryLayout<UnsafeMutablePointer<UnsafeMutablePointer<UInt8>>>.stride).assumingMemoryBound(to: UnsafeMutablePointer<UInt8>?.self)
-        self.resampleOutBuffer = UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>.allocate(capacity: Int(desc.channels))
+        let count = Int(desc.channels)
+        self.resampleOutBuffer = UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>.allocate(capacity: count)
+        self.resampleOutBuffer?.initialize(repeating: nil, count: count)
     }
     
     func destroyResampleOutBuffer() {
@@ -193,12 +197,7 @@ private
 extension Codec.FFmpeg.Decoder.AudioSession {
     
     func createSwrCtx() throws {
-        let inDesc = self.config.srcPCMDesc
-        let outDesc = self.config.dstPCMDesc
-        //Create swrCtx if neccessary
-        if inDesc != outDesc {
-            self.swrCtx = try self.createSwrCtx(inDesc: inDesc, outDesc: outDesc)
-        }
+        self.swrCtx = try self.createSwrCtx(inDesc: self.config.srcPCMDesc, outDesc: self.config.dstPCMDesc)
     }
     
     func destroySwrCtx() {
@@ -326,6 +325,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
             let data = Data.init(bytes: buffer[0]!, count: Int(nb_samples))
             dataList.append(data)
         }
+        
         if buffer[1] != nil {
             let data = Data.init(bytes: buffer[1]!, count: Int(nb_samples))
             dataList.append(data)
