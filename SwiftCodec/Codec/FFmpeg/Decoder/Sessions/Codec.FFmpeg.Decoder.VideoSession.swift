@@ -180,7 +180,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
 //MARK: - Decode
 extension Codec.FFmpeg.Decoder.VideoSession {
 
-    func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedVideoCallback) {
+    func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, isKeyFrame: Bool, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedVideoCallback) {
         
         guard let codecCtx = self.codecCtx,
             let packet = self.packet,
@@ -194,6 +194,9 @@ extension Codec.FFmpeg.Decoder.VideoSession {
         av_init_packet(packet)
         packet.pointee.data = bytes
         packet.pointee.size = size
+        if isKeyFrame {
+            packet.pointee.flags |= AV_PKT_FLAG_KEY
+        }
         
         var ret = avcodec_send_packet(codecCtx, packet)
         

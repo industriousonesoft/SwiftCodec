@@ -31,8 +31,8 @@ extension Codec.FFmpeg.VideoCompatible where Base: Codec.FFmpeg.Decoder {
         self.base.closeVideoSession()
     }
     
-    func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedVideoCallback) {
-        self.base.decode(bytes: bytes, size: size, timestamp: timestamp, onDecoded: onDecoded)
+    func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, isKeyFrame: Bool, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedVideoCallback) {
+        self.base.decode(bytes: bytes, size: size, isKeyFrame: isKeyFrame, timestamp: timestamp, onDecoded: onDecoded)
     }
 }
 
@@ -47,7 +47,7 @@ extension Codec.FFmpeg.Decoder {
         self.videoSession = nil
     }
     
-    func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedVideoCallback) {
-        self.videoSession?.decode(bytes: bytes, size: size, timestamp: timestamp, onDecoded: onDecoded)
+    func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, isKeyFrame: Bool, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedVideoCallback) {
+        self.videoSession?.decode(bytes: bytes, size: size, isKeyFrame: isKeyFrame, timestamp: timestamp, onDecoded: onDecoded)
     }
 }
