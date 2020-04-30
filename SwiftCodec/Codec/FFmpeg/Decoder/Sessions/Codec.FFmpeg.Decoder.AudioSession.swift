@@ -28,6 +28,7 @@ extension Codec.FFmpeg.Decoder {
         
         private var swrCtx: OpaquePointer?
         
+        private var resampleSrcFrameSize: Int32 = 0
         private var resampleDstFrameSize: Int32 = 0
         
         init(config: AudioConfig, decodeIn queue: DispatchQueue? = nil) throws {
@@ -66,6 +67,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         }
         codecCtx.pointee.codec_id = codecId
         codecCtx.pointee.codec_type = AVMEDIA_TYPE_AUDIO
+        codecCtx.pointee.sample_fmt = self.config.srcPCMDesc.sampleFmt.avSampleFmt
         codecCtx.pointee.channel_layout = codec.pointee.channelLayout ?? UInt64(av_get_default_channel_layout(self.config.srcPCMDesc.channels))
         codecCtx.pointee.sample_rate = self.config.srcPCMDesc.sampleRate
         codecCtx.pointee.channels = self.config.srcPCMDesc.channels
@@ -164,7 +166,6 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         }
         //Free last allocated memory
         av_freep(buffer)
-        //分别给每一个channle对于的缓存分配空间: nb_samples * channles * bitsPreChannel / 8， 其中nb_samples等价于frameSize， bitsPreChannel可由sample_fmt推断得出
         let ret = av_samples_alloc(buffer, nil, desc.channels, nb_samples, desc.sampleFmt.avSampleFmt, 0)
         if ret < 0 {
             throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) Could not allocate converted input samples...\(ret)")!
@@ -261,7 +262,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
             
             do {
                 let tuple = try self.resample(frame: decodedFrame)
-                let dataList = try dump(from: tuple.buffer, nb_samples: tuple.nb_samples)
+                let dataList = self.dump(from: tuple.buffer, nb_samples: tuple.nb_samples)
                 onDecoded(dataList, nil)
             } catch let err {
                 onDecoded(nil, err)
@@ -293,20 +294,24 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         
         let src_nb_samples = frame.pointee.nb_samples
         
-        let dst_nb_samples = Int32(av_rescale_rnd(swr_get_delay(swr, Int64(inDesc.sampleRate)) + Int64(src_nb_samples), Int64(outDesc.sampleRate), Int64(inDesc.sampleRate), AV_ROUND_UP))
-    
-        if dst_nb_samples > self.resampleDstFrameSize {
+        if src_nb_samples > self.resampleSrcFrameSize {
+            let dst_nb_samples = Int32(av_rescale_rnd(swr_get_delay(swr, Int64(inDesc.sampleRate)) + Int64(src_nb_samples), Int64(outDesc.sampleRate), Int64(inDesc.sampleRate), AV_ROUND_UP))
             try self.updateResampleOutBuffer(with: outDesc, nb_samples: dst_nb_samples)
+            self.resampleSrcFrameSize = src_nb_samples
             self.resampleDstFrameSize = dst_nb_samples
+            print("Audio Decoded LineSize: \(src_nb_samples) - \(dst_nb_samples)")
         }
         
+//        print("Audio Decoded Data: \(String(describing: frame.pointee.data.0)) - \(String(describing: frame.pointee.data.1))")
+      
         //TODO: 此处暂时只考虑channel=2的情况，channel>2的情况待优化
         inBuffer[0] = UnsafePointer<UInt8>(frame.pointee.data.0)
         inBuffer[1] = UnsafePointer<UInt8>(frame.pointee.data.1)
         
-        let nb_samples = swr_convert(swr, outBuffer, dst_nb_samples, inBuffer, src_nb_samples)
+        let nb_samples = swr_convert(swr, outBuffer, self.resampleDstFrameSize, inBuffer, src_nb_samples)
         
         if nb_samples > 0 {
+            print("nb_samples: \(nb_samples)")
             return (buffer: outBuffer, nb_samples: nb_samples)
         }else {
             throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) => Failed to convert sample buffer.")!
@@ -318,8 +323,18 @@ extension Codec.FFmpeg.Decoder.AudioSession {
 
 //MARK: - Dump
 extension Codec.FFmpeg.Decoder.AudioSession {
+    
+    func dump(from frame: UnsafeMutablePointer<AVFrame>) -> [Data] {
+        var dataList = Array<Data>.init()
+        if let bytes = frame.pointee.data.0 {
+            let size = frame.pointee.linesize.0
+            let data = Data.init(bytes:bytes, count: Int(size))
+            dataList.append(data)
+        }
+        return dataList
+    }
 
-    func dump(from buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, nb_samples: Int32) throws -> [Data] {
+    func dump(from buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, nb_samples: Int32) -> [Data] {
         var dataList = Array<Data>.init()
         if buffer[0] != nil {
             let data = Data.init(bytes: buffer[0]!, count: Int(nb_samples))
@@ -328,6 +343,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         
         if buffer[1] != nil {
             let data = Data.init(bytes: buffer[1]!, count: Int(nb_samples))
+            print("channel-1: \(data)")
             dataList.append(data)
         }
         return dataList
