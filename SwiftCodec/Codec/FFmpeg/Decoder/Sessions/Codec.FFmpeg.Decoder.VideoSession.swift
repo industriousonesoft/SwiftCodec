@@ -20,6 +20,7 @@ extension Codec.FFmpeg.Decoder {
         private var decodeQueue: DispatchQueue
     
         private var codecCtx: UnsafeMutablePointer<AVCodecContext>?
+        private var parserCtx: UnsafeMutablePointer<AVCodecParserContext>?
         
         private var decodedFrame: UnsafeMutablePointer<AVFrame>?
         private var scaledFrame: UnsafeMutablePointer<AVFrame>?
@@ -32,6 +33,7 @@ extension Codec.FFmpeg.Decoder {
             self.config = config
             self.decodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.decode.queue")
             try self.createCodecCtx(config: config)
+//            try self.createParser(codecId: config.codec.avCodecID)
             try self.createDecodedFrame(size: config.outSize)
             try self.createScaledFrame(size: config.outSize)
             try self.createPakcet()
@@ -43,6 +45,7 @@ extension Codec.FFmpeg.Decoder {
             self.destroyScaledFrame()
             self.destroyDecodedFrame()
             self.destroyPacket()
+//            self.destroyParser()
             self.destroyCodecCtx()
         }
     }
@@ -138,6 +141,25 @@ extension Codec.FFmpeg.Decoder.VideoSession {
     }
 }
 
+//MARK: - Parser Context
+private
+extension Codec.FFmpeg.Decoder.VideoSession {
+    
+    func createParser(codecId: AVCodecID) throws {
+        guard let parser = av_parser_init(Int32(codecId.rawValue)) else {
+            throw NSError.error(ErrorDomain, reason: "Failed to create parser context.")!
+        }
+        self.parserCtx = parser
+    }
+    
+    func destroyParser() {
+        if self.parserCtx != nil {
+            av_parser_close(self.parserCtx!)
+            self.parserCtx = nil
+        }
+    }
+}
+
 //MARK: - AVPacket
 private
 extension Codec.FFmpeg.Decoder.VideoSession {
@@ -183,6 +205,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
     func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, isKeyFrame: Bool, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedVideoCallback) {
         
         guard let codecCtx = self.codecCtx,
+            /*let parserCtx = self.parserCtx,*/
             let packet = self.packet,
             let decodedFrame = self.decodedFrame,
             let scaledFrame = self.scaledFrame,
@@ -191,9 +214,27 @@ extension Codec.FFmpeg.Decoder.VideoSession {
                 return
         }
         
+        //FIXME: 使用这种方式掉帧情况很严重，原因暂时不明
+        /*
+        var ret = av_parser_parse2(parserCtx, codecCtx, &packet.pointee.data, &packet.pointee.size, bytes, size, Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE, Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE, 0)
+        
+        if ret < 0 {
+            onDecoded(nil, NSError.error(ErrorDomain, code: Int(ret), reason: "Error occured when parsering video packet for decoding.")!)
+            return
+        }
+        print("Parser Packet Size: \(packet.pointee.size)")
+        guard packet.pointee.size > 0 else {
+            return
+        }
+         */
+        
         av_init_packet(packet)
         packet.pointee.data = bytes
         packet.pointee.size = size
+        packet.pointee.pos = 0
+        packet.pointee.pts = Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE
+        packet.pointee.dts = Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE
+        
         if isKeyFrame {
             packet.pointee.flags |= AV_PKT_FLAG_KEY
         }

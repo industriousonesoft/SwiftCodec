@@ -21,15 +21,16 @@ extension Codec.FFmpeg.Decoder {
 
         private var decodedFrame: UnsafeMutablePointer<AVFrame>?
         
-        private var resampleInBuffer: UnsafeMutablePointer<UnsafePointer<UInt8>?>?
-        private var resampleOutBuffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?
+        private var srcBuffer: UnsafeMutablePointer<UnsafePointer<UInt8>?>?
+        private var dstBuffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?
      
         private var packet: UnsafeMutablePointer<AVPacket>?
         
         private var swrCtx: OpaquePointer?
         
-        private var resampleSrcFrameSize: Int32 = 0
-        private var resampleDstFrameSize: Int32 = 0
+        private var srcFrameSize: Int32 = 0
+        private var dstFrameSize: Int32 = 0
+        private var dstBufferSize: Int32 = 0
         
         init(config: AudioConfig, decodeIn queue: DispatchQueue? = nil) throws {
             self.config = config
@@ -37,15 +38,15 @@ extension Codec.FFmpeg.Decoder {
             try self.createCodecContext(config: config)
             try self.createPakcet()
             try self.createDecodedFrame(codecCtx: self.codecCtx!)
-            try self.createResampleInBuffer(desc: self.config.srcPCMDesc)
-            try self.createResampleOutBuffer(desc: self.config.dstPCMDesc)
+            try self.createSrcBuffer(desc: self.config.srcPCMDesc)
+            try self.createDstBuffer(desc: self.config.dstPCMDesc)
             try self.createSwrCtx()
         }
         
         deinit {
             self.destroySwrCtx()
-            self.destroyResampleOutBuffer()
-            self.destroyResampleInBuffer()
+            self.destroyDstBuffer()
+            self.destroySrcBuffer()
             self.destroyDecodedFrame()
             self.destroyPacket()
             self.destroyCodecCtx()
@@ -77,7 +78,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         guard avcodec_open2(codecCtx, codec, nil) == 0 else {
             throw NSError.error(ErrorDomain, reason: "Can not open audio decode avcodec...")!
         }
-        
+    
         self.codecCtx = codecCtx
     }
     
@@ -122,16 +123,16 @@ extension Codec.FFmpeg.Decoder.AudioSession {
     
     //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
     //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
-    func createResampleInBuffer(desc: Codec.FFmpeg.Audio.PCMDescription) throws {
+    func createSrcBuffer(desc: Codec.FFmpeg.Audio.PCMDescription) throws {
         let count = Int(desc.channels)
-        self.resampleInBuffer = UnsafeMutablePointer<UnsafePointer<UInt8>?>.allocate(capacity: count)
-        self.resampleInBuffer?.initialize(repeating: nil, count: count)
+        self.srcBuffer = UnsafeMutablePointer<UnsafePointer<UInt8>?>.allocate(capacity: count)
+        self.srcBuffer?.initialize(repeating: nil, count: count)
     }
     
-    func destroyResampleInBuffer() {
-        if self.resampleInBuffer != nil {
-            self.resampleInBuffer!.deallocate()
-            self.resampleInBuffer = nil
+    func destroySrcBuffer() {
+        if self.srcBuffer != nil {
+            self.srcBuffer!.deallocate()
+            self.srcBuffer = nil
         }
     }
     
@@ -143,33 +144,44 @@ extension Codec.FFmpeg.Decoder.AudioSession {
     
     //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
     //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
-    func createResampleOutBuffer(desc: Codec.FFmpeg.Audio.PCMDescription) throws {
+    func createDstBuffer(desc: Codec.FFmpeg.Audio.PCMDescription) throws {
         //申请一个多维数组，维度等于音频的channel数
 //        let buffer = calloc(Int(desc.channels), MemoryLayout<UnsafeMutablePointer<UnsafeMutablePointer<UInt8>>>.stride).assumingMemoryBound(to: UnsafeMutablePointer<UInt8>?.self)
         let count = Int(desc.channels)
-        self.resampleOutBuffer = UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>.allocate(capacity: count)
-        self.resampleOutBuffer?.initialize(repeating: nil, count: count)
+        self.dstBuffer = UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>.allocate(capacity: count)
+        self.dstBuffer?.initialize(repeating: nil, count: count)
     }
     
-    func destroyResampleOutBuffer() {
-        if self.resampleOutBuffer != nil {
-            av_freep(self.resampleOutBuffer)
-            self.resampleOutBuffer!.deallocate()
-            self.resampleOutBuffer = nil
+    func destroyDstBuffer() {
+        if self.dstBuffer != nil {
+            av_freep(self.dstBuffer)
+            self.dstBuffer!.deallocate()
+            self.dstBuffer = nil
         }
     }
     
-    func updateResampleOutBuffer(with desc: Codec.FFmpeg.Audio.PCMDescription, nb_samples: Int32) throws {
+    func updateDstBuffer(with desc: Codec.FFmpeg.Audio.PCMDescription, nb_samples: Int32) throws -> Int32 {
         
-        guard let buffer = self.resampleOutBuffer else {
+        guard let buffer = self.dstBuffer else {
             throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) Resample out buffer not created yet.")!
         }
         //Free last allocated memory
         av_freep(buffer)
-        let ret = av_samples_alloc(buffer, nil, desc.channels, nb_samples, desc.sampleFmt.avSampleFmt, 0)
+        var linesize: Int32 = 0
+        //Way-01
+//        let buffer_size = av_samples_get_buffer_size(&linesize, desc.channels ,nb_samples, desc.sampleFmt.avSampleFmt, 1)
+//        let out_buffer = av_malloc(Int(buffer_size))
+        //Get buffer_size
+        //Way-02
+        let ret = av_samples_alloc(buffer, &linesize, desc.channels, nb_samples, desc.sampleFmt.avSampleFmt, 0)
         if ret < 0 {
             throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) Could not allocate converted input samples...\(ret)")!
         }
+        print("\(#function) => linesize: \(linesize) -> \(ret)")
+        //linesize = nb_samples * bitsPerChannel / 8
+        //当采样格式是packed（LRLRLR...）时，buffer_size = linesize，是planar(LLL..RRR..)时，buffer_size = linesize * channels
+
+        return ret
     }
     
 }
@@ -245,9 +257,13 @@ extension Codec.FFmpeg.Decoder.AudioSession {
                 onDecoded(nil, NSError.error(ErrorDomain, reason: "Audio decoder not initialized yet.")!)
                 return
         }
+        
         av_init_packet(packet)
         packet.pointee.data = bytes
         packet.pointee.size = size
+        packet.pointee.pos = 0
+        packet.pointee.pts = Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE
+        packet.pointee.dts = Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE
         
         var ret = avcodec_send_packet(codecCtx, packet)
         
@@ -262,7 +278,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
             
             do {
                 let tuple = try self.resample(frame: decodedFrame)
-                let dataList = self.dump(from: tuple.buffer, nb_samples: tuple.nb_samples)
+                let dataList = self.dump(from: tuple.buffer, size: tuple.size)
                 onDecoded(dataList, nil)
             } catch let err {
                 onDecoded(nil, err)
@@ -281,11 +297,11 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         av_frame_unref(decodedFrame)
     }
     
-    func resample(frame: UnsafeMutablePointer<AVFrame>) throws -> (buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, nb_samples: Int32) {
+    func resample(frame: UnsafeMutablePointer<AVFrame>) throws -> (buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, size: Int32) {
         
         guard let swr = self.swrCtx,
-            let outBuffer = self.resampleOutBuffer,
-            let inBuffer = self.resampleInBuffer else {
+            let dstBuffer = self.dstBuffer,
+            let srcBuffer = self.srcBuffer else {
             throw NSError.error(ErrorDomain, reason: "Swr context not created yet.")!
         }
         
@@ -294,25 +310,26 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         
         let src_nb_samples = frame.pointee.nb_samples
         
-        if src_nb_samples > self.resampleSrcFrameSize {
+        if src_nb_samples > self.srcFrameSize {
             let dst_nb_samples = Int32(av_rescale_rnd(swr_get_delay(swr, Int64(inDesc.sampleRate)) + Int64(src_nb_samples), Int64(outDesc.sampleRate), Int64(inDesc.sampleRate), AV_ROUND_UP))
-            try self.updateResampleOutBuffer(with: outDesc, nb_samples: dst_nb_samples)
-            self.resampleSrcFrameSize = src_nb_samples
-            self.resampleDstFrameSize = dst_nb_samples
-            print("Audio Decoded LineSize: \(src_nb_samples) - \(dst_nb_samples)")
+            let bufferSize = try self.updateDstBuffer(with: outDesc, nb_samples: dst_nb_samples)
+            self.srcFrameSize = src_nb_samples
+            self.dstFrameSize = dst_nb_samples
+            self.dstBufferSize = bufferSize
+            print("Audio Decoded LineSize: \(src_nb_samples) - \(dst_nb_samples) - \(bufferSize)")
         }
         
 //        print("Audio Decoded Data: \(String(describing: frame.pointee.data.0)) - \(String(describing: frame.pointee.data.1))")
       
         //TODO: 此处暂时只考虑channel=2的情况，channel>2的情况待优化
-        inBuffer[0] = UnsafePointer<UInt8>(frame.pointee.data.0)
-        inBuffer[1] = UnsafePointer<UInt8>(frame.pointee.data.1)
-        
-        let nb_samples = swr_convert(swr, outBuffer, self.resampleDstFrameSize, inBuffer, src_nb_samples)
+        srcBuffer[0] = UnsafePointer<UInt8>(frame.pointee.data.0)
+        srcBuffer[1] = UnsafePointer<UInt8>(frame.pointee.data.1)
+ 
+        let nb_samples = swr_convert(swr, dstBuffer, self.dstFrameSize, srcBuffer, src_nb_samples)
         
         if nb_samples > 0 {
-            print("nb_samples: \(nb_samples)")
-            return (buffer: outBuffer, nb_samples: nb_samples)
+//            print("nb_samples: \(nb_samples)")
+            return (buffer: dstBuffer, size: self.dstBufferSize)
         }else {
             throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) => Failed to convert sample buffer.")!
         }
@@ -334,15 +351,15 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         return dataList
     }
 
-    func dump(from buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, nb_samples: Int32) -> [Data] {
+    func dump(from buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, size: Int32) -> [Data] {
         var dataList = Array<Data>.init()
         if buffer[0] != nil {
-            let data = Data.init(bytes: buffer[0]!, count: Int(nb_samples))
+            let data = Data.init(bytes: buffer[0]!, count: Int(size))
             dataList.append(data)
         }
         
         if buffer[1] != nil {
-            let data = Data.init(bytes: buffer[1]!, count: Int(nb_samples))
+            let data = Data.init(bytes: buffer[1]!, count: Int(size))
             print("channel-1: \(data)")
             dataList.append(data)
         }
