@@ -30,7 +30,7 @@ extension Codec.FFmpeg.Decoder {
         
         private var srcFrameSize: Int32 = 0
         private var dstFrameSize: Int32 = 0
-        private var dstBufferSize: Int32 = 0
+        private var dstLineSize: Int32 = 0
         
         init(config: AudioConfig, decodeIn queue: DispatchQueue? = nil) throws {
             self.config = config
@@ -181,7 +181,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         }
 //        print("\(#function) => linesize: \(linesize) -> \(ret)")
 
-        return ret
+        return linesize
     }
     
 }
@@ -278,8 +278,10 @@ extension Codec.FFmpeg.Decoder.AudioSession {
             
             do {
                 let tuple = try self.resample(frame: decodedFrame)
-                let dataList = self.dump(from: tuple.buffer, size: tuple.size)
-                onDecoded(dataList, nil)
+//                let dataList = self.dump(from: tuple.buffer, size: tuple.size)
+//                onDecoded(dataList, nil)
+                let bytes = self.dumpBytes(from: tuple.buffer, size: tuple.size)
+                onDecoded(bytes, nil)
             } catch let err {
                 onDecoded(nil, err)
             }
@@ -313,11 +315,11 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         if src_nb_samples > self.srcFrameSize {
             //Calculate the destination nb_samples according to the source nb_samples
             let dst_nb_samples = Int32(av_rescale_rnd(swr_get_delay(swr, Int64(inDesc.sampleRate)) + Int64(src_nb_samples), Int64(outDesc.sampleRate), Int64(inDesc.sampleRate), AV_ROUND_UP))
-            let bufferSize = try self.updateDstBuffer(with: outDesc, nb_samples: dst_nb_samples)
+            let lineSize = try self.updateDstBuffer(with: outDesc, nb_samples: dst_nb_samples)
             self.srcFrameSize = src_nb_samples
             self.dstFrameSize = dst_nb_samples
-            self.dstBufferSize = bufferSize
-//            print("Audio Decoded LineSize: \(src_nb_samples) - \(dst_nb_samples) - \(bufferSize)")
+            self.dstLineSize = lineSize
+//            print("Audio Decoded LineSize: \(src_nb_samples) - \(dst_nb_samples) - \(lineSize)")
         }
         
 //        print("Audio Decoded Data: \(String(describing: frame.pointee.data.0)) - \(String(describing: frame.pointee.data.1))")
@@ -330,7 +332,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         
         if nb_samples > 0 {
 //            print("nb_samples: \(nb_samples)")
-            return (buffer: dstBuffer, size: self.dstBufferSize)
+            return (buffer: dstBuffer, size: self.dstLineSize)
         }else {
             throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) => Failed to convert sample buffer.")!
         }
@@ -352,7 +354,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         return dataList
     }
 
-    func dump(from buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, size: Int32) -> [Data] {
+    func dumpData(from buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, size: Int32) -> [Data] {
         var dataList = Array<Data>.init()
         if buffer[0] != nil {
             let data = Data.init(bytes: buffer[0]!, count: Int(size))
@@ -365,5 +367,14 @@ extension Codec.FFmpeg.Decoder.AudioSession {
             dataList.append(data)
         }
         return dataList
+    }
+    
+    func dumpBytes(from buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, size: Int32) -> (bytes: UnsafeMutablePointer<UInt8>, size: Int)? {
+        if buffer[0] != nil {
+            let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: Int(size))
+            bytes.assign(from: buffer[0]!, count: Int(size))
+            return (bytes: bytes, size: Int(size))
+        }
+        return nil
     }
 }

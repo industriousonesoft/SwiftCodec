@@ -64,7 +64,8 @@ extension Codec.FFmpeg.Decoder {
     
 //    public typealias DecodedVideoCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int)?, Error?) -> Void
     public typealias DecodedVideoCallback = (Data?, Error?) -> Void
-    public typealias DecodedAudioCallback = ([Data]?, Error?) -> Void
+//    public typealias DecodedAudioCallback = ([Data]?, Error?) -> Void
+    public typealias DecodedAudioCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int)?, Error?) -> Void
   
     typealias DecodedFrameCallback = (UnsafeMutablePointer<AVFrame>?, Error?) -> Void
 }
