@@ -260,7 +260,9 @@ extension Codec.FFmpeg.Decoder.VideoSession {
                 }
                 
                 do {
-                    let data = try self.dump(from: scaledFrame, codecCtx: codecCtx)
+//                    let tuple = try self.dumpBytes(from: scaledFrame, codecCtx: codecCtx)
+//                    onDecoded(tuple, nil)
+                    let data = try self.dumpData(from: scaledFrame, codecCtx: codecCtx)
                     onDecoded(data, nil)
                 } catch let err {
                     onDecoded(nil, err)
@@ -268,7 +270,9 @@ extension Codec.FFmpeg.Decoder.VideoSession {
                 
             }else {
                 do {
-                    let data = try self.dump(from: decodedFrame, codecCtx: codecCtx)
+//                    let tuple = try self.dumpBytes(from: decodedFrame, codecCtx: codecCtx)
+//                    onDecoded(tuple, nil)
+                    let data = try self.dumpData(from: decodedFrame, codecCtx: codecCtx)
                     onDecoded(data, nil)
                 } catch let err {
                     onDecoded(nil, err)
@@ -296,7 +300,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
 //MARK: - Decode
 extension Codec.FFmpeg.Decoder.VideoSession {
     
-    func dump(from frame: UnsafePointer<AVFrame>, codecCtx: UnsafePointer<AVCodecContext>) throws -> Data {
+    func dumpData(from frame: UnsafePointer<AVFrame>, codecCtx: UnsafePointer<AVCodecContext>) throws -> Data {
         
         if self.config.dstPixelFmt == .YUV420P {
             if let data = self.dumpYUV420Data(from: frame, codecCtx: codecCtx) {
@@ -309,6 +313,28 @@ extension Codec.FFmpeg.Decoder.VideoSession {
             if let bytesTuple = self.dumpRGBBytes(from: frame, codecCtx: codecCtx) {
                 //onDecoded(bytesTuple, nil)
                 return Data.init(bytes: bytesTuple.bytes, count: bytesTuple.size)
+            }else {
+                throw NSError.error(ErrorDomain, reason: "Failed to dump rgb raw data from avframe.")!
+            }
+            
+        }else {
+            throw NSError.error(ErrorDomain, reason: "Unsuppored pixel format to dump: \(self.config.dstPixelFmt)")!
+        }
+    }
+    
+    func dumpBytes(from frame: UnsafePointer<AVFrame>, codecCtx: UnsafePointer<AVCodecContext>) throws -> (bytes: UnsafeMutablePointer<UInt8>, size: Int)? {
+        
+        if self.config.dstPixelFmt == .YUV420P {
+            if let tuple = self.dumpYUV420Bytes(from: frame, codecCtx: codecCtx) {
+                return tuple
+            }else {
+                throw NSError.error(ErrorDomain, reason: "Failed to dump yuv raw data from avframe.")!
+            }
+        }else if self.config.dstPixelFmt == .RGB32 {
+            
+            if let tuple = self.dumpRGBBytes(from: frame, codecCtx: codecCtx) {
+                //onDecoded(bytesTuple, nil)
+                return tuple
             }else {
                 throw NSError.error(ErrorDomain, reason: "Failed to dump rgb raw data from avframe.")!
             }

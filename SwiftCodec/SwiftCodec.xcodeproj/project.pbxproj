@@ -36,6 +36,7 @@
 		EE91CD6B24447364000E6D71 /* Codec.FFmpeg.Encoder.VideoSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE91CD6A24447364000E6D71 /* Codec.FFmpeg.Encoder.VideoSession.swift */; };
 		EE91CD6D244475E8000E6D71 /* Codec.FFmpeg.Encoder.Audio.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE91CD6C244475E8000E6D71 /* Codec.FFmpeg.Encoder.Audio.swift */; };
 		EE91CD6F244475EF000E6D71 /* Codec.FFmpeg.Encoder.Video.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE91CD6E244475EF000E6D71 /* Codec.FFmpeg.Encoder.Video.swift */; };
+		EEB0F22F2465739B00097A0F /* CircleQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEB0F22E2465739B00097A0F /* CircleQueue.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -189,6 +190,7 @@
 		EE91CD6A24447364000E6D71 /* Codec.FFmpeg.Encoder.VideoSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Encoder.VideoSession.swift; sourceTree = "<group>"; };
 		EE91CD6C244475E8000E6D71 /* Codec.FFmpeg.Encoder.Audio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Encoder.Audio.swift; sourceTree = "<group>"; };
 		EE91CD6E244475EF000E6D71 /* Codec.FFmpeg.Encoder.Video.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Encoder.Video.swift; sourceTree = "<group>"; };
+		EEB0F22E2465739B00097A0F /* CircleQueue.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CircleQueue.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -504,6 +506,7 @@
 			isa = PBXGroup;
 			children = (
 				90D4264023CDB1690077CF1A /* NSError+Extend.swift */,
+				EEB0F22E2465739B00097A0F /* CircleQueue.swift */,
 			);
 			path = Common;
 			sourceTree = "<group>";
@@ -626,6 +629,7 @@
 				EE7E4F10244FE6E2002279D9 /* Codec.FFmpeg.Decoder.VideoSession.swift in Sources */,
 				EE912B5A24446958003907FC /* Codec.FFmpeg.Encoder.swift in Sources */,
 				EE912B5024444779003907FC /* Codec.swift in Sources */,
+				EEB0F22F2465739B00097A0F /* CircleQueue.swift in Sources */,
 				90D35BC324138E5C00A507BC /* NSError+Extend.swift in Sources */,
 				EE91CD6F244475EF000E6D71 /* Codec.FFmpeg.Encoder.Video.swift in Sources */,
 				EE75C2342445930500711CA1 /* Codec.FFmpeg.Muxer.MuxerSession.swift in Sources */,

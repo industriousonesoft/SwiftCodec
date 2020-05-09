@@ -10,6 +10,8 @@ import Foundation
 import CFFmpeg
 
 private let ErrorDomain = "FFmpeg:Video:Encoder"
+//ts流的timebase 为90000，flv格式视频流timebase为1000, h264格式则与具体清晰度有关
+//TODO: How to calculate the h264 timebase according to resolutions? 1080p->1200K? 720p->800k?
 private let SampleTimebase = AVRational.init(num: 1, den: 90000)
 
 //MARK: - VideoSession

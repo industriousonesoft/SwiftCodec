@@ -173,13 +173,13 @@ extension Codec.FFmpeg.Decoder.AudioSession {
 //        let out_buffer = av_malloc(Int(buffer_size))
         //Get buffer_size
         //Way-02
-        let ret = av_samples_alloc(buffer, &linesize, desc.channels, nb_samples, desc.sampleFmt.avSampleFmt, 0)
+        //linesize = nb_samples * bitsPerChannel / 8
+        //当采样格式是packed（LRLRLR...）时，buffer_size = linesize，是planar(LLL..RRR..)时，buffer_size = linesize * channels
+        let ret = av_samples_alloc(buffer, &linesize, desc.channels, nb_samples, desc.sampleFmt.avSampleFmt, 1)
         if ret < 0 {
             throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) Could not allocate converted input samples...\(ret)")!
         }
-        print("\(#function) => linesize: \(linesize) -> \(ret)")
-        //linesize = nb_samples * bitsPerChannel / 8
-        //当采样格式是packed（LRLRLR...）时，buffer_size = linesize，是planar(LLL..RRR..)时，buffer_size = linesize * channels
+//        print("\(#function) => linesize: \(linesize) -> \(ret)")
 
         return ret
     }
@@ -311,12 +311,13 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         let src_nb_samples = frame.pointee.nb_samples
         
         if src_nb_samples > self.srcFrameSize {
+            //Calculate the destination nb_samples according to the source nb_samples
             let dst_nb_samples = Int32(av_rescale_rnd(swr_get_delay(swr, Int64(inDesc.sampleRate)) + Int64(src_nb_samples), Int64(outDesc.sampleRate), Int64(inDesc.sampleRate), AV_ROUND_UP))
             let bufferSize = try self.updateDstBuffer(with: outDesc, nb_samples: dst_nb_samples)
             self.srcFrameSize = src_nb_samples
             self.dstFrameSize = dst_nb_samples
             self.dstBufferSize = bufferSize
-            print("Audio Decoded LineSize: \(src_nb_samples) - \(dst_nb_samples) - \(bufferSize)")
+//            print("Audio Decoded LineSize: \(src_nb_samples) - \(dst_nb_samples) - \(bufferSize)")
         }
         
 //        print("Audio Decoded Data: \(String(describing: frame.pointee.data.0)) - \(String(describing: frame.pointee.data.1))")
