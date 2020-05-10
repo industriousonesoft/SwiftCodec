@@ -40,7 +40,7 @@ extension Codec.FFmpeg.VideoCompatible where Base: Codec.FFmpeg.Decoder {
 extension Codec.FFmpeg.Decoder {
     
     func open(format: Video.Format) throws {
-        self.videoSession = try VideoSession.init(format: format)
+        self.videoSession = try Video.Session.init(format: format)
     }
     
     func closeVideoSession() {

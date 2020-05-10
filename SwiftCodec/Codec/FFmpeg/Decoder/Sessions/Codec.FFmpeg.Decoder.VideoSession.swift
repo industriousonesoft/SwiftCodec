@@ -11,11 +11,10 @@ import CFFmpeg
 
 private let ErrorDomain = "FFmpeg:Video:Decoder"
 
-extension Codec.FFmpeg.Decoder {
+extension Codec.FFmpeg.Decoder.Video {
     
-    class VideoSession {
-        
-        private var format: Video.Format
+    class Session {
+        private var format: Format
     
         private var decodeQueue: DispatchQueue
     
@@ -29,7 +28,7 @@ extension Codec.FFmpeg.Decoder {
         
         private var swsCtx: OpaquePointer?
         
-        init(format: Video.Format, decodeIn queue: DispatchQueue? = nil) throws {
+        init(format: Format, decodeIn queue: DispatchQueue? = nil) throws {
             self.format = format
             self.decodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.decode.queue")
             try self.createCodecCtx(format: format)
@@ -53,7 +52,7 @@ extension Codec.FFmpeg.Decoder {
 
 //MARK: - Codec Context
 private
-extension Codec.FFmpeg.Decoder.VideoSession {
+extension Codec.FFmpeg.Decoder.Video.Session {
     
     func createCodecCtx(format: Codec.FFmpeg.Decoder.Video.Format) throws {
         
@@ -92,7 +91,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
 
 //MARK: - AVFrame
 private
-extension Codec.FFmpeg.Decoder.VideoSession {
+extension Codec.FFmpeg.Decoder.Video.Session {
 
     func createDecodedFrame(size: CGSize) throws {
         self.decodedFrame = try self.createFrame(pixFmt: self.format.srcPixelFmt.avPixelFormat, size: size, fillIfNecessary: false)
@@ -143,7 +142,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
 
 //MARK: - Parser Context
 private
-extension Codec.FFmpeg.Decoder.VideoSession {
+extension Codec.FFmpeg.Decoder.Video.Session {
     
     func createParser(codecId: AVCodecID) throws {
         guard let parser = av_parser_init(Int32(codecId.rawValue)) else {
@@ -162,7 +161,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
 
 //MARK: - AVPacket
 private
-extension Codec.FFmpeg.Decoder.VideoSession {
+extension Codec.FFmpeg.Decoder.Video.Session {
     
     func createPakcet() throws {
         guard let packet = av_packet_alloc() else {
@@ -181,7 +180,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
 
 //MARK: - Sws Context
 private
-extension Codec.FFmpeg.Decoder.VideoSession {
+extension Codec.FFmpeg.Decoder.Video.Session {
 
     func createSwsCtx(inSize: CGSize) throws {
         if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), self.format.srcPixelFmt.avPixelFormat, Int32(self.format.outSize.width), Int32(self.format.outSize.height), self.format.dstPixelFmt.avPixelFormat, SWS_FAST_BILINEAR, nil, nil, nil) {
@@ -200,7 +199,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
 }
 
 //MARK: - Decode
-extension Codec.FFmpeg.Decoder.VideoSession {
+extension Codec.FFmpeg.Decoder.Video.Session {
 
     func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, isKeyFrame: Bool, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedVideoCallback) {
         
@@ -298,7 +297,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
 }
 
 //MARK: - Decode
-extension Codec.FFmpeg.Decoder.VideoSession {
+extension Codec.FFmpeg.Decoder.Video.Session {
     
     func dumpData(from frame: UnsafePointer<AVFrame>, codecCtx: UnsafePointer<AVCodecContext>) throws -> Data {
         

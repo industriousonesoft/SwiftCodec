@@ -11,10 +11,9 @@ import CFFmpeg
 
 private let ErrorDomain = "FFmpeg:Audio:Decoder"
 
-extension Codec.FFmpeg.Decoder {
-    class AudioSession {
-        
-        private var format: Audio.Format
+extension Codec.FFmpeg.Decoder.Audio {
+    class Session {
+        private var format: Format
         private var decodeQueue: DispatchQueue
         
         private var codecCtx: UnsafeMutablePointer<AVCodecContext>?
@@ -32,7 +31,7 @@ extension Codec.FFmpeg.Decoder {
         private var dstFrameSize: Int32 = 0
         private var dstLineSize: Int32 = 0
         
-        init(format: Audio.Format, decodeIn queue: DispatchQueue? = nil) throws {
+        init(format: Format, decodeIn queue: DispatchQueue? = nil) throws {
             self.format = format
             self.decodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.decode.queue")
             try self.createCodecContext(format: format)
@@ -54,7 +53,7 @@ extension Codec.FFmpeg.Decoder {
     }
 }
 
-extension Codec.FFmpeg.Decoder.AudioSession {
+extension Codec.FFmpeg.Decoder.Audio.Session {
     
     func createCodecContext(format: Codec.FFmpeg.Decoder.Audio.Format) throws {
         
@@ -94,7 +93,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
 
 //MARK: - AVFrame
 private
-extension Codec.FFmpeg.Decoder.AudioSession {
+extension Codec.FFmpeg.Decoder.Audio.Session {
     
     func createDecodedFrame(codecCtx: UnsafeMutablePointer<AVCodecContext>) throws {
     
@@ -119,7 +118,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
 
 //MARK: - In SampleBuffer
 private
-extension Codec.FFmpeg.Decoder.AudioSession {
+extension Codec.FFmpeg.Decoder.Audio.Session {
     
     //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
     //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
@@ -140,7 +139,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
 
 //MARK: - Out SampleBuffer
 private
-extension Codec.FFmpeg.Decoder.AudioSession {
+extension Codec.FFmpeg.Decoder.Audio.Session {
     
     //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
     //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
@@ -188,7 +187,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
 
 //MARK: - AVPacket
 private
-extension Codec.FFmpeg.Decoder.AudioSession {
+extension Codec.FFmpeg.Decoder.Audio.Session {
     
     func createPakcet() throws {
         guard let packet = av_packet_alloc() else {
@@ -207,7 +206,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
 
 //MARK: - Swr Context
 private
-extension Codec.FFmpeg.Decoder.AudioSession {
+extension Codec.FFmpeg.Decoder.Audio.Session {
     
     func createSwrCtx() throws {
         self.swrCtx = try self.createSwrCtx(inSpec: self.format.srcPCMSpec, outSpec: self.format.dstPCMSpec)
@@ -247,7 +246,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
 }
 
 //MARK: - Decode
-extension Codec.FFmpeg.Decoder.AudioSession {
+extension Codec.FFmpeg.Decoder.Audio.Session {
     
     func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedAudioCallback) {
         
@@ -342,7 +341,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
 
 
 //MARK: - Dump
-extension Codec.FFmpeg.Decoder.AudioSession {
+extension Codec.FFmpeg.Decoder.Audio.Session {
     
     func dump(from frame: UnsafeMutablePointer<AVFrame>) -> [Data] {
         var dataList = Array<Data>.init()

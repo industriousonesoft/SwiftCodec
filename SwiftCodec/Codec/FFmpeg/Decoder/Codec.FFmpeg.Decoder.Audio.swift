@@ -40,7 +40,7 @@ extension Codec.FFmpeg.AudioCompatible where Base: Codec.FFmpeg.Decoder {
 extension Codec.FFmpeg.Decoder {
     
     func open(format: Audio.Format) throws {
-        self.audioSession = try AudioSession.init(format: format)
+        self.audioSession = try Audio.Session.init(format: format)
     }
     
     func closeAudioSession() {

@@ -11,8 +11,8 @@ import CFFmpeg
 
 extension Codec.FFmpeg {
     public class Decoder {
-        var videoSession: VideoSession? = nil
-        var audioSession: AudioSession? = nil
+        var videoSession: Video.Session? = nil
+        var audioSession: Audio.Session? = nil
         public init() {}
     }
     
@@ -40,7 +40,19 @@ extension Codec.FFmpeg.Decoder {
                 self.dstPixelFmt = dstPixelFmt
             }
         }
+        
+        //由于frame中的属性需要动态更新，使用class避免copy-on-write
+        public
+        class Frame {
+            public var bytes: UnsafeMutablePointer<UInt8>? = nil
+            public var size: Int = 0
+        }
     }
+    
+}
+
+public
+extension Codec.FFmpeg.Decoder {
     
     struct Audio {
         public
@@ -57,19 +69,23 @@ extension Codec.FFmpeg.Decoder {
                 self.srcPCMSpec = srcPCMSpec
                 self.dstPCMSpec = dstPCMSpec
             }
-            
+        }
+        
+        public
+        class Frame {
+            public var bytes: UnsafeMutablePointer<UInt8>? = nil
+            public var size: Int = 0
         }
     }
-    
 }
 
 extension Codec.FFmpeg.Decoder {
 //    public typealias DecodedDataCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int)?, Error?) -> Void
     
 //    public typealias DecodedVideoCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int)?, Error?) -> Void
-    public typealias DecodedVideoCallback = (Data?, Error?) -> Void
+    public typealias DecodedVideoCallback = (Video.Frame?, Error?) -> Void
 //    public typealias DecodedAudioCallback = ([Data]?, Error?) -> Void
-    public typealias DecodedAudioCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int)?, Error?) -> Void
+    public typealias DecodedAudioCallback = (Audio.Frame?, Error?) -> Void
   
     typealias DecodedFrameCallback = (UnsafeMutablePointer<AVFrame>?, Error?) -> Void
 }
