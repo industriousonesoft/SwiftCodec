@@ -14,7 +14,7 @@ private let ErrorDomain = "FFmpeg:Audio:Decoder"
 extension Codec.FFmpeg.Decoder {
     class AudioSession {
         
-        private var config: AudioConfig
+        private var format: Audio.Format
         private var decodeQueue: DispatchQueue
         
         private var codecCtx: UnsafeMutablePointer<AVCodecContext>?
@@ -32,14 +32,14 @@ extension Codec.FFmpeg.Decoder {
         private var dstFrameSize: Int32 = 0
         private var dstLineSize: Int32 = 0
         
-        init(config: AudioConfig, decodeIn queue: DispatchQueue? = nil) throws {
-            self.config = config
+        init(format: Audio.Format, decodeIn queue: DispatchQueue? = nil) throws {
+            self.format = format
             self.decodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.decode.queue")
-            try self.createCodecContext(config: config)
+            try self.createCodecContext(format: format)
             try self.createPakcet()
             try self.createDecodedFrame(codecCtx: self.codecCtx!)
-            try self.createSrcBuffer(desc: self.config.srcPCMDesc)
-            try self.createDstBuffer(desc: self.config.dstPCMDesc)
+            try self.createSrcBuffer(spec: self.format.srcPCMSpec)
+            try self.createDstBuffer(spec: self.format.dstPCMSpec)
             try self.createSwrCtx()
         }
         
@@ -56,9 +56,9 @@ extension Codec.FFmpeg.Decoder {
 
 extension Codec.FFmpeg.Decoder.AudioSession {
     
-    func createCodecContext(config: Codec.FFmpeg.Decoder.AudioConfig) throws {
+    func createCodecContext(format: Codec.FFmpeg.Decoder.Audio.Format) throws {
         
-        let codecId = config.codec.avCodecID
+        let codecId = format.codec.avCodecID
         guard let codec = avcodec_find_decoder(codecId) else {
             throw NSError.error(ErrorDomain, reason: "Can not create audio codec.")!
         }
@@ -68,12 +68,12 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         }
         codecCtx.pointee.codec_id = codecId
         codecCtx.pointee.codec_type = AVMEDIA_TYPE_AUDIO
-        codecCtx.pointee.sample_fmt = self.config.srcPCMDesc.sampleFmt.avSampleFmt
-        codecCtx.pointee.channel_layout = codec.pointee.channelLayout ?? UInt64(av_get_default_channel_layout(self.config.srcPCMDesc.channels))
-        codecCtx.pointee.sample_rate = self.config.srcPCMDesc.sampleRate
-        codecCtx.pointee.channels = self.config.srcPCMDesc.channels
+        codecCtx.pointee.sample_fmt = self.format.srcPCMSpec.sampleFmt.avSampleFmt
+        codecCtx.pointee.channel_layout = codec.pointee.channelLayout ?? UInt64(av_get_default_channel_layout(self.format.srcPCMSpec.channels))
+        codecCtx.pointee.sample_rate = self.format.srcPCMSpec.sampleRate
+        codecCtx.pointee.channels = self.format.srcPCMSpec.channels
         codecCtx.pointee.time_base.num = 1
-        codecCtx.pointee.time_base.den = self.config.srcPCMDesc.sampleRate
+        codecCtx.pointee.time_base.den = self.format.srcPCMSpec.sampleRate
         
         guard avcodec_open2(codecCtx, codec, nil) == 0 else {
             throw NSError.error(ErrorDomain, reason: "Can not open audio decode avcodec...")!
@@ -123,8 +123,8 @@ extension Codec.FFmpeg.Decoder.AudioSession {
     
     //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
     //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
-    func createSrcBuffer(desc: Codec.FFmpeg.Audio.PCMDescription) throws {
-        let count = Int(desc.channels)
+    func createSrcBuffer(spec: Codec.FFmpeg.Audio.PCMSpec) throws {
+        let count = Int(spec.channels)
         self.srcBuffer = UnsafeMutablePointer<UnsafePointer<UInt8>?>.allocate(capacity: count)
         self.srcBuffer?.initialize(repeating: nil, count: count)
     }
@@ -144,10 +144,10 @@ extension Codec.FFmpeg.Decoder.AudioSession {
     
     //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
     //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
-    func createDstBuffer(desc: Codec.FFmpeg.Audio.PCMDescription) throws {
+    func createDstBuffer(spec: Codec.FFmpeg.Audio.PCMSpec) throws {
         //申请一个多维数组，维度等于音频的channel数
 //        let buffer = calloc(Int(desc.channels), MemoryLayout<UnsafeMutablePointer<UnsafeMutablePointer<UInt8>>>.stride).assumingMemoryBound(to: UnsafeMutablePointer<UInt8>?.self)
-        let count = Int(desc.channels)
+        let count = Int(spec.channels)
         self.dstBuffer = UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>.allocate(capacity: count)
         self.dstBuffer?.initialize(repeating: nil, count: count)
     }
@@ -160,7 +160,7 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         }
     }
     
-    func updateDstBuffer(with desc: Codec.FFmpeg.Audio.PCMDescription, nb_samples: Int32) throws -> Int32 {
+    func updateDstBuffer(with desc: Codec.FFmpeg.Audio.PCMSpec, nb_samples: Int32) throws -> Int32 {
         
         guard let buffer = self.dstBuffer else {
             throw NSError.error(ErrorDomain, reason: "\(#function):\(#line) Resample out buffer not created yet.")!
@@ -210,7 +210,7 @@ private
 extension Codec.FFmpeg.Decoder.AudioSession {
     
     func createSwrCtx() throws {
-        self.swrCtx = try self.createSwrCtx(inDesc: self.config.srcPCMDesc, outDesc: self.config.dstPCMDesc)
+        self.swrCtx = try self.createSwrCtx(inSpec: self.format.srcPCMSpec, outSpec: self.format.dstPCMSpec)
     }
     
     func destroySwrCtx() {
@@ -221,15 +221,15 @@ extension Codec.FFmpeg.Decoder.AudioSession {
         }
     }
     
-    func createSwrCtx(inDesc: Codec.FFmpeg.Audio.PCMDescription, outDesc: Codec.FFmpeg.Audio.PCMDescription) throws -> OpaquePointer? {
+    func createSwrCtx(inSpec: Codec.FFmpeg.Audio.PCMSpec, outSpec: Codec.FFmpeg.Audio.PCMSpec) throws -> OpaquePointer? {
         //swr
         if let swrCtx = swr_alloc_set_opts(nil,
-                                    av_get_default_channel_layout(outDesc.channels),
-                                    outDesc.sampleFmt.avSampleFmt,
-                                    outDesc.sampleRate,
-                                    av_get_default_channel_layout(inDesc.channels),
-                                    inDesc.sampleFmt.avSampleFmt,
-                                    inDesc.sampleRate,
+                                    av_get_default_channel_layout(outSpec.channels),
+                                    outSpec.sampleFmt.avSampleFmt,
+                                    outSpec.sampleRate,
+                                    av_get_default_channel_layout(inSpec.channels),
+                                    inSpec.sampleFmt.avSampleFmt,
+                                    inSpec.sampleRate,
                                     0,
                                     nil
             ) {
@@ -307,8 +307,8 @@ extension Codec.FFmpeg.Decoder.AudioSession {
             throw NSError.error(ErrorDomain, reason: "Swr context not created yet.")!
         }
         
-        let inDesc = self.config.srcPCMDesc
-        let outDesc = self.config.dstPCMDesc
+        let inDesc = self.format.srcPCMSpec
+        let outDesc = self.format.dstPCMSpec
         
         let src_nb_samples = frame.pointee.nb_samples
         

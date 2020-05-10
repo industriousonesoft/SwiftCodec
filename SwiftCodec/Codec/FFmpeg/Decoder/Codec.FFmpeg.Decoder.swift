@@ -20,43 +20,47 @@ extension Codec.FFmpeg {
 
 public
 extension Codec.FFmpeg.Decoder {
-    //MARK: - Video Config
-    struct VideoConfig {
-        
-        public var codec: Codec.FFmpeg.Video.CodecType
-        public var bitRate: Int64
-        public var fps: Int32
-        public var outSize: CGSize
-        public var srcPixelFmt: Codec.FFmpeg.Video.PixelFormat
-        public var dstPixelFmt: Codec.FFmpeg.Video.PixelFormat
-        
-        public init(outSize: CGSize, codec: Codec.FFmpeg.Video.CodecType, bitRate: Int64, fps: Int32, srcPixelFmt: Codec.FFmpeg.Video.PixelFormat, dstPixelFmt: Codec.FFmpeg.Video.PixelFormat) {
-            self.outSize = outSize
-            self.codec = codec
-            self.bitRate = bitRate
-            self.fps = fps
-            self.srcPixelFmt = srcPixelFmt
-            self.dstPixelFmt = dstPixelFmt
+    
+    struct Video {
+        public
+        struct Format {
+            public var codec: Codec.FFmpeg.Video.CodecType
+            public var bitRate: Int64
+            public var fps: Int32
+            public var outSize: CGSize
+            public var srcPixelFmt: Codec.FFmpeg.Video.PixelFormat
+            public var dstPixelFmt: Codec.FFmpeg.Video.PixelFormat
+            
+            public init(outSize: CGSize, codec: Codec.FFmpeg.Video.CodecType, bitRate: Int64, fps: Int32, srcPixelFmt: Codec.FFmpeg.Video.PixelFormat, dstPixelFmt: Codec.FFmpeg.Video.PixelFormat) {
+                self.outSize = outSize
+                self.codec = codec
+                self.bitRate = bitRate
+                self.fps = fps
+                self.srcPixelFmt = srcPixelFmt
+                self.dstPixelFmt = dstPixelFmt
+            }
         }
     }
     
-    //MARK: - Audio Config
-    struct AudioConfig {
-        
-        public var codec: Codec.FFmpeg.Audio.CodecType
-        public var srcPCMDesc: Codec.FFmpeg.Audio.PCMDescription
-        public var dstPCMDesc: Codec.FFmpeg.Audio.PCMDescription
-        
-        public init(codec: Codec.FFmpeg.Audio.CodecType,
-                    srcPCMDesc: Codec.FFmpeg.Audio.PCMDescription,
-                    dstPCMDesc: Codec.FFmpeg.Audio.PCMDescription
-        ) {
-            self.codec = codec
-            self.srcPCMDesc = srcPCMDesc
-            self.dstPCMDesc = dstPCMDesc
+    struct Audio {
+        public
+        struct Format {
+            public var codec: Codec.FFmpeg.Audio.CodecType
+            public var srcPCMSpec: Codec.FFmpeg.Audio.PCMSpec
+            public var dstPCMSpec: Codec.FFmpeg.Audio.PCMSpec
+            
+            public init(codec: Codec.FFmpeg.Audio.CodecType,
+                        srcPCMSpec: Codec.FFmpeg.Audio.PCMSpec,
+                        dstPCMSpec: Codec.FFmpeg.Audio.PCMSpec
+            ) {
+                self.codec = codec
+                self.srcPCMSpec = srcPCMSpec
+                self.dstPCMSpec = dstPCMSpec
+            }
+            
         }
-        
     }
+    
 }
 
 extension Codec.FFmpeg.Decoder {

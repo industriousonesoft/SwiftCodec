@@ -23,8 +23,8 @@ extension Codec.FFmpeg.Decoder {
 public
 extension Codec.FFmpeg.VideoCompatible where Base: Codec.FFmpeg.Decoder {
 
-    func open(config: Codec.FFmpeg.Decoder.VideoConfig) throws {
-        try self.base.open(config: config)
+    func open(format: Codec.FFmpeg.Decoder.Video.Format) throws {
+        try self.base.open(format: format)
     }
     
     func close() {
@@ -39,8 +39,8 @@ extension Codec.FFmpeg.VideoCompatible where Base: Codec.FFmpeg.Decoder {
 //MARK: - Decode Audio
 extension Codec.FFmpeg.Decoder {
     
-    func open(config: VideoConfig) throws {
-        self.videoSession = try VideoSession.init(config: config)
+    func open(format: Video.Format) throws {
+        self.videoSession = try VideoSession.init(format: format)
     }
     
     func closeVideoSession() {

@@ -15,7 +15,7 @@ extension Codec.FFmpeg.Decoder {
     
     class VideoSession {
         
-        private var config: VideoConfig
+        private var format: Video.Format
     
         private var decodeQueue: DispatchQueue
     
@@ -29,15 +29,15 @@ extension Codec.FFmpeg.Decoder {
         
         private var swsCtx: OpaquePointer?
         
-        init(config: VideoConfig, decodeIn queue: DispatchQueue? = nil) throws {
-            self.config = config
+        init(format: Video.Format, decodeIn queue: DispatchQueue? = nil) throws {
+            self.format = format
             self.decodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.decode.queue")
-            try self.createCodecCtx(config: config)
+            try self.createCodecCtx(format: format)
 //            try self.createParser(codecId: config.codec.avCodecID)
-            try self.createDecodedFrame(size: config.outSize)
-            try self.createScaledFrame(size: config.outSize)
+            try self.createDecodedFrame(size: format.outSize)
+            try self.createScaledFrame(size: format.outSize)
             try self.createPakcet()
-            try self.createSwsCtx(inSize: config.outSize)
+            try self.createSwsCtx(inSize: format.outSize)
         }
         
         deinit {
@@ -55,9 +55,9 @@ extension Codec.FFmpeg.Decoder {
 private
 extension Codec.FFmpeg.Decoder.VideoSession {
     
-    func createCodecCtx(config: Codec.FFmpeg.Decoder.VideoConfig) throws {
+    func createCodecCtx(format: Codec.FFmpeg.Decoder.Video.Format) throws {
         
-        let codecId: AVCodecID = config.codec.avCodecID
+        let codecId: AVCodecID = format.codec.avCodecID
         let codec = avcodec_find_decoder(codecId)
         
         guard let codecCtx = avcodec_alloc_context3(codec) else {
@@ -66,11 +66,11 @@ extension Codec.FFmpeg.Decoder.VideoSession {
         
         codecCtx.pointee.codec_id = codecId
         codecCtx.pointee.codec_type = AVMEDIA_TYPE_VIDEO
-        codecCtx.pointee.bit_rate = config.bitRate
-        codecCtx.pointee.width = Int32(config.outSize.width)
-        codecCtx.pointee.height = Int32(config.outSize.height)
-        codecCtx.pointee.time_base = AVRational.init(num: 1, den: config.fps)
-        codecCtx.pointee.pix_fmt = config.srcPixelFmt.avPixelFormat
+        codecCtx.pointee.bit_rate = format.bitRate
+        codecCtx.pointee.width = Int32(format.outSize.width)
+        codecCtx.pointee.height = Int32(format.outSize.height)
+        codecCtx.pointee.time_base = AVRational.init(num: 1, den: format.fps)
+        codecCtx.pointee.pix_fmt = format.srcPixelFmt.avPixelFormat
         
         guard avcodec_open2(codecCtx, codec, nil) == 0 else {
             throw NSError.error(ErrorDomain, reason: "Failed to open video deconder.")!
@@ -95,7 +95,7 @@ private
 extension Codec.FFmpeg.Decoder.VideoSession {
 
     func createDecodedFrame(size: CGSize) throws {
-        self.decodedFrame = try self.createFrame(pixFmt: self.config.srcPixelFmt.avPixelFormat, size: size, fillIfNecessary: false)
+        self.decodedFrame = try self.createFrame(pixFmt: self.format.srcPixelFmt.avPixelFormat, size: size, fillIfNecessary: false)
     }
     
     func destroyDecodedFrame() {
@@ -106,7 +106,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
     }
     
     func createScaledFrame(size: CGSize) throws {
-        self.scaledFrame = try self.createFrame(pixFmt: self.config.dstPixelFmt.avPixelFormat, size: size, fillIfNecessary: true)
+        self.scaledFrame = try self.createFrame(pixFmt: self.format.dstPixelFmt.avPixelFormat, size: size, fillIfNecessary: true)
     }
     
     func destroyScaledFrame() {
@@ -184,7 +184,7 @@ private
 extension Codec.FFmpeg.Decoder.VideoSession {
 
     func createSwsCtx(inSize: CGSize) throws {
-        if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), self.config.srcPixelFmt.avPixelFormat, Int32(self.config.outSize.width), Int32(self.config.outSize.height), self.config.dstPixelFmt.avPixelFormat, SWS_FAST_BILINEAR, nil, nil, nil) {
+        if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), self.format.srcPixelFmt.avPixelFormat, Int32(self.format.outSize.width), Int32(self.format.outSize.height), self.format.dstPixelFmt.avPixelFormat, SWS_FAST_BILINEAR, nil, nil, nil) {
             self.swsCtx = sws
         }else {
             throw NSError.error(ErrorDomain, reason: "Can not create sws context.")!
@@ -250,12 +250,12 @@ extension Codec.FFmpeg.Decoder.VideoSession {
         
         if ret == 0 {
             
-            if self.config.srcPixelFmt != self.config.dstPixelFmt {
+            if self.format.srcPixelFmt != self.format.dstPixelFmt {
                 
                 let dstSliceH = sws_scale(swsCtx, decodedFrame.pointee.sliceArray, decodedFrame.pointee.strideArray, 0, Int32(codecCtx.pointee.height), scaledFrame.pointee.mutablleSliceArray, scaledFrame.pointee.strideArray)
                 
                 guard dstSliceH > 0 else {
-                    onDecoded(nil, NSError.error(ErrorDomain, reason: "Failed to scale \(self.config.srcPixelFmt) to \(self.config.dstPixelFmt)."))
+                    onDecoded(nil, NSError.error(ErrorDomain, reason: "Failed to scale \(self.format.srcPixelFmt) to \(self.format.dstPixelFmt)."))
                     return
                 }
                 
@@ -302,13 +302,13 @@ extension Codec.FFmpeg.Decoder.VideoSession {
     
     func dumpData(from frame: UnsafePointer<AVFrame>, codecCtx: UnsafePointer<AVCodecContext>) throws -> Data {
         
-        if self.config.dstPixelFmt == .YUV420P {
+        if self.format.dstPixelFmt == .YUV420P {
             if let data = self.dumpYUV420Data(from: frame, codecCtx: codecCtx) {
                 return data
             }else {
                 throw NSError.error(ErrorDomain, reason: "Failed to dump yuv raw data from avframe.")!
             }
-        }else if self.config.dstPixelFmt == .RGB32 {
+        }else if self.format.dstPixelFmt == .RGB32 {
             
             if let bytesTuple = self.dumpRGBBytes(from: frame, codecCtx: codecCtx) {
                 //onDecoded(bytesTuple, nil)
@@ -318,19 +318,19 @@ extension Codec.FFmpeg.Decoder.VideoSession {
             }
             
         }else {
-            throw NSError.error(ErrorDomain, reason: "Unsuppored pixel format to dump: \(self.config.dstPixelFmt)")!
+            throw NSError.error(ErrorDomain, reason: "Unsuppored pixel format to dump: \(self.format.dstPixelFmt)")!
         }
     }
     
     func dumpBytes(from frame: UnsafePointer<AVFrame>, codecCtx: UnsafePointer<AVCodecContext>) throws -> (bytes: UnsafeMutablePointer<UInt8>, size: Int)? {
         
-        if self.config.dstPixelFmt == .YUV420P {
+        if self.format.dstPixelFmt == .YUV420P {
             if let tuple = self.dumpYUV420Bytes(from: frame, codecCtx: codecCtx) {
                 return tuple
             }else {
                 throw NSError.error(ErrorDomain, reason: "Failed to dump yuv raw data from avframe.")!
             }
-        }else if self.config.dstPixelFmt == .RGB32 {
+        }else if self.format.dstPixelFmt == .RGB32 {
             
             if let tuple = self.dumpRGBBytes(from: frame, codecCtx: codecCtx) {
                 //onDecoded(bytesTuple, nil)
@@ -340,7 +340,7 @@ extension Codec.FFmpeg.Decoder.VideoSession {
             }
             
         }else {
-            throw NSError.error(ErrorDomain, reason: "Unsuppored pixel format to dump: \(self.config.dstPixelFmt)")!
+            throw NSError.error(ErrorDomain, reason: "Unsuppored pixel format to dump: \(self.format.dstPixelFmt)")!
         }
     }
     

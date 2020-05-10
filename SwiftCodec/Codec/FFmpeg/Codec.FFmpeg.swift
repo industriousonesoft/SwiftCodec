@@ -104,7 +104,7 @@ public extension Codec.FFmpeg {
         }
         
         //MARK: - Description
-        public struct PCMDescription: Equatable {
+        public struct PCMSpec: Equatable {
         
             public var sampleRate: Int32
             public var channels: Int32
