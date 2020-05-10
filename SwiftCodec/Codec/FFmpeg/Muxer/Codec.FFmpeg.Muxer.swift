@@ -78,12 +78,12 @@ extension Codec.FFmpeg.Muxer {
         self.muxerSession = nil
     }
     
-    func setAudioStream(config: Codec.FFmpeg.Encoder.AudioConfig) throws {
-        try self.muxerSession?.setAudioStream(config: config)
+    func setAudioStream(format: Codec.FFmpeg.Encoder.Audio.Format) throws {
+        try self.muxerSession?.setAudioStream(format: format)
     }
     
-    func setVideoStream(config: Codec.FFmpeg.Encoder.VideoConfig) throws {
-        try self.muxerSession?.setVideoStream(config: config)
+    func setVideoStream(format: Codec.FFmpeg.Encoder.Video.Format) throws {
+        try self.muxerSession?.setVideoStream(format: format)
     }
     
     func fillVideo(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, onFinished: @escaping (Error?)->Void) {

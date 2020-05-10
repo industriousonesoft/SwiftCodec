@@ -27,8 +27,8 @@ extension Codec.FFmpeg.Muxer {
         private var videoStream: UnsafeMutablePointer<AVStream>?
         private var audioStream: UnsafeMutablePointer<AVStream>?
         
-        private var audioSession: Codec.FFmpeg.Encoder.AudioSession? = nil
-        private var videoSession: Codec.FFmpeg.Encoder.VideoSession? = nil
+        private var audioSession: Codec.FFmpeg.Encoder.Audio.Session? = nil
+        private var videoSession: Codec.FFmpeg.Encoder.Video.Session? = nil
         
         private var currVideoPts: Int64 = ZeroPts
         private var currAudioPts: Int64 = ZeroPts
@@ -81,7 +81,7 @@ extension Codec.FFmpeg.Muxer {
 //MARK: - Stream Manager
 extension Codec.FFmpeg.Muxer.MuxerSession {
     
-    func setVideoStream(config: Codec.FFmpeg.Encoder.VideoConfig) throws {
+    func setVideoStream(format: Codec.FFmpeg.Encoder.Video.Format) throws {
         
         guard self.flags.contains(.Video) else {
             throw NSError.error(ErrorDomain, reason: "Muxer not support to mux video.")!
@@ -91,7 +91,7 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
             throw NSError.error(ErrorDomain, reason: "Video stream is set.")!
         }
         
-        let session = try Codec.FFmpeg.Encoder.VideoSession.init(config: config)
+        let session = try Codec.FFmpeg.Encoder.Video.Session.init(format: format)
         self.videoSession = session
         self.videoStream = try self.addStream(codecCtx: session.codecCtx!)
         //Add ts header when all stream set
@@ -102,7 +102,7 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
         }
     }
     
-    func setAudioStream(config: Codec.FFmpeg.Encoder.AudioConfig) throws {
+    func setAudioStream(format: Codec.FFmpeg.Encoder.Audio.Format) throws {
         guard self.flags.contains(.Audio) else {
             throw NSError.error(ErrorDomain, reason: "Muxer not support to mux audio.")!
         }
@@ -111,7 +111,7 @@ extension Codec.FFmpeg.Muxer.MuxerSession {
             throw NSError.error(ErrorDomain, reason: "Video stream is set.")!
         }
         
-        let session = try Codec.FFmpeg.Encoder.AudioSession.init(config: config)
+        let session = try Codec.FFmpeg.Encoder.Audio.Session.init(format: format)
         self.audioSession = session
         self.audioStream = try self.addStream(codecCtx: session.codecCtx!)
         //Add ts header when all stream set

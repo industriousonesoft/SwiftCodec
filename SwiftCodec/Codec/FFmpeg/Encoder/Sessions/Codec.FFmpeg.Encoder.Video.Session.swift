@@ -15,11 +15,11 @@ private let ErrorDomain = "FFmpeg:Video:Encoder"
 private let SampleTimebase = AVRational.init(num: 1, den: 90000)
 
 //MARK: - VideoSession
-extension Codec.FFmpeg.Encoder {
+extension Codec.FFmpeg.Encoder.Video {
     
-    class VideoSession {
+    class Session {
         
-        private var config: VideoConfig
+        private var format: Format
         
         private(set) var codecCtx: UnsafeMutablePointer<AVCodecContext>?
         private var inFrame: UnsafeMutablePointer<AVFrame>?
@@ -37,11 +37,11 @@ extension Codec.FFmpeg.Encoder {
         private(set) var lastPts: Int64 = -1
         private var encodeQueue: DispatchQueue
         
-        init(config: VideoConfig, encodeIn queue: DispatchQueue? = nil) throws {
+        init(format: Format, encodeIn queue: DispatchQueue? = nil) throws {
             self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.encode.queue")
-            self.config = config
-            try self.createCodecCtx(config: config)
-            try self.createOutFrame(size: config.outSize)
+            self.format = format
+            try self.createCodecCtx(format: format)
+            try self.createOutFrame(size: format.outSize)
             try self.createOutPakcet()
         }
         
@@ -57,14 +57,14 @@ extension Codec.FFmpeg.Encoder {
     }
 }
 
-extension Codec.FFmpeg.Encoder.VideoSession {
+extension Codec.FFmpeg.Encoder.Video.Session {
     
-    func createCodecCtx(config: Codec.FFmpeg.Encoder.VideoConfig) throws {
+    func createCodecCtx(format: Codec.FFmpeg.Encoder.Video.Format) throws {
         
         #warning("Deprecated, No neccessary any more!")
         //avcodec_register_all()
         
-        let codecId = config.codec.avCodecID
+        let codecId = format.codec.avCodecID
         let codec = avcodec_find_encoder(codecId)
         
         guard let codecCtx = avcodec_alloc_context3(codec) else {
@@ -73,18 +73,18 @@ extension Codec.FFmpeg.Encoder.VideoSession {
         codecCtx.pointee.codec_id = codecId
         codecCtx.pointee.codec_type = AVMEDIA_TYPE_VIDEO
         codecCtx.pointee.dct_algo = FF_DCT_FASTINT
-        codecCtx.pointee.bit_rate = config.bitRate
-        codecCtx.pointee.width = Int32(config.outSize.width)
-        codecCtx.pointee.height = Int32(config.outSize.height)
+        codecCtx.pointee.bit_rate = format.bitRate
+        codecCtx.pointee.width = Int32(format.outSize.width)
+        codecCtx.pointee.height = Int32(format.outSize.height)
         codecCtx.pointee.time_base.num = 1
         //All the fps supported by mpeg1: 0, 23.976, 24, 25, 29.97, 30, 50, 59.94, 60
-        codecCtx.pointee.time_base.den = config.fps
-        codecCtx.pointee.gop_size = config.gopSize // 2s: 2 * 25
+        codecCtx.pointee.time_base.den = format.fps
+        codecCtx.pointee.gop_size = format.gopSize // 2s: 2 * 25
         //Drop out B frame
-        if config.dropB == true {
+        if format.dropB == true {
             codecCtx.pointee.max_b_frames = 0
         }
-        codecCtx.pointee.pix_fmt = config.dstPixelFmt.avPixelFormat
+        codecCtx.pointee.pix_fmt = format.dstPixelFmt.avPixelFormat
         codecCtx.pointee.mb_cmp = FF_MB_DECISION_RD
         //CBR is default setting, VBR Setting blow:
         //context.pointee.flags |= AV_CODEC_FLAG_QSCALE
@@ -110,18 +110,18 @@ extension Codec.FFmpeg.Encoder.VideoSession {
 
 //MARK: - Frame
 private
-extension Codec.FFmpeg.Encoder.VideoSession {
+extension Codec.FFmpeg.Encoder.Video.Session {
     
     func createInFrame(size: CGSize) throws {
         //编码过程中，输出frame指向内存块是动态的，因此不必在初始化时创建（fill = false）
-        self.inFrame = try self.createFrame(pixFmt: self.config.srcPixelFmt.avPixelFormat, size: size, fillIfNecessary: false)
+        self.inFrame = try self.createFrame(pixFmt: self.format.srcPixelFmt.avPixelFormat, size: size, fillIfNecessary: false)
     }
     
     func fillInFrame(bytes: UnsafeMutablePointer<UInt8>, size: CGSize) -> Bool {
         guard let frame = self.inFrame else {
             return false
         }
-        return av_image_fill_arrays(&(frame.pointee.data.0), &(frame.pointee.linesize.0), bytes, self.config.srcPixelFmt.avPixelFormat, Int32(size.width), Int32(size.height), 1) > 0
+        return av_image_fill_arrays(&(frame.pointee.data.0), &(frame.pointee.linesize.0), bytes, self.format.srcPixelFmt.avPixelFormat, Int32(size.width), Int32(size.height), 1) > 0
     }
     
     func destroyInFrame() {
@@ -133,7 +133,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
     
     func createOutFrame(size: CGSize) throws {
         //编码过程中，输出frame指向内存块是固定的，因此在初始化时创建（fill = true）
-        self.outFrame = try self.createFrame(pixFmt: self.config.dstPixelFmt.avPixelFormat, size: size, fillIfNecessary: true)
+        self.outFrame = try self.createFrame(pixFmt: self.format.dstPixelFmt.avPixelFormat, size: size, fillIfNecessary: true)
     }
     
     func destroyOutFrame() {
@@ -171,7 +171,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
 
 //MARK: - AVPacket
 private
-extension Codec.FFmpeg.Encoder.VideoSession {
+extension Codec.FFmpeg.Encoder.Video.Session {
     
     func createOutPakcet() throws {
         guard let packet = av_packet_alloc() else {
@@ -190,10 +190,10 @@ extension Codec.FFmpeg.Encoder.VideoSession {
 
 //MARK: - Sws Context
 private
-extension Codec.FFmpeg.Encoder.VideoSession {
+extension Codec.FFmpeg.Encoder.Video.Session {
 
     func createSwsCtx(inSize: CGSize) throws {
-        if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), self.config.srcPixelFmt.avPixelFormat, Int32(self.config.outSize.width), Int32(self.config.outSize.height), self.config.dstPixelFmt.avPixelFormat, SWS_FAST_BILINEAR, nil, nil, nil) {
+        if let sws = sws_getContext(Int32(inSize.width), Int32(inSize.height), self.format.srcPixelFmt.avPixelFormat, Int32(self.format.outSize.width), Int32(self.format.outSize.height), self.format.dstPixelFmt.avPixelFormat, SWS_FAST_BILINEAR, nil, nil, nil) {
             self.swsCtx = sws
         }else {
             throw NSError.error(ErrorDomain, reason: "Can not create sws context.")!
@@ -209,7 +209,7 @@ extension Codec.FFmpeg.Encoder.VideoSession {
 }
 
 //MARK: - Encode
-extension Codec.FFmpeg.Encoder.VideoSession {
+extension Codec.FFmpeg.Encoder.Video.Session {
     
     func fill(bytes: UnsafeMutablePointer<UInt8>, size: CGSize, onFinished: @escaping (Error?)-> Void) {
         self.encodeQueue.async { [unowned self] in

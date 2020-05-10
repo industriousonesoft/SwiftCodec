@@ -11,11 +11,11 @@ import CFFmpeg
 
 private let ErrorDomain = "FFmpeg:Audio:Encoder"
 
-extension Codec.FFmpeg.Encoder {
+extension Codec.FFmpeg.Encoder.Audio {
     //MARK: - FFmpegAudioSession
-    class AudioSession {
+    class Session {
         
-        private var config: AudioConfig
+        private var format: Format
      
         private(set) var codecCtx: UnsafeMutablePointer<AVCodecContext>?
         
@@ -33,13 +33,13 @@ extension Codec.FFmpeg.Encoder {
         
         private var encodeQueue: DispatchQueue
        
-        init(config: AudioConfig, queue: DispatchQueue? = nil) throws {
-            self.config = config
+        init(format: Format, queue: DispatchQueue? = nil) throws {
+            self.format = format
             self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.AudioSession.encode.queue")
             //查看jsmpeg中mp2解码器代码，mp2格式对应的frame_size（nb_samples）似乎是定值：1152
-            try self.createCodecCtx(config: config)
-            try self.createResampleInBuffer(spec: self.config.srcPCMSpec)
-            try self.createResampleOutBuffer(spec: self.config.dstPCMSpec)
+            try self.createCodecCtx(format: format)
+            try self.createResampleInBuffer(spec: self.format.srcPCMSpec)
+            try self.createResampleOutBuffer(spec: self.format.dstPCMSpec)
             try self.createSwrCtx()
             //使用fifo管道可以确保音频的读写的连续性，每次达到音频格式对应的缓存值时才读取
             try self.createFIFO(codecCtx: self.codecCtx!)
@@ -59,12 +59,12 @@ extension Codec.FFmpeg.Encoder {
 
 }
 
-extension Codec.FFmpeg.Encoder.AudioSession {
+extension Codec.FFmpeg.Encoder.Audio.Session {
     
-    func createCodecCtx(config: Codec.FFmpeg.Encoder.AudioConfig) throws {
+    func createCodecCtx(format: Codec.FFmpeg.Encoder.Audio.Format) throws {
         
         //Codec
-        let codecId: AVCodecID = config.codec.avCodecID
+        let codecId: AVCodecID = format.codec.avCodecID
         guard let codec = avcodec_find_encoder(codecId) else {
             throw NSError.error(ErrorDomain, reason: "Can not create audio codec...")!
         }
@@ -75,13 +75,13 @@ extension Codec.FFmpeg.Encoder.AudioSession {
         }
         codecCtx.pointee.codec_id = codecId
         codecCtx.pointee.codec_type = AVMEDIA_TYPE_AUDIO
-        codecCtx.pointee.sample_fmt = self.config.dstPCMSpec.sampleFmt.avSampleFmt
-        codecCtx.pointee.channel_layout = codec.pointee.channelLayout ?? UInt64(av_get_default_channel_layout(self.config.dstPCMSpec.channels))//UInt64(AV_CH_LAYOUT_STEREO)
-        codecCtx.pointee.sample_rate = codec.pointee.sampleRate ?? self.config.dstPCMSpec.sampleRate //44100
-        codecCtx.pointee.channels = self.config.dstPCMSpec.channels //2
-        codecCtx.pointee.bit_rate = config.bitRate//64000: 128kbps
+        codecCtx.pointee.sample_fmt = format.dstPCMSpec.sampleFmt.avSampleFmt
+        codecCtx.pointee.channel_layout = codec.pointee.channelLayout ?? UInt64(av_get_default_channel_layout(format.dstPCMSpec.channels))//UInt64(AV_CH_LAYOUT_STEREO)
+        codecCtx.pointee.sample_rate = codec.pointee.sampleRate ?? format.dstPCMSpec.sampleRate //44100
+        codecCtx.pointee.channels = format.dstPCMSpec.channels //2
+        codecCtx.pointee.bit_rate = format.bitRate//64000: 128kbps
         codecCtx.pointee.time_base.num = 1
-        codecCtx.pointee.time_base.den = self.config.dstPCMSpec.sampleRate
+        codecCtx.pointee.time_base.den = format.dstPCMSpec.sampleRate
      
         //看jsmpeg中mp2解码器代码，mp2格式对应的frame_size（nb_samples）似乎是定值：1152
         guard avcodec_open2(codecCtx, codec, nil) == 0 else {
@@ -104,7 +104,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 
 //MARK: - Encode AVFrame
 private
-extension Codec.FFmpeg.Encoder.AudioSession {
+extension Codec.FFmpeg.Encoder.Audio.Session {
     
     func createEncodeFrame(codecCtx: UnsafeMutablePointer<AVCodecContext>) throws {
         guard let frame = av_frame_alloc() else {
@@ -131,7 +131,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 
 //MARK: - In SampleBuffer
 private
-extension Codec.FFmpeg.Encoder.AudioSession {
+extension Codec.FFmpeg.Encoder.Audio.Session {
     
     //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
     //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
@@ -150,7 +150,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 
 //MARK: - Out SampleBuffer
 private
-extension Codec.FFmpeg.Encoder.AudioSession {
+extension Codec.FFmpeg.Encoder.Audio.Session {
     
     //此处的frameSize是根据重采样前的pcm数据计算而来，不需要且不一定等于AVCodecContext中的frameSize
     //原因在于：此函数创建的buffer用于存储重采样后的pcm数据，且后续写入fifo中，而用于编码的数据则从fifo中读取
@@ -172,7 +172,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 
 //MARK: - Resample Helper
 private
-extension Codec.FFmpeg.Encoder.AudioSession {
+extension Codec.FFmpeg.Encoder.Audio.Session {
     
     func updateSample(buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, with spec: Codec.FFmpeg.Audio.PCMSpec, nb_samples: Int32) throws {
         //Free last allocated memory
@@ -187,7 +187,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 
 //MARK: - FIFO
 private
-extension Codec.FFmpeg.Encoder.AudioSession {
+extension Codec.FFmpeg.Encoder.Audio.Session {
     
     func createFIFO(codecCtx: UnsafeMutablePointer<AVCodecContext>) throws {
    
@@ -209,11 +209,11 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 
 //MARK: - Swr Context
 private
-extension Codec.FFmpeg.Encoder.AudioSession {
+extension Codec.FFmpeg.Encoder.Audio.Session {
     
     func createSwrCtx() throws {
-        let inSpec = self.config.srcPCMSpec
-        let outSpec = self.config.dstPCMSpec
+        let inSpec = self.format.srcPCMSpec
+        let outSpec = self.format.dstPCMSpec
         //Create swrCtx if neccessary
         if inSpec != outSpec {
             self.swrCtx = try self.createSwrCtx(inSpec: inSpec, outSpec: outSpec)
@@ -255,7 +255,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 
 //MARK: - FIFO
 private
-extension Codec.FFmpeg.Encoder.AudioSession {
+extension Codec.FFmpeg.Encoder.Audio.Session {
     
     func write(buffer: UnsafeMutablePointer<UnsafeMutableRawPointer?>!, frameSize: Int32, to fifo: OpaquePointer) -> Error? {
      
@@ -295,7 +295,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 }
 
 //MARK: - Resample
-extension Codec.FFmpeg.Encoder.AudioSession {
+extension Codec.FFmpeg.Encoder.Audio.Session {
         
     func resample(bytes: UnsafeMutablePointer<UInt8>, size: Int32) throws -> (buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, nb_samples: Int32) {
         
@@ -305,12 +305,12 @@ extension Codec.FFmpeg.Encoder.AudioSession {
                 throw NSError.error(ErrorDomain, reason: "Swr context not created yet.")!
         }
         
-        let inSpec = self.config.srcPCMSpec
+        let inSpec = self.format.srcPCMSpec
         //nb_samples: bytes per channel
         //nb_bytes（单位：字节） = (nb_samples * nb_channel * nb_bitsPerChannel) / 8 /*bits per bytes*/
         let src_nb_samples = size / (inSpec.channels * inSpec.bitsPerChannel / 8)
         
-        let outSpec = self.config.dstPCMSpec
+        let outSpec = self.format.dstPCMSpec
             
         let dst_nb_samples = Int32(av_rescale_rnd(swr_get_delay(swr, Int64(inSpec.sampleRate)) + Int64(src_nb_samples), Int64(outSpec.sampleRate), Int64(inSpec.sampleRate), AV_ROUND_UP))
     
@@ -338,7 +338,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
     }
 }
 
-extension Codec.FFmpeg.Encoder.AudioSession {
+extension Codec.FFmpeg.Encoder.Audio.Session {
     
     func fill(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onFinished: @escaping (Error?) -> Void) {
         self.encodeQueue.async { [unowned self] in
@@ -363,7 +363,7 @@ extension Codec.FFmpeg.Encoder.AudioSession {
 }
 
 //MARK: - Encode
-extension Codec.FFmpeg.Encoder.AudioSession {
+extension Codec.FFmpeg.Encoder.Audio.Session {
  
     func encode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, onEncoded: @escaping Codec.FFmpeg.Encoder.EncodedPacketCallback) {
         self.encodeQueue.async { [unowned self] in

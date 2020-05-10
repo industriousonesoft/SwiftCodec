@@ -24,8 +24,8 @@ extension Codec.FFmpeg.Encoder {
 public
 extension Codec.FFmpeg.VideoCompatible where Base: Codec.FFmpeg.Encoder {
     
-    func open(config: Codec.FFmpeg.Encoder.VideoConfig, queue: DispatchQueue? = nil) throws {
-        try self.base.open(config: config, queue: queue)
+    func open(format: Codec.FFmpeg.Encoder.Video.Format, queue: DispatchQueue? = nil) throws {
+        try self.base.open(format: format, queue: queue)
     }
     
     func close() {
@@ -45,8 +45,8 @@ extension Codec.FFmpeg.VideoCompatible where Base: Codec.FFmpeg.Encoder {
 private
 extension Codec.FFmpeg.Encoder {
     
-    func open(config: VideoConfig, queue: DispatchQueue? = nil) throws {
-        try self.videoSession = VideoSession.init(config: config)
+    func open(format: Video.Format, queue: DispatchQueue? = nil) throws {
+        try self.videoSession = Video.Session.init(format: format)
     }
     
     func closeVideoSession() {
