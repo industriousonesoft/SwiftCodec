@@ -12,7 +12,7 @@ typedef void(^FFmpegAVLogCallback)(NSString *log);
 
 @interface FFmepgOCBridge: NSObject
 
-+ (int)avPixelFormatRGB32;
++ (int)avPIXFMTRGB32;
 + (int)avErrorEOF;
 + (int)avErrorEagain;
 + (char *)avErr2str:(int)errCode;

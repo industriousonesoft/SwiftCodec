@@ -44,8 +44,50 @@ extension Codec.FFmpeg.Decoder {
         //由于frame中的属性需要动态更新，使用class避免copy-on-write
         public
         class Frame {
-            public var bytes: UnsafeMutablePointer<UInt8>? = nil
-            public var size: Int = 0
+            public var data: Data? = nil
+        
+            func wraps(from frame: UnsafePointer<AVFrame>, pixFmt: Codec.FFmpeg.Video.PixelFormat) {
+                if pixFmt == .YUV420P {
+                   self.data = Frame.dumpYUV420(from: frame)
+                }else if pixFmt == .RGB32 {
+                    self.data = Frame.dumpRGB(from: frame)
+                }
+            }
+            
+            static
+            func dumpYUV420(from frame: UnsafePointer<AVFrame>) -> Data? {
+                    
+                if let bytesY = frame.pointee.data.0,
+                 let bytesU = frame.pointee.data.1,
+                 let bytesV = frame.pointee.data.2 {
+                    
+        //            print("frame h: \(frame.pointee.height) - w: \(frame.pointee.width)")
+                    //frame h: 1080 - w: 1920
+        //            print("\(#function): \(frame.pointee.linesize.0) - \(frame.pointee.linesize.1) - \(frame.pointee.linesize.2)")
+                    //1920 - 960 - 960
+                    
+                    //Method-01:
+        //            let sizeY = frame.pointee.linesize.0 * frame.pointee.height
+                    //Method-02
+                    let sizeY = Int(frame.pointee.width * frame.pointee.height)
+                  
+                    var yuvData = Data.init(bytes: bytesY, count: sizeY)
+                    yuvData.append(bytesU, count: sizeY / 4)
+                    yuvData.append(bytesV, count: sizeY / 4)
+                    
+                    return yuvData
+                }
+                return nil
+            }
+            
+            static
+            func dumpRGB(from frame: UnsafePointer<AVFrame>) -> Data? {
+                if let bytes = frame.pointee.data.0 {
+                    let size = frame.pointee.width * frame.pointee.height
+                    return Data.init(bytes: bytes, count: Int(size))
+                }
+                return nil
+            }
         }
     }
     
@@ -73,8 +115,12 @@ extension Codec.FFmpeg.Decoder {
         
         public
         class Frame {
-            public var bytes: UnsafeMutablePointer<UInt8>? = nil
-            public var size: Int = 0
+            //FIXED: Only support packed sample format and 2 channels
+            public var data: Data? = nil
+            
+            func wraps(from buffer: UnsafeMutablePointer<UInt8>, size: Int) {
+                self.data = Data.init(bytes: buffer, count: size)
+            }
         }
     }
 }
@@ -83,12 +129,12 @@ extension Codec.FFmpeg.Decoder {
 //    public typealias DecodedDataCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int)?, Error?) -> Void
     
 //    public typealias DecodedVideoCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int)?, Error?) -> Void
-//    public typealias DecodedVideoCallback = (Video.Frame?, Error?) -> Void
-    public typealias DecodedVideoCallback = (Data?, Error?) -> Void
+    public typealias DecodedVideoCallback = (Video.Frame?, Error?) -> Void
+//    public typealias DecodedVideoCallback = (Data?, Error?) -> Void
     
 //    public typealias DecodedAudioCallback = ([Data]?, Error?) -> Void
-//    public typealias DecodedAudioCallback = (Audio.Frame?, Error?) -> Void
-    public typealias DecodedAudioCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int)?, Error?) -> Void
+    public typealias DecodedAudioCallback = (Audio.Frame?, Error?) -> Void
+//    public typealias DecodedAudioCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int)?, Error?) -> Void
   
     typealias DecodedFrameCallback = (UnsafeMutablePointer<AVFrame>?, Error?) -> Void
 }

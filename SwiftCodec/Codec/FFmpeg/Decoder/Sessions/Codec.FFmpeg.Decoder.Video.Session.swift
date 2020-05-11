@@ -258,24 +258,14 @@ extension Codec.FFmpeg.Decoder.Video.Session {
                     return
                 }
                 
-                do {
-//                    let tuple = try self.dumpBytes(from: scaledFrame, codecCtx: codecCtx)
-//                    onDecoded(tuple, nil)
-                    let data = try self.dumpData(from: scaledFrame, codecCtx: codecCtx)
-                    onDecoded(data, nil)
-                } catch let err {
-                    onDecoded(nil, err)
-                }
+                let yuvFrame = Codec.FFmpeg.Decoder.Video.Frame.init()
+                yuvFrame.wraps(from: scaledFrame, pixFmt: .YUV420P)
+                onDecoded(yuvFrame, nil)
                 
             }else {
-                do {
-//                    let tuple = try self.dumpBytes(from: decodedFrame, codecCtx: codecCtx)
-//                    onDecoded(tuple, nil)
-                    let data = try self.dumpData(from: decodedFrame, codecCtx: codecCtx)
-                    onDecoded(data, nil)
-                } catch let err {
-                    onDecoded(nil, err)
-                }
+                let yuvFrame = Codec.FFmpeg.Decoder.Video.Frame.init()
+                yuvFrame.wraps(from: decodedFrame, pixFmt: .YUV420P)
+                onDecoded(yuvFrame, nil)
             }
             
 //            print("\(#function) decoded frame: \(decodedFrame.pointee.pts)")
@@ -301,13 +291,13 @@ extension Codec.FFmpeg.Decoder.Video.Session {
     
     func dumpData(from frame: UnsafePointer<AVFrame>, codecCtx: UnsafePointer<AVCodecContext>) throws -> Data {
         
-        if self.format.dstPixelFmt == .YUV420P {
-            if let data = self.dumpYUV420Data(from: frame, codecCtx: codecCtx) {
+        if codecCtx.pointee.pix_fmt == AV_PIX_FMT_YUV420P {
+            if let data = self.dumpYUV420(from: frame) {
                 return data
             }else {
                 throw NSError.error(ErrorDomain, reason: "Failed to dump yuv raw data from avframe.")!
             }
-        }else if self.format.dstPixelFmt == .RGB32 {
+        }else if codecCtx.pointee.pix_fmt == AVPixelFormat(FFmepgOCBridge.avPIXFMTRGB32()) {
             
             if let bytesTuple = self.dumpRGBBytes(from: frame, codecCtx: codecCtx) {
                 //onDecoded(bytesTuple, nil)
@@ -323,13 +313,13 @@ extension Codec.FFmpeg.Decoder.Video.Session {
     
     func dumpBytes(from frame: UnsafePointer<AVFrame>, codecCtx: UnsafePointer<AVCodecContext>) throws -> (bytes: UnsafeMutablePointer<UInt8>, size: Int)? {
         
-        if self.format.dstPixelFmt == .YUV420P {
+        if codecCtx.pointee.pix_fmt == AV_PIX_FMT_YUV420P {
             if let tuple = self.dumpYUV420Bytes(from: frame, codecCtx: codecCtx) {
                 return tuple
             }else {
                 throw NSError.error(ErrorDomain, reason: "Failed to dump yuv raw data from avframe.")!
             }
-        }else if self.format.dstPixelFmt == .RGB32 {
+        }else if codecCtx.pointee.pix_fmt == AVPixelFormat(FFmepgOCBridge.avPIXFMTRGB32()) {
             
             if let tuple = self.dumpRGBBytes(from: frame, codecCtx: codecCtx) {
                 //onDecoded(bytesTuple, nil)
@@ -343,14 +333,22 @@ extension Codec.FFmpeg.Decoder.Video.Session {
         }
     }
     
-    func dumpYUV420Data(from frame: UnsafePointer<AVFrame>, codecCtx: UnsafePointer<AVCodecContext>) -> Data? {
+    func dumpYUV420(from frame: UnsafePointer<AVFrame>) -> Data? {
         
         if let bytesY = frame.pointee.data.0,
          let bytesU = frame.pointee.data.1,
          let bytesV = frame.pointee.data.2 {
             
-            let sizeY = Int(codecCtx.pointee.width * codecCtx.pointee.height)
-         
+//            print("frame h: \(frame.pointee.height) - w: \(frame.pointee.width)")
+            //frame h: 1080 - w: 1920
+//            print("\(#function): \(frame.pointee.linesize.0) - \(frame.pointee.linesize.1) - \(frame.pointee.linesize.2)")
+            //1920 - 960 - 960
+            
+            //Method-01:
+//            let sizeY = frame.pointee.linesize.0 * frame.pointee.height
+            //Method-02
+            let sizeY = Int(frame.pointee.width * frame.pointee.height)
+          
             var yuvData = Data.init(bytes: bytesY, count: sizeY)
             yuvData.append(bytesU, count: sizeY / 4)
             yuvData.append(bytesV, count: sizeY / 4)
@@ -402,7 +400,6 @@ extension Codec.FFmpeg.Decoder.Video.Session {
         }else {
             return nil
         }
-        
     }
     
 }

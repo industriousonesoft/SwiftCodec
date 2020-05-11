@@ -158,7 +158,7 @@ public extension Codec.FFmpeg {
                 case .YUV420P:
                     return AV_PIX_FMT_YUV420P
                 case .RGB32:
-                    return AVPixelFormat(FFmepgOCBridge.avPixelFormatRGB32())
+                    return AVPixelFormat(FFmepgOCBridge.avPIXFMTRGB32())
                 }
             }
             

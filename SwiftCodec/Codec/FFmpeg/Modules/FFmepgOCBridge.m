@@ -16,7 +16,7 @@ static FFmpegAVLogCallback avLogCallback = nil;
 
 @implementation FFmepgOCBridge
 
-+ (int)avPixelFormatRGB32 {
++ (int)avPIXFMTRGB32 {
     return AV_PIX_FMT_RGB32;
 }
 

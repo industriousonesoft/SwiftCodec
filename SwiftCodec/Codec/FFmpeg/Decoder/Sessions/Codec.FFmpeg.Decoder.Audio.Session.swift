@@ -277,10 +277,13 @@ extension Codec.FFmpeg.Decoder.Audio.Session {
             
             do {
                 let tuple = try self.resample(frame: decodedFrame)
-//                let dataList = self.dump(from: tuple.buffer, size: tuple.size)
-//                onDecoded(dataList, nil)
-                let bytes = self.dumpBytes(from: tuple.buffer, size: tuple.size)
-                onDecoded(bytes, nil)
+//                let bytes = self.dumpBytes(from: tuple.buffer, size: tuple.size)
+                let pcmFrame = Codec.FFmpeg.Decoder.Audio.Frame.init()
+                //FIXME: Only support 2 channls and Packed sample format for now
+                if let bytes = tuple.buffer[0] {
+                    pcmFrame.wraps(from: bytes, size: Int(tuple.size))
+                }
+                onDecoded(pcmFrame, nil)
             } catch let err {
                 onDecoded(nil, err)
             }
