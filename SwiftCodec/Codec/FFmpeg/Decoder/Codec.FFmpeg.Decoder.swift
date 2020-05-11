@@ -44,7 +44,7 @@ extension Codec.FFmpeg.Decoder {
         //由于frame中的属性需要动态更新，使用class避免copy-on-write
         public
         class Frame {
-            public var data: Data? = nil
+            public private(set) var data: Data? = nil
         
             func wraps(from frame: UnsafePointer<AVFrame>, pixFmt: Codec.FFmpeg.Video.PixelFormat) {
                 if pixFmt == .YUV420P {
@@ -115,9 +115,8 @@ extension Codec.FFmpeg.Decoder {
         
         public
         class Frame {
+            public private(set) var data: Data? = nil
             //FIXED: Only support packed sample format and 2 channels
-            public var data: Data? = nil
-            
             func wraps(from buffer: UnsafeMutablePointer<UInt8>, size: Int) {
                 self.data = Data.init(bytes: buffer, count: size)
             }
@@ -126,15 +125,6 @@ extension Codec.FFmpeg.Decoder {
 }
 
 extension Codec.FFmpeg.Decoder {
-//    public typealias DecodedDataCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int)?, Error?) -> Void
-    
-//    public typealias DecodedVideoCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int)?, Error?) -> Void
     public typealias DecodedVideoCallback = (Video.Frame?, Error?) -> Void
-//    public typealias DecodedVideoCallback = (Data?, Error?) -> Void
-    
-//    public typealias DecodedAudioCallback = ([Data]?, Error?) -> Void
     public typealias DecodedAudioCallback = (Audio.Frame?, Error?) -> Void
-//    public typealias DecodedAudioCallback = ((bytes: UnsafeMutablePointer<UInt8>, size: Int)?, Error?) -> Void
-  
-    typealias DecodedFrameCallback = (UnsafeMutablePointer<AVFrame>?, Error?) -> Void
 }

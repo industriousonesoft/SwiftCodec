@@ -248,7 +248,7 @@ extension Codec.FFmpeg.Decoder.Audio.Session {
 //MARK: - Decode
 extension Codec.FFmpeg.Decoder.Audio.Session {
     
-    func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedAudioCallback) {
+    func decode(bytes: UnsafePointer<UInt8>, size: Int32, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedAudioCallback) {
         
         guard let codecCtx = self.codecCtx,
             let packet = self.packet,
@@ -258,7 +258,7 @@ extension Codec.FFmpeg.Decoder.Audio.Session {
         }
         
         av_init_packet(packet)
-        packet.pointee.data = bytes
+        packet.pointee.data = UnsafeMutablePointer<UInt8>(mutating: bytes)
         packet.pointee.size = size
         packet.pointee.pos = 0
         packet.pointee.pts = Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE

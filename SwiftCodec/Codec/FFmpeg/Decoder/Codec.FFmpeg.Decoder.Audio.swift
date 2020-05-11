@@ -31,7 +31,7 @@ extension Codec.FFmpeg.AudioCompatible where Base: Codec.FFmpeg.Decoder {
         self.base.closeAudioSession()
     }
     
-    func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedAudioCallback) {
+    func decode(bytes: UnsafePointer<UInt8>, size: Int32, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedAudioCallback) {
         self.base.decode(bytes: bytes, size: size, timestamp: timestamp, onDecoded: onDecoded)
     }
 }
@@ -47,7 +47,7 @@ extension Codec.FFmpeg.Decoder {
         self.audioSession = nil
     }
     
-    func decode(bytes: UnsafeMutablePointer<UInt8>, size: Int32, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedAudioCallback) {
+    func decode(bytes: UnsafePointer<UInt8>, size: Int32, timestamp: UInt64, onDecoded: Codec.FFmpeg.Decoder.DecodedAudioCallback) {
         self.audioSession?.decode(bytes: bytes, size: size, timestamp: timestamp, onDecoded: onDecoded)
     }
 }
