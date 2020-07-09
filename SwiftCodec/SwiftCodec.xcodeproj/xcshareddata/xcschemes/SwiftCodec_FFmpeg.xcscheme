@@ -16,7 +16,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "90D35BAA24138BD400A507BC"
                BuildableName = "SwiftyCodec.framework"
-               BlueprintName = "SwiftCodec"
+               BlueprintName = "SwiftCodec_FFmpeg"
                ReferencedContainer = "container:SwiftCodec.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -52,7 +52,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "90D35BAA24138BD400A507BC"
             BuildableName = "SwiftyCodec.framework"
-            BlueprintName = "SwiftCodec"
+            BlueprintName = "SwiftCodec_FFmpeg"
             ReferencedContainer = "container:SwiftCodec.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

@@ -18,6 +18,86 @@ extension Codec.FFmpeg {
     
 }
 
+//MARK: - Audio
+public
+extension Codec.FFmpeg.Decoder {
+    
+    struct Audio {
+        public
+        struct Format {
+            public var codec: Codec.FFmpeg.Audio.CodecType
+            public var srcPCMSpec: Codec.FFmpeg.Audio.PCMSpec
+            public var dstPCMSpec: Codec.FFmpeg.Audio.PCMSpec
+            
+            public init(codec: Codec.FFmpeg.Audio.CodecType,
+                        srcPCMSpec: Codec.FFmpeg.Audio.PCMSpec,
+                        dstPCMSpec: Codec.FFmpeg.Audio.PCMSpec
+            ) {
+                self.codec = codec
+                self.srcPCMSpec = srcPCMSpec
+                self.dstPCMSpec = dstPCMSpec
+            }
+        }
+        
+        public
+        class Frame {
+//            private var bytes: UnsafeMutablePointer<UInt8>? = nil
+//            private var size: Int = 0
+//            private var filledSize: Int = 0
+            public private(set) var data: Data? = nil
+            let id: Int
+            
+            init(id: Int) {
+                self.id = id
+            }
+            
+            //FIXED: Only support packed sample format and 2 channels
+            func assign(from buffer: UnsafePointer<UInt8>, size: Int) {
+                self.data = Data.init(bytes: buffer, count: size)
+            }
+            /*
+            private lazy var lockQueue: DispatchQueue = {
+                return DispatchQueue.init(label: "com.wangcast.Codec.FFmpeg.Decoder.audio.frame-\(self.id)")
+            }()
+            
+            //FIXED: Only support packed sample format and 2 channels
+            func assign(from buffer: UnsafeMutablePointer<UInt8>, size: Int) {
+                self.lockQueue.async { [unowned self] in
+                    if self.bytes == nil {
+                        self.bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: size)
+                        self.size = size
+                        self.filledSize = size
+                    }else if self.bytes != nil {
+                        if self.size >= size {
+                            self.bytes!.assign(from: buffer, count: size)
+                            self.filledSize = size
+                        }else {
+                            print("Free and New - \(self.id)")
+                            free(self.bytes!)
+                            self.bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: size)
+                            self.size = size
+                            self.filledSize = size
+                        }
+                    }
+                }
+            }
+            
+            public
+            func read() -> (UnsafeMutablePointer<UInt8>?, Int) {
+                var bytes: UnsafeMutablePointer<UInt8>? = nil
+                var size: Int = 0
+                self.lockQueue.sync { [unowned self] in
+                    bytes = self.bytes
+                    size = self.filledSize
+                }
+                return (bytes, size)
+            }
+             */
+        }
+    }
+}
+
+//MARK: - Video
 public
 extension Codec.FFmpeg.Decoder {
     
@@ -45,16 +125,21 @@ extension Codec.FFmpeg.Decoder {
         public
         class Frame {
             public private(set) var data: Data? = nil
+            let id: Int
+            
+            init(id: Int) {
+                self.id = id
+            }
         
-            func wraps(from frame: UnsafePointer<AVFrame>, pixFmt: Codec.FFmpeg.Video.PixelFormat) {
+            func assign(from frame: UnsafePointer<AVFrame>, pixFmt: Codec.FFmpeg.Video.PixelFormat) {
                 if pixFmt == .YUV420P {
-                   self.data = Frame.dumpYUV420(from: frame)
+                   self.data = self.dumpYUV420(from: frame)
                 }else if pixFmt == .RGB32 {
-                    self.data = Frame.dumpRGB(from: frame)
+                    self.data = self.dumpRGB(from: frame)
                 }
             }
             
-            static
+            private
             func dumpYUV420(from frame: UnsafePointer<AVFrame>) -> Data? {
                     
                 if let bytesY = frame.pointee.data.0,
@@ -80,7 +165,7 @@ extension Codec.FFmpeg.Decoder {
                 return nil
             }
             
-            static
+            private
             func dumpRGB(from frame: UnsafePointer<AVFrame>) -> Data? {
                 if let bytes = frame.pointee.data.0 {
                     let size = frame.pointee.width * frame.pointee.height
@@ -91,37 +176,6 @@ extension Codec.FFmpeg.Decoder {
         }
     }
     
-}
-
-public
-extension Codec.FFmpeg.Decoder {
-    
-    struct Audio {
-        public
-        struct Format {
-            public var codec: Codec.FFmpeg.Audio.CodecType
-            public var srcPCMSpec: Codec.FFmpeg.Audio.PCMSpec
-            public var dstPCMSpec: Codec.FFmpeg.Audio.PCMSpec
-            
-            public init(codec: Codec.FFmpeg.Audio.CodecType,
-                        srcPCMSpec: Codec.FFmpeg.Audio.PCMSpec,
-                        dstPCMSpec: Codec.FFmpeg.Audio.PCMSpec
-            ) {
-                self.codec = codec
-                self.srcPCMSpec = srcPCMSpec
-                self.dstPCMSpec = dstPCMSpec
-            }
-        }
-        
-        public
-        class Frame {
-            public private(set) var data: Data? = nil
-            //FIXED: Only support packed sample format and 2 channels
-            func wraps(from buffer: UnsafeMutablePointer<UInt8>, size: Int) {
-                self.data = Data.init(bytes: buffer, count: size)
-            }
-        }
-    }
 }
 
 extension Codec.FFmpeg.Decoder {

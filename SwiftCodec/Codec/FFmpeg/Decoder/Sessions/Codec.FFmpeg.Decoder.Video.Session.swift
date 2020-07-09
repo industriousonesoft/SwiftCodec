@@ -30,7 +30,7 @@ extension Codec.FFmpeg.Decoder.Video {
         
         init(format: Format, decodeIn queue: DispatchQueue? = nil) throws {
             self.format = format
-            self.decodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.decode.queue")
+            self.decodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.wangcast.ffmpeg.VideoSession.decode.queue")
             try self.createCodecCtx(format: format)
 //            try self.createParser(codecId: config.codec.avCodecID)
             try self.createDecodedFrame(size: format.outSize)
@@ -226,7 +226,7 @@ extension Codec.FFmpeg.Decoder.Video.Session {
             return
         }
          */
-        
+       
         av_init_packet(packet)
         packet.pointee.data = UnsafeMutablePointer<UInt8>(mutating: bytes)
         packet.pointee.size = size
@@ -258,13 +258,13 @@ extension Codec.FFmpeg.Decoder.Video.Session {
                     return
                 }
                 
-                let yuvFrame = Codec.FFmpeg.Decoder.Video.Frame.init()
-                yuvFrame.wraps(from: scaledFrame, pixFmt: .YUV420P)
+                let yuvFrame = Codec.FFmpeg.Decoder.Video.Frame.init(id: 0)
+                yuvFrame.assign(from: scaledFrame, pixFmt: .YUV420P)
                 onDecoded(yuvFrame, nil)
                 
             }else {
-                let yuvFrame = Codec.FFmpeg.Decoder.Video.Frame.init()
-                yuvFrame.wraps(from: decodedFrame, pixFmt: .YUV420P)
+                let yuvFrame = Codec.FFmpeg.Decoder.Video.Frame.init(id: 0)
+                yuvFrame.assign(from: decodedFrame, pixFmt: .YUV420P)
                 onDecoded(yuvFrame, nil)
             }
             

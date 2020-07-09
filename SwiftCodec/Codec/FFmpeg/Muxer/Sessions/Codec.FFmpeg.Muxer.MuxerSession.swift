@@ -54,7 +54,7 @@ extension Codec.FFmpeg.Muxer {
             self.mode = mode
             self.flags = flags
             self.onMuxedData = onMuxed
-            self.muxingQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.MuxerSession.muxing.Queue")
+            self.muxingQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.wangcast.ffmpeg.MuxerSession.muxing.Queue")
             let ioBufferSize: Int = 512*1024 //32768
             let buff = UnsafeMutablePointer<UInt8>.allocate(capacity: ioBufferSize)
             let writable: Int = 1

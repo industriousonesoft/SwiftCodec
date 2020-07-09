@@ -12,13 +12,10 @@ import CFFmpeg
 @_exported import FFmepgOCBridge
 
 public extension Codec {
-    
-    class FFmpeg {
-        
+    enum FFmpeg {
         static let SWIFT_AV_ERROR_EOF = FFmepgOCBridge.avErrorEOF()
         static let SWIFT_AV_ERROR_EAGAIN = FFmepgOCBridge.avErrorEagain()
         static let SWIFT_AV_NOPTS_VALUE = FFmepgOCBridge.avNoPTSValue()
-   
     }
 }
 

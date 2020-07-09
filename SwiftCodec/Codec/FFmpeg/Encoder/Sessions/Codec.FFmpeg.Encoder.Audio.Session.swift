@@ -35,7 +35,7 @@ extension Codec.FFmpeg.Encoder.Audio {
        
         init(format: Format, queue: DispatchQueue? = nil) throws {
             self.format = format
-            self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.AudioSession.encode.queue")
+            self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.wangcast.ffmpeg.AudioSession.encode.queue")
             //查看jsmpeg中mp2解码器代码，mp2格式对应的frame_size（nb_samples）似乎是定值：1152
             try self.createCodecCtx(format: format)
             try self.createResampleInBuffer(spec: self.format.srcPCMSpec)

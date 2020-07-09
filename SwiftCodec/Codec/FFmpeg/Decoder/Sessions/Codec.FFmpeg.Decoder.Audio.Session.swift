@@ -33,7 +33,7 @@ extension Codec.FFmpeg.Decoder.Audio {
         
         init(format: Format, decodeIn queue: DispatchQueue? = nil) throws {
             self.format = format
-            self.decodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.decode.queue")
+            self.decodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.wangcast.ffmpeg.VideoSession.decode.queue")
             try self.createCodecContext(format: format)
             try self.createPakcet()
             try self.createDecodedFrame(codecCtx: self.codecCtx!)
@@ -278,10 +278,10 @@ extension Codec.FFmpeg.Decoder.Audio.Session {
             do {
                 let tuple = try self.resample(frame: decodedFrame)
 //                let bytes = self.dumpBytes(from: tuple.buffer, size: tuple.size)
-                let pcmFrame = Codec.FFmpeg.Decoder.Audio.Frame.init()
+                let pcmFrame = Codec.FFmpeg.Decoder.Audio.Frame.init(id: 0)
                 //FIXME: Only support 2 channls and Packed sample format for now
                 if let bytes = tuple.buffer[0] {
-                    pcmFrame.wraps(from: bytes, size: Int(tuple.size))
+                    pcmFrame.assign(from: bytes, size: Int(tuple.size))
                 }
                 onDecoded(pcmFrame, nil)
             } catch let err {

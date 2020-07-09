@@ -38,7 +38,7 @@ extension Codec.FFmpeg.Encoder.Video {
         private var encodeQueue: DispatchQueue
         
         init(format: Format, encodeIn queue: DispatchQueue? = nil) throws {
-            self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.zdnet.ffmpeg.VideoSession.encode.queue")
+            self.encodeQueue = queue != nil ? queue! : DispatchQueue.init(label: "com.wangcast.ffmpeg.VideoSession.encode.queue")
             self.format = format
             try self.createCodecCtx(format: format)
             try self.createOutFrame(size: format.outSize)
