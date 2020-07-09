@@ -15,7 +15,6 @@ extension Codec.FFmpeg {
         var audioSession: Audio.Session? = nil
         public init() {}
     }
-    
 }
 
 //MARK: - Audio

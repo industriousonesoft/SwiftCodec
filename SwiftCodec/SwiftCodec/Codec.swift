@@ -8,6 +8,6 @@
 
 import Foundation
 
-public struct Codec {
+public enum Codec {
     
 }

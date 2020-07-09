@@ -36,6 +36,12 @@
 		EE91CD6B24447364000E6D71 /* Codec.FFmpeg.Encoder.Video.Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE91CD6A24447364000E6D71 /* Codec.FFmpeg.Encoder.Video.Session.swift */; };
 		EE91CD6D244475E8000E6D71 /* Codec.FFmpeg.Encoder.Audio.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE91CD6C244475E8000E6D71 /* Codec.FFmpeg.Encoder.Audio.swift */; };
 		EE91CD6F244475EF000E6D71 /* Codec.FFmpeg.Encoder.Video.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE91CD6E244475EF000E6D71 /* Codec.FFmpeg.Encoder.Video.swift */; };
+		EE91EB0A24B6FE8D003BDFF7 /* Codec.AppleToolbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE91EAFB24B6FDF3003BDFF7 /* Codec.AppleToolbox.swift */; };
+		EE91EB0B24B6FF64003BDFF7 /* Codec.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE912B4F24444779003907FC /* Codec.swift */; };
+		EE91EB0C24B6FF69003BDFF7 /* NSError+Extend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D4264023CDB1690077CF1A /* NSError+Extend.swift */; };
+		EE91EB1024B702DA003BDFF7 /* Codec.AppleToolbox.Decoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE91EB0E24B7000E003BDFF7 /* Codec.AppleToolbox.Decoder.swift */; };
+		EE91EB1624B71632003BDFF7 /* Codec.AppleToolbox.Decoder.Video.Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE91EB1424B7162E003BDFF7 /* Codec.AppleToolbox.Decoder.Video.Session.swift */; };
+		EE91EB1724B71634003BDFF7 /* Codec.AppleToolbox.Decoder.Video.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE91EB1224B71623003BDFF7 /* Codec.AppleToolbox.Decoder.Video.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -189,6 +195,12 @@
 		EE91CD6A24447364000E6D71 /* Codec.FFmpeg.Encoder.Video.Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Encoder.Video.Session.swift; sourceTree = "<group>"; };
 		EE91CD6C244475E8000E6D71 /* Codec.FFmpeg.Encoder.Audio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Encoder.Audio.swift; sourceTree = "<group>"; };
 		EE91CD6E244475EF000E6D71 /* Codec.FFmpeg.Encoder.Video.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.FFmpeg.Encoder.Video.swift; sourceTree = "<group>"; };
+		EE91EAFB24B6FDF3003BDFF7 /* Codec.AppleToolbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.AppleToolbox.swift; sourceTree = "<group>"; };
+		EE91EB0224B6FE7F003BDFF7 /* SwiftyCodec.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SwiftyCodec.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		EE91EB0524B6FE7F003BDFF7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		EE91EB0E24B7000E003BDFF7 /* Codec.AppleToolbox.Decoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.AppleToolbox.Decoder.swift; sourceTree = "<group>"; };
+		EE91EB1224B71623003BDFF7 /* Codec.AppleToolbox.Decoder.Video.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.AppleToolbox.Decoder.Video.swift; sourceTree = "<group>"; };
+		EE91EB1424B7162E003BDFF7 /* Codec.AppleToolbox.Decoder.Video.Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Codec.AppleToolbox.Decoder.Video.Session.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -201,6 +213,13 @@
 				90D35BCA24138F3400A507BC /* libswresample.3.dylib in Frameworks */,
 				90D35BC624138F3400A507BC /* libavformat.58.dylib in Frameworks */,
 				90D35BC824138F3400A507BC /* libavutil.56.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EE91EAFF24B6FE7F003BDFF7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -219,7 +238,7 @@
 		90CC79A9238E0E8F005FCD2D = {
 			isa = PBXGroup;
 			children = (
-				EE912B522444478D003907FC /* Codec */,
+				EE912B522444478D003907FC /* SwiftCodec */,
 				90CC79B3238E0E8F005FCD2D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -228,6 +247,7 @@
 			isa = PBXGroup;
 			children = (
 				90D35BAB24138BD400A507BC /* SwiftyCodec.framework */,
+				EE91EB0224B6FE7F003BDFF7 /* SwiftyCodec.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -521,14 +541,51 @@
 			path = Encoder;
 			sourceTree = "<group>";
 		};
-		EE912B522444478D003907FC /* Codec */ = {
+		EE912B522444478D003907FC /* SwiftCodec */ = {
 			isa = PBXGroup;
 			children = (
 				EE912B4F24444779003907FC /* Codec.swift */,
 				EE912B4E24444715003907FC /* Common */,
 				90D05578238FB51600DB766C /* FFmpeg */,
+				EE91EAFA24B6FDCB003BDFF7 /* AppleToolbox */,
 			);
-			path = Codec;
+			path = SwiftCodec;
+			sourceTree = "<group>";
+		};
+		EE91EAFA24B6FDCB003BDFF7 /* AppleToolbox */ = {
+			isa = PBXGroup;
+			children = (
+				EE91EAFB24B6FDF3003BDFF7 /* Codec.AppleToolbox.swift */,
+				EE91EB0D24B6FFEC003BDFF7 /* Decoder */,
+				EE91EB0324B6FE7F003BDFF7 /* SupportingFiles */,
+			);
+			path = AppleToolbox;
+			sourceTree = "<group>";
+		};
+		EE91EB0324B6FE7F003BDFF7 /* SupportingFiles */ = {
+			isa = PBXGroup;
+			children = (
+				EE91EB0524B6FE7F003BDFF7 /* Info.plist */,
+			);
+			path = SupportingFiles;
+			sourceTree = "<group>";
+		};
+		EE91EB0D24B6FFEC003BDFF7 /* Decoder */ = {
+			isa = PBXGroup;
+			children = (
+				EE91EB1124B70329003BDFF7 /* Sessions */,
+				EE91EB0E24B7000E003BDFF7 /* Codec.AppleToolbox.Decoder.swift */,
+				EE91EB1224B71623003BDFF7 /* Codec.AppleToolbox.Decoder.Video.swift */,
+			);
+			path = Decoder;
+			sourceTree = "<group>";
+		};
+		EE91EB1124B70329003BDFF7 /* Sessions */ = {
+			isa = PBXGroup;
+			children = (
+				EE91EB1424B7162E003BDFF7 /* Codec.AppleToolbox.Decoder.Video.Session.swift */,
+			);
+			path = Sessions;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -545,6 +602,13 @@
 				90D35BBC24138E5C00A507BC /* avutil_shim.h in Headers */,
 				90D35BB824138D9200A507BC /* FFmpegWrapper.h in Headers */,
 				90D35BBF24138E5C00A507BC /* swscale_shim.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EE91EAFD24B6FE7F003BDFF7 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -569,6 +633,24 @@
 			productReference = 90D35BAB24138BD400A507BC /* SwiftyCodec.framework */;
 			productType = "com.apple.product-type.framework";
 		};
+		EE91EB0124B6FE7F003BDFF7 /* SwiftCodec_AppleToolbox */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EE91EB0724B6FE7F003BDFF7 /* Build configuration list for PBXNativeTarget "SwiftCodec_AppleToolbox" */;
+			buildPhases = (
+				EE91EAFD24B6FE7F003BDFF7 /* Headers */,
+				EE91EAFE24B6FE7F003BDFF7 /* Sources */,
+				EE91EAFF24B6FE7F003BDFF7 /* Frameworks */,
+				EE91EB0024B6FE7F003BDFF7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SwiftCodec_AppleToolbox;
+			productName = SwiftCodec_AppleToolbox;
+			productReference = EE91EB0224B6FE7F003BDFF7 /* SwiftyCodec.framework */;
+			productType = "com.apple.product-type.framework";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -581,6 +663,9 @@
 				TargetAttributes = {
 					90D35BAA24138BD400A507BC = {
 						CreatedOnToolsVersion = 11.1;
+					};
+					EE91EB0124B6FE7F003BDFF7 = {
+						CreatedOnToolsVersion = 11.5;
 					};
 				};
 			};
@@ -598,12 +683,20 @@
 			projectRoot = "";
 			targets = (
 				90D35BAA24138BD400A507BC /* SwiftCodec_FFmpeg */,
+				EE91EB0124B6FE7F003BDFF7 /* SwiftCodec_AppleToolbox */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		90D35BA924138BD400A507BC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EE91EB0024B6FE7F003BDFF7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -634,6 +727,19 @@
 				EE75C2362445B10600711CA1 /* Codec.FFmpeg.Muxer.swift in Sources */,
 				90D35BC424138E5C00A507BC /* Codec.FFmpeg.Encoder.Audio.Session.swift in Sources */,
 				EE7BCEC224541A8900672009 /* Codec.FFmpeg.Decoder.Video.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EE91EAFE24B6FE7F003BDFF7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EE91EB1624B71632003BDFF7 /* Codec.AppleToolbox.Decoder.Video.Session.swift in Sources */,
+				EE91EB1024B702DA003BDFF7 /* Codec.AppleToolbox.Decoder.swift in Sources */,
+				EE91EB0C24B6FF69003BDFF7 /* NSError+Extend.swift in Sources */,
+				EE91EB1724B71634003BDFF7 /* Codec.AppleToolbox.Decoder.Video.swift in Sources */,
+				EE91EB0B24B6FF64003BDFF7 /* Codec.swift in Sources */,
+				EE91EB0A24B6FE8D003BDFF7 /* Codec.AppleToolbox.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -763,8 +869,8 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/Codec/FFmpeg/LinkedFramework/FFmpeg/include\"";
-				INFOPLIST_FILE = Codec/FFmpeg/SupportFiles/Info.plist;
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/SwiftCodec/FFmpeg/LinkedFramework/FFmpeg/include\"";
+				INFOPLIST_FILE = SwiftCodec/FFmpeg/SupportFiles/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -773,7 +879,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/Codec/FFmpeg/LinkedFramework/FFmpeg/lib\"",
+					"\"$(SRCROOT)/SwiftCodec/FFmpeg/LinkedFramework/FFmpeg/lib\"",
 				);
 				MACRO_AUDIO_FLUENCY_PRIORITY = AudioFluencyPriority;
 				MY_LIB_NAME = SwiftyCodec;
@@ -783,7 +889,7 @@
 				PRODUCT_NAME = "${MY_LIB_NAME}";
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
-				SWIFT_INCLUDE_PATHS = "\"$(SRCROOT)/Codec/FFmpeg/Modules\"";
+				SWIFT_INCLUDE_PATHS = "\"$(SRCROOT)/SwiftCodec/FFmpeg/Modules\"";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -801,8 +907,8 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/Codec/FFmpeg/LinkedFramework/FFmpeg/include\"";
-				INFOPLIST_FILE = Codec/FFmpeg/SupportFiles/Info.plist;
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/SwiftCodec/FFmpeg/LinkedFramework/FFmpeg/include\"";
+				INFOPLIST_FILE = SwiftCodec/FFmpeg/SupportFiles/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -811,7 +917,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/Codec/FFmpeg/LinkedFramework/FFmpeg/lib\"",
+					"\"$(SRCROOT)/SwiftCodec/FFmpeg/LinkedFramework/FFmpeg/lib\"",
 				);
 				MACRO_AUDIO_FLUENCY_PRIORITY = AudioFluencyPriority;
 				MY_LIB_NAME = SwiftyCodec;
@@ -821,7 +927,69 @@
 				PRODUCT_NAME = "${MY_LIB_NAME}";
 				SKIP_INSTALL = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_INCLUDE_PATHS = "\"$(SRCROOT)/Codec/FFmpeg/Modules\"";
+				SWIFT_INCLUDE_PATHS = "\"$(SRCROOT)/SwiftCodec/FFmpeg/Modules\"";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		EE91EB0824B6FE7F003BDFF7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = 3XHZCR9E3L;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = SwiftCodec/AppleToolbox/SupportingFiles/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MY_LIB_NAME = SwiftyCodec;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.iosguy.SwiftCodec-AppleToolbox";
+				PRODUCT_NAME = "$(MY_LIB_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		EE91EB0924B6FE7F003BDFF7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = 3XHZCR9E3L;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = SwiftCodec/AppleToolbox/SupportingFiles/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MY_LIB_NAME = SwiftyCodec;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.iosguy.SwiftCodec-AppleToolbox";
+				PRODUCT_NAME = "$(MY_LIB_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -846,6 +1014,15 @@
 			buildConfigurations = (
 				90D35BB124138BD400A507BC /* Debug */,
 				90D35BB224138BD400A507BC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EE91EB0724B6FE7F003BDFF7 /* Build configuration list for PBXNativeTarget "SwiftCodec_AppleToolbox" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EE91EB0824B6FE7F003BDFF7 /* Debug */,
+				EE91EB0924B6FE7F003BDFF7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

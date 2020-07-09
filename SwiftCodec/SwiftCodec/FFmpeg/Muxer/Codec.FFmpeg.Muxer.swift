@@ -11,7 +11,6 @@ import Foundation
 extension Codec.FFmpeg {
     public class Muxer {
         var muxerSession: MuxerSession? = nil
-
         public init() {}
     }
 }
