@@ -105,12 +105,12 @@ public extension Codec.FFmpeg {
         
             public var sampleRate: Int32
             public var channels: Int32
-            public var bitsPerChannel: Int32
+            public let bitsPerChannel: Int32
             public var sampleFmt: SampleFormat
             
-            public init(channels: Int32, bitsPerChannel: Int32, sampleRate: Int32, sampleFmt: SampleFormat) {
+            public init(channels: Int32, sampleRate: Int32, sampleFmt: SampleFormat) {
                 self.channels = channels
-                self.bitsPerChannel = bitsPerChannel
+                self.bitsPerChannel = (sampleFmt == SampleFormat.S16P || sampleFmt == SampleFormat.S16) ? 16 : 32;
                 self.sampleRate = sampleRate
                 self.sampleFmt = sampleFmt
             }

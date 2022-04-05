@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "EE91EB0124B6FE7F003BDFF7"
-               BuildableName = "SwiftyCodec.framework"
+               BuildableName = "SwiftyAppleToolboxCodec.framework"
                BlueprintName = "SwiftCodec_AppleToolbox"
                ReferencedContainer = "container:SwiftCodec.xcodeproj">
             </BuildableReference>
@@ -51,7 +51,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "EE91EB0124B6FE7F003BDFF7"
-            BuildableName = "SwiftyCodec.framework"
+            BuildableName = "SwiftyAppleToolboxCodec.framework"
             BlueprintName = "SwiftCodec_AppleToolbox"
             ReferencedContainer = "container:SwiftCodec.xcodeproj">
          </BuildableReference>

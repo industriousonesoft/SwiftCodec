@@ -261,8 +261,10 @@ extension Codec.FFmpeg.Decoder.Audio.Session {
         packet.pointee.data = UnsafeMutablePointer<UInt8>(mutating: bytes)
         packet.pointee.size = size
         packet.pointee.pos = 0
+        //编码时设置，表示数据开始编码的时间，ds会自动更新
         packet.pointee.pts = Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE
-        packet.pointee.dts = Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE
+        //解码时设置，表示开始解码的时间，ps则会自动更新
+        packet.pointee.dts = Int64(timestamp)//Codec.FFmpeg.SWIFT_AV_NOPTS_VALUE
         
         var ret = avcodec_send_packet(codecCtx, packet)
         
