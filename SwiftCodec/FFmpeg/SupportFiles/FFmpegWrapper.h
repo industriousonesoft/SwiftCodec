@@ -3,7 +3,7 @@
 //  FFmpegWrapper
 //
 //  Created by caowanping on 2020/3/7.
-//  Copyright © 2020 zenet. All rights reserved.
+//  Copyright © 2020 industriousonesoft. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
