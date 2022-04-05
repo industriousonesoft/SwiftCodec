@@ -104,7 +104,7 @@ extension FFmpegEncoder {
         let displays = self.screenCapturer.getSourceList()
         if let item = displays.filter({ return $0.isMainDisplay == true }).first {
             self.currDesktopItem = item
-            let config = Codec.FFmpeg.Encoder.VideoConfig.init(
+            let format = Codec.FFmpeg.Encoder.Video.Format.init(
                 outSize: .init(width: 1280, height: 720),
                 codec: .MPEG1,
                 bitRate: 1000000,
@@ -114,7 +114,7 @@ extension FFmpegEncoder {
                 srcPixelFmt: .RGB32,
                 dstPixelFmt: .YUV420P
             )
-            try self.muxer.setVideoStream(config: config)
+            try self.muxer.setVideoStream(format: format)
         }
     }
     
@@ -166,23 +166,21 @@ extension FFmpegEncoder {
             throw NSError.init(domain: #function, code: -1, userInfo: [NSLocalizedDescriptionKey : "Unsupported audio format flags: \(capturer.audioFormatFlags)"])
         }
         
-        let srcPCMDesc = Codec.FFmpeg.Audio.PCMDescription.init(
+        let srcPCMDesc = Codec.FFmpeg.Audio.PCMSpec.init(
             channels: capturer.channelCount,
-            bitsPerChannel: capturer.bitsPerChannel,
             sampleRate: capturer.sampleRate,
             sampleFmt: sampleFmt
         )
         
-        let dstPCMDesc = Codec.FFmpeg.Audio.PCMDescription.init(
+        let dstPCMDesc = Codec.FFmpeg.Audio.PCMSpec.init(
             channels: 2,
-            bitsPerChannel: 16,
             sampleRate: 44100,
             sampleFmt: .S16
         )
         
-        let config = Codec.FFmpeg.Encoder.AudioConfig.init(codec: .MP2, bitRate: 64000, srcPCMDesc: srcPCMDesc, dstPCMDesc: dstPCMDesc)
+        let format = Codec.FFmpeg.Encoder.Audio.Format.init(codec: .MP2, bitRate: 64000, srcPCMSpec: srcPCMDesc, dstPCMSpec: dstPCMDesc)
         
-        try self.muxer.setAudioStream(config: config)
+        try self.muxer.setAudioStream(format: format)
     }
     
     func startAudio() {

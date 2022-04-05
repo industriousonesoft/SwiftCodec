@@ -8,6 +8,6 @@
       location = "group:SwiftCodec/SwiftCodec.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:SwiftCodecDemo/SwiftCodecDemo.xcodeproj">
+      location = "group:/Users/markcao/Documents/Github_Codes/SwiftCodec/SwiftCodecDemo/SwiftCodecDemo.xcodeproj">
    </FileRef>
 </Workspace>
