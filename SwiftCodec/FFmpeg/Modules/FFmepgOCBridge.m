@@ -3,7 +3,7 @@
 //  FFMpegEncoder
 //
 //  Created by caowanping on 2019/11/27.
-//  Copyright © 2019 zenet. All rights reserved.
+//  Copyright © 2019 industriousonesoft. All rights reserved.
 //
 
 #import "FFmepgOCBridge.h"

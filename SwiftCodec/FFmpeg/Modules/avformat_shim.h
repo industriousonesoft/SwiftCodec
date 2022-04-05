@@ -3,7 +3,7 @@
 //  FFmpegWrapper
 //
 //  Created by caowanping on 2019/12/5.
-//  Copyright © 2019 zenet. All rights reserved.
+//  Copyright © 2019 industriousonesoft. All rights reserved.
 //
 
 #pragma once
